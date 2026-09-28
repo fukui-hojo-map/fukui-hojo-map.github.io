@@ -1,0 +1,25 @@
+# site/switch.json を main で書き換えたら、公開中のサイト（gh-pages）にすぐ反映する
+# site: "off" → サイトを「公開を停止しています」だけにする / dev: "off" → 開発者モードをだれにも出さない
+name: switch
+on:
+  push:
+    branches: [main]
+    paths: [site/switch.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: switch, cancel-in-progress: false }
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: main }
+      - uses: actions/checkout@v4
+        with: { ref: gh-pages, path: pages }
+      - run: |
+          python3 -c "import json; json.load(open('main/site/switch.json'))"
+          cp main/site/switch.json pages/switch.json
+          cd pages
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add switch.json && { git diff --cached --quiet && echo "変わりなし" || { git commit -qm "switch: $(tr -d '\n ' < switch.json)" && git push -q origin HEAD:gh-pages; }; }

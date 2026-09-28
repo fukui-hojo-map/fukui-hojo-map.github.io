@@ -1,0 +1,150 @@
+name: weekly-ndvi
+
+on:
+  schedule:
+    # 日本時間の 5〜9月は毎日、それ以外は毎週月曜。どちらも 4:23 JST（UTC 前日 19:23。0分ちょうどは混み合って遅れやすい）
+    # cron は UTC の月で判定されるので 4〜9月（UTC）で毎日起動し、最初のステップで日本時間の月・曜日を見て走るか決める
+    # 新しい画像がない日はすぐ終わる。月曜は全セルを調べ直す
+    - cron: '23 19 * 4-9 *'
+    - cron: '23 19 * 1-3,10-12 0'
+  workflow_dispatch:
+    inputs:
+      rebuild_cells:
+        description: '区画グリッドを作り直す（筆ポリゴン更新時）'
+        type: boolean
+        default: false
+      max_minutes:
+        description: 'NDVI計算に使う時間の上限（分）'
+        default: '300'
+      full:
+        description: '新しい画像の有無に関係なく全セルを調べる'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ndvi-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    permissions:
+      contents: write
+      actions: write          # 定期実行が止まらないようにする（下の最後のステップ）
+    steps:
+      - name: 日本時間で今日走るか決める（5〜9月は毎日、それ以外は月曜だけ。手動実行はいつでも）
+        id: gate
+        run: |
+          echo "t0=$(date +%s)" >> "$GITHUB_OUTPUT"
+          m=$(TZ=Asia/Tokyo date +%-m); w=$(TZ=Asia/Tokyo date +%u)
+          if [ "${{ github.event_name }}" != "schedule" ] || { [ "$m" -ge 5 ] && [ "$m" -le 9 ]; } || [ "$w" = 1 ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "今日（日本時間 ${m}月・曜日${w}）は更新しない日です"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == '1'
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == '1'
+        with:
+          ref: gh-pages
+          path: published
+        continue-on-error: true
+      - name: 前回データを復元
+        if: steps.gate.outputs.run == '1'
+        run: |
+          if [ -d published/data ]; then mkdir -p site && rm -rf site/data && cp -r published/data site/data;
+          elif git ls-remote --exit-code --heads origin gh-pages >/dev/null; then
+            echo "::error::公開中のデータ（gh-pages）を取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
+
+      # 機械のハマりやすさ（pipeline/wet.py）の衛星の乾きの合計。公開サイトの容量（1GB）を使わないよう、別のブランチ wet-state に置く
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == '1'
+        with:
+          ref: wet-state
+          path: state
+        continue-on-error: true
+
+      - uses: actions/setup-python@v5
+        if: steps.gate.outputs.run == '1'
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+        if: steps.gate.outputs.run == '1'
+
+      - name: 区画グリッドを作成（初回 or 指定時）
+        if: ${{ steps.gate.outputs.run == '1' && (inputs.rebuild_cells == true || hashFiles('site/data/index.json') == '') }}
+        run: python pipeline/build_cells.py
+
+      - name: NDVI を更新
+        if: steps.gate.outputs.run == '1'
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: python pipeline/update_ndvi.py --max-minutes ${{ inputs.max_minutes || '300' }} --workers 4 ${{ inputs.full && '--full' || '' }}
+
+      - uses: peaceiris/actions-gh-pages@v4
+        if: steps.gate.outputs.run == '1'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
+          commit_message: 'update ndvi data'
+
+      # 生育傾向マップ（過去の年の作物の見分けと田の中の差）。NDVI を公開したあと、残り時間で作る。
+      # 最初は全セルで数日かかる（近いセルから順に。途中で切れても次回に続きから）。作った年があるときだけ公開し直す
+      - name: 生育傾向マップのデータを作る
+        id: trend
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: python pipeline/trend.py --deadline $(( ${{ steps.gate.outputs.t0 }} + 300 * 60 )) --workers 4
+
+      # 作物の見分け（稲・麦・休耕か草・その他）。全部の田・年を、そろったデータから見分け直す（4コアで4分ほど。Earth Engine は使わない）
+      # 入力が欠けた年は前回の見分けを残す（--prev）。失敗しても前回のファイルが残るだけで、ほかは止めない
+      - name: 作物を見分ける
+        id: crop
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        timeout-minutes: 30
+        run: python pipeline/crop.py --data site/data --out site/data --prev site/data --no-full --workers 4
+
+      - name: 乾きの合計を wet-state ブランチに保存する
+        if: steps.gate.outputs.run == '1' && !cancelled()
+        continue-on-error: true
+        run: |
+          [ -d state/wet ] && [ -n "$(ls -A state/wet 2>/dev/null)" ] || { echo "保存するものがありません"; exit 0; }
+          cd state
+          [ -d .git ] || { git init -q && git checkout -q -b wet-state; }
+          url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git remote set-url origin "$url" 2>/dev/null || git remote add origin "$url"
+          git config --unset-all http.https://github.com/.extraheader || true
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add -A wet && { git diff --cached --quiet && echo "変わりなし" || { git commit -qm "wet sums" && git push -q origin HEAD:wet-state; }; }
+
+      - uses: peaceiris/actions-gh-pages@v4
+        if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
+          commit_message: 'update trend and crop data'
+
+      # GitHub は公開リポジトリで60日間動きがないと定期実行を止めるので、毎回「有効」にし直しておく
+      # （手で「無効」にしたときは再び有効にしない。失敗してもジョブは止めず、警告として残す）
+      - name: 定期実行を有効のままにする
+        if: ${{ !cancelled() && github.event_name == 'schedule' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          s=$(gh api "repos/${{ github.repository }}/actions/workflows/weekly.yml" --jq .state)
+          if [ "$s" = active ]; then gh workflow enable weekly.yml --repo "${{ github.repository }}"; else echo "state=$s のため有効にし直さない"; fi
