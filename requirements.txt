@@ -1,0 +1,9 @@
+earthengine-api>=1.5
+geopandas>=1.0
+pyogrio>=0.10
+shapely>=2.0
+pyyaml>=6
+requests>=2.31
+pillow>=10
+numpy>=1.24
+pyshp>=2.3
