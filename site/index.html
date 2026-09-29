@@ -1956,7 +1956,7 @@ function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にし
   const cells=[]; for(const c of S.cells){ let sq=c.sq.map(q=>E.fw(q[0],q[1])); if(arArea(sq)<0) sq.reverse(); const xs=sq.map(q=>q[0]), ys=sq.map(q=>q[1]), b=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
     const pieces=[]; let ar2=0; for(const t of tris){ if(t.bb[2]<b[0]||t.bb[0]>b[2]||t.bb[3]<b[1]||t.bb[1]>b[3]) continue; const q=arClip(t.tr,sq); const a=q.length>=3?arArea(q):0; if(a>1e-4){ pieces.push(q); ar2+=a; } }   // 三角形もマスも凸なので、切った形も凸
     if(ar2<0.3) continue; const px=pieces.flat();
-    cells.push({pieces,rgb:c.rgb,txt:c.txt,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
+    cells.push({pieces,rgb:c.rgb,txt:c.txt,lab:c.lab,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
   const P=V.map(q=>E.fw(q[0],q[1]));
   return {pid,k,name:selLabel(pid),src:(AR_SRC.find(s=>s.k===k)||{}).name,E,V,P,parts,holes,c1,c2,cells,legend:S.legend,note:S.note||''}; }
 
@@ -2033,12 +2033,18 @@ function arAlign(){   // 2点で合わせる: 回転 = 地図の方位 − AR �
   ar.gy=(p1[1]+p2[1])/2; ar.geo.rotation.set(0,th,0); ar.geo.position.set((p1[0]+p2[0])/2-mid.x,ar.gy,(p1[2]+p2[2])/2-mid.z); ar.geo.updateMatrixWorld(true);
   ar.fit={th,dM,dA}; ar.fitBad=Math.abs(dM-dA)>=1; }   // 距離の確かめも、いま描いている2点で
 function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭・頂点の番号
-  const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); }
+  const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material){ if(o.material.map&&o.name==='labs') o.material.map.dispose(); o.material.dispose(); } }); }
   const g=new T.Group(), pos=[], col=[], rib=[];
   for(const c of M.cells){ const k=new T.Color().setRGB(c.rgb[0]/255,c.rgb[1]/255,c.rgb[2]/255,T.SRGBColorSpace);
     for(const q of c.pieces) for(let i=1;i<q.length-1;i++) for(const v of [q[0],q[i],q[i+1]]){ pos.push(v[0],0,-v[1]); col.push(k.r,k.g,k.b); } }   // 切った形は凸なので扇形に分ける
   if(pos.length){ const geo=new T.BufferGeometry(); geo.setAttribute('position',new T.Float32BufferAttribute(pos,3)); geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
     const m=new T.Mesh(geo,new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:AR_OP,side:T.DoubleSide,depthWrite:false})); m.name='cells'; g.add(m); }
+  { const L=M.cells.filter(c=>c.lab!=null&&c.pieces.length).map(c=>{ const q=c.pieces.reduce((a,b)=>Math.abs(arArea(b))>Math.abs(arArea(a))?b:a); return [q.reduce((s,v)=>s+v[0],0)/q.length,q.reduce((s,v)=>s+v[1],0)/q.length,String(c.lab)]; });   // マスごとの量の数字を地面に（1枚の絵にして、色の上に平らに置く）
+    if(L.length){ const x0=Math.min(...L.map(q=>q[0]))-5, x1=Math.max(...L.map(q=>q[0]))+5, y0=Math.min(...L.map(q=>q[1]))-5, y1=Math.max(...L.map(q=>q[1]))+5, w=x1-x0, h=y1-y0, ppm=Math.min(24,2048/Math.max(w,h));
+      const cv=document.createElement('canvas'); cv.width=Math.ceil(w*ppm); cv.height=Math.ceil(h*ppm); const x=cv.getContext('2d'); x.font=`bold ${Math.round(3*ppm)}px sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.lineJoin='round'; x.lineWidth=Math.max(2,0.6*ppm); x.strokeStyle='rgba(0,0,0,.75)'; x.fillStyle='#fff';
+      for(const [a,b,t] of L){ const px=(a-x0)*ppm, py=(y1-b)*ppm; x.strokeText(t,px,py); x.fillText(t,px,py); }
+      const tx=new T.CanvasTexture(cv); tx.colorSpace=T.SRGBColorSpace; const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:tx,transparent:true,depthWrite:false,side:T.DoubleSide}));
+      m.rotation.x=-Math.PI/2; m.position.set((x0+x1)/2,0.02,-(y0+y1)/2); m.renderOrder=3; m.name='labs'; g.add(m); } }
   for(const p of M.parts.concat(...(M.holes||[]))) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, ox=-dy/L*0.12, oy=dx/L*0.12;   // 輪郭（幅 24cm の帯。穴のふちも）
     for(const q of [[a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],[b[0]+ox,b[1]+oy],[a[0]-ox,a[1]-oy],[b[0]+ox,b[1]+oy],[a[0]+ox,a[1]+oy]]) rib.push(q[0],0.01,-q[1]); }
   const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rib,3)); const rm=new T.Mesh(rg,new T.MeshBasicMaterial({color:0xffe14d,side:T.DoubleSide,depthWrite:false})); rm.renderOrder=2; g.add(rm);
