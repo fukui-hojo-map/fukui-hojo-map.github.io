@@ -2032,19 +2032,27 @@ function arAlign(){   // 2点で合わせる: 回転 = 地図の方位 − AR �
   const mid=new T.Vector3(g2[0]/2,0,-g2[1]/2).applyAxisAngle(new T.Vector3(0,1,0),th);
   ar.gy=(p1[1]+p2[1])/2; ar.geo.rotation.set(0,th,0); ar.geo.position.set((p1[0]+p2[0])/2-mid.x,ar.gy,(p1[2]+p2[2])/2-mid.z); ar.geo.updateMatrixWorld(true);
   ar.fit={th,dM,dA}; ar.fitBad=Math.abs(dM-dA)>=1; }   // 距離の確かめも、いま描いている2点で
+const arLabT=new Map();   // 数字の札の絵（数字と色ごとに1枚。使い回す）
+function arLabTex(t,rgb){ const k=t+'|'+rgb.join(','); if(arLabT.has(k)) return arLabT.get(k); if(arLabT.size>400){ for(const v of arLabT.values()) v.dispose(); arLabT.clear(); }
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=128; const x=cv.getContext('2d'), c=`rgb(${rgb.join(',')})`;
+  const rr=(a,b,w,h,r)=>{ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); };
+  x.shadowColor='rgba(0,0,0,.55)'; x.shadowBlur=14; x.shadowOffsetY=5; rr(14,12,228,96,34); const gr=x.createLinearGradient(0,12,0,108); gr.addColorStop(0,'rgba(40,40,44,.92)'); gr.addColorStop(1,'rgba(10,10,12,.92)'); x.fillStyle=gr; x.fill();
+  x.shadowColor='transparent'; x.lineWidth=9; x.strokeStyle=c; rr(14,12,228,96,34); x.stroke();
+  x.font='bold 70px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,63); x.shadowBlur=0; x.fillText(t,128,63);
+  const tx=new AR3.CanvasTexture(cv); tx.colorSpace=AR3.SRGBColorSpace; arLabT.set(k,tx); return tx; }
 function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭・頂点の番号
-  const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material){ if(o.material.map&&o.name==='labs') o.material.map.dispose(); o.material.dispose(); } }); }
+  const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); }
   const g=new T.Group(), pos=[], col=[], rib=[];
   for(const c of M.cells){ const k=new T.Color().setRGB(c.rgb[0]/255,c.rgb[1]/255,c.rgb[2]/255,T.SRGBColorSpace);
     for(const q of c.pieces) for(let i=1;i<q.length-1;i++) for(const v of [q[0],q[i],q[i+1]]){ pos.push(v[0],0,-v[1]); col.push(k.r,k.g,k.b); } }   // 切った形は凸なので扇形に分ける
   if(pos.length){ const geo=new T.BufferGeometry(); geo.setAttribute('position',new T.Float32BufferAttribute(pos,3)); geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
     const m=new T.Mesh(geo,new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:AR_OP,side:T.DoubleSide,depthWrite:false})); m.name='cells'; g.add(m); }
-  { const L=M.cells.filter(c=>c.lab!=null&&c.pieces.length).map(c=>{ const q=c.pieces.reduce((a,b)=>Math.abs(arArea(b))>Math.abs(arArea(a))?b:a); return [q.reduce((s,v)=>s+v[0],0)/q.length,q.reduce((s,v)=>s+v[1],0)/q.length,String(c.lab)]; });   // マスごとの量の数字を地面に（1枚の絵にして、色の上に平らに置く）
-    if(L.length){ const x0=Math.min(...L.map(q=>q[0]))-5, x1=Math.max(...L.map(q=>q[0]))+5, y0=Math.min(...L.map(q=>q[1]))-5, y1=Math.max(...L.map(q=>q[1]))+5, w=x1-x0, h=y1-y0, ppm=Math.min(24,2048/Math.max(w,h));
-      const cv=document.createElement('canvas'); cv.width=Math.ceil(w*ppm); cv.height=Math.ceil(h*ppm); const x=cv.getContext('2d'); x.font=`bold ${Math.round(3*ppm)}px sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.lineJoin='round'; x.lineWidth=Math.max(2,0.6*ppm); x.strokeStyle='rgba(0,0,0,.75)'; x.fillStyle='#fff';
-      for(const [a,b,t] of L){ const px=(a-x0)*ppm, py=(y1-b)*ppm; x.strokeText(t,px,py); x.fillText(t,px,py); }
-      const tx=new T.CanvasTexture(cv); tx.colorSpace=T.SRGBColorSpace; const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:tx,transparent:true,depthWrite:false,side:T.DoubleSide}));
-      m.rotation.x=-Math.PI/2; m.position.set((x0+x1)/2,0.02,-(y0+y1)/2); m.renderOrder=3; m.name='labs'; g.add(m); } }
+  { const L=M.cells.filter(c=>c.lab!=null&&c.pieces.length);   // マスごとの量の数字: 田の上に浮かぶ札（いつもこちらを向く）と、地面からの細い棒
+    if(L.length){ const lg=new T.Group(); lg.name='labs'; const st=[];
+      for(const c of L){ const q=c.pieces.reduce((a,b)=>Math.abs(arArea(b))>Math.abs(arArea(a))?b:a), x=q.reduce((s,v)=>s+v[0],0)/q.length, y=q.reduce((s,v)=>s+v[1],0)/q.length;
+        const sp=new T.Sprite(new T.SpriteMaterial({map:arLabTex(String(c.lab),c.rgb),transparent:true,depthWrite:false})); sp.scale.set(2.8,1.4,1); sp.position.set(x,2.3,-y); sp.renderOrder=4; lg.add(sp);
+        st.push(x,0.02,-y,x,1.62,-y); }
+      const sg=new T.BufferGeometry(); sg.setAttribute('position',new T.Float32BufferAttribute(st,3)); const sl=new T.LineSegments(sg,new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75,depthWrite:false})); sl.renderOrder=3; lg.add(sl); g.add(lg); } }
   for(const p of M.parts.concat(...(M.holes||[]))) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, ox=-dy/L*0.12, oy=dx/L*0.12;   // 輪郭（幅 24cm の帯。穴のふちも）
     for(const q of [[a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],[b[0]+ox,b[1]+oy],[a[0]-ox,a[1]-oy],[b[0]+ox,b[1]+oy],[a[0]+ox,a[1]+oy]]) rib.push(q[0],0.01,-q[1]); }
   const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rib,3)); const rm=new T.Mesh(rg,new T.MeshBasicMaterial({color:0xffe14d,side:T.DoubleSide,depthWrite:false})); rm.renderOrder=2; g.add(rm);
