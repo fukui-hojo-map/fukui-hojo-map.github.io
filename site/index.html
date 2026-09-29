@@ -862,7 +862,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
     <div class="ctl">
-      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
+      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnAr" title="田んぼでスマホをかざすと、選んだ筆の色が地面に重なって見えます（Android の Chrome）">ARで見る</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
@@ -1350,7 +1350,8 @@ const medOf=a=>{ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y), 
 function polyArea(geom){ const ring=c=>{ const k=Math.cos(c[0][1]*Math.PI/180); let s=0; for(let i=0;i<c.length;i++){ const [x1,y1]=c[i],[x2,y2]=c[(i+1)%c.length]; s+=x1*y2-x2*y1; } return Math.abs(s)/2*111320*k*110540; };
   return (geom.type==='Polygon'?[geom.coordinates]:geom.coordinates).reduce((a,p)=>a+ring(p[0])-p.slice(1).reduce((b,h)=>b+ring(h),0),0); }
 let SHOW_PLAN=false;   // 作付計画（開発者の端末だけ。priv.js が読み込まれたら true）
-function onParcelTap(pid){ if(SHOW_PLAN&&fillMode()==='plan'&&typeof planTap==='function') return planTap(pid); toggleSelect(pid); }
+function onParcelTap(pid){ if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid) return; if(selected.some(x=>x.pid===pid)) return arPrepField(pid); setStatus('ARの角を選んでいる間は、筆を選べません（「やめる」で閉じてください）'); return; }   // ARで見るの角を選んでいる間は、選んだ筆の切り替えだけ
+  if(SHOW_PLAN&&fillMode()==='plan'&&typeof planTap==='function') return planTap(pid); toggleSelect(pid); }
 async function renderTrend(gen,mode,note,lbl){
   const ranked=[]; let one=null, wait=0, few=0; note.textContent='読み込み中…';
   for(const s of selected){ const P=parcels[s.pid]; if(!P||!P.cell){ wait++; continue; }
@@ -1690,7 +1691,7 @@ document.getElementById('dipOn').onchange=refresh; document.getElementById('lsOn
 document.getElementById('nbR').onchange=refresh; document.getElementById('nbOn').onchange=refresh;
 document.getElementById('mode').onchange=refresh;
 
-function refresh(){ syncClean(); renderChips(); paintMap(); drawChart(); renderSummary(); buildExcl(); if(index) writeHash(); }
+function refresh(){ syncClean(); renderChips(); paintMap(); drawChart(); renderSummary(); buildExcl(); if(index) writeHash(); if(typeof arPrepSync==='function') arPrepSync(); }
 
 // ---------- export ----------
 document.getElementById('btnPng').onclick=()=>{ const svg=document.getElementById('chart'); const vb=svg.getAttribute('viewBox').split(' ').map(Number); const clone=svg.cloneNode(true);
@@ -1771,9 +1772,293 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
   buildPxDates();
 }
 function parseHash(){ const o={}; for(const kv of location.hash.replace(/^#/,'').split('&')){ const [k,v]=kv.split('='); if(!k) continue; if(k==='c'){const a=v.split(',').map(Number); if(a.length===2&&a.every(isFinite)) o.c=a;} else if(k==='z') o.z=+v; else if(k==='sel') o.sel=decodeURIComponent(v); } return o; }
-function writeHash(){ const c=map.getCenter(); const parts=[`c=${c.lat.toFixed(5)},${c.lng.toFixed(5)}`,`z=${map.getZoom()}`]; if(selected.length) parts.push('sel='+encodeURIComponent(selected.map(s=>s.pid).join(','))); history.replaceState(null,'','#'+parts.join('&')); }
+function writeHash(){ const c=map.getCenter(); const parts=[`c=${c.lat.toFixed(5)},${c.lng.toFixed(5)}`,`z=${map.getZoom()}`]; if(selected.length) parts.push('sel='+encodeURIComponent(selected.map(s=>s.pid).join(','))); history.replaceState(history.state,'','#'+parts.join('&')); }
 document.getElementById('btnLink').onclick=async()=>{ writeHash(); try{ await navigator.clipboard.writeText(location.href); setStatus('リンクをコピーしました。'); }catch(e){ prompt('このリンクをコピーしてください', location.href); } };
 document.getElementById('btnGeo').onclick=()=>{ if(!navigator.geolocation){ setStatus('この端末では現在地を取得できません。'); return; } navigator.geolocation.getCurrentPosition(p=>map.setView([p.coords.latitude,p.coords.longitude],16),()=>setStatus('現在地を取得できませんでした。'));};
+// ---------- ARで見る（Android の Chrome。WebXR の immersive-ar と hit-test） ----------
+// 田んぼに立ってスマホをかざすと、選んだ筆の中の色（NDVI など）が地面に塗られて見える。three.js は押したときだけ読み込む（cdn.jsdelivr.net）
+// 1. 地図で筆を選び「ARで見る」→ 地図の上で、筆の頂点から 角1・角2 を選ぶ（長い辺の両はしがおすすめ）
+// 2. AR の画面で地面を映すと照準（リング）が出る。リングを角1に合わせてタップ → 角2に合わせてタップ
+// 3. 2点から回転と位置を決める（縮尺は 1:1）。回転 = 地図の角1→角2 の方位と、AR でタップした角1→角2 の向きの差。
+//    位置は2点の真ん中どうしを合わせる（タップのずれを2つの角に半分ずつ分ける）。2点の距離が地図と AR で 1m 以上違えば「タップ位置を確認してください」
+// 4. 塗る高さ: はじめはタップした所（あぜ）の高さ。田の中を映すと、田の中で見つかった面（稲の上・水面）の高さに合わせる。▲▼で手で直せる
+// 座標: 緯度経度は角1を原点にした 東・北 の m（筆1枚ほどなので平面で近似）。three.js では 東 = +X、上 = +Y、北 = −Z
+const AR_THREE='https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js';
+// 色の出どころ。get(pid) → {cells:[{sq:[[緯度,経度]×4（マスの角）], rgb:[r,g,b], txt}], legend:{grad, lo, hi, unit}, note} か {err}
+const AR_SRC=[{k:'ndvi',name:'NDVI（地図の日付）',get:pid=>arNdvi(pid)},{k:'line',name:'輪郭だけ（確認用）',get:async()=>({cells:[],legend:null,note:'筆の輪郭と頂点の番号だけ'})}];
+const AR_OP=0.6;   // 色の濃さ（半透明）
+let AR3=null, AR3p=null, arOk=null;
+const arLoad3=()=>AR3p||(AR3p=import(AR_THREE).then(m=>AR3=m).catch(()=>{ AR3p=null; throw new Error('AR の部品を読み込めません（電波を確かめてください）'); }));
+const arSupport=(navigator.xr&&navigator.xr.isSessionSupported?navigator.xr.isSessionSupported('immersive-ar').catch(()=>false):Promise.resolve(false)).then(v=>arOk=!!v);
+const arP={on:false};   // 地図で角を選んでいる間
+const ar={on:false};    // AR の画面
+
+// ---- 形 ----
+function arEnu(lat0,lon0){ const a=6378137, e2=0.00669438, f=Math.PI/180, s=Math.sin(lat0*f), w=1-e2*s*s, kx=a/Math.sqrt(w)*Math.cos(lat0*f)*f, ky=a*(1-e2)/Math.pow(w,1.5)*f;
+  return {fw:(lat,lon)=>[(lon-lon0)*kx,(lat-lat0)*ky], bw:(x,y)=>[lat0+y/ky,lon0+x/kx]}; }   // [東, 北] m（1km 以内なら誤差 1cm 未満）
+const arArea=p=>{ let s=0; for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length]; s+=a[0]*b[1]-b[0]*a[1]; } return s/2; };
+function arClip(subj,clip){   // 筆の形（凹みがあってもよい）を、マス（凸・反時計回り）の中だけに切る（Sutherland–Hodgman）
+  let out=subj;
+  for(let i=0;i<clip.length&&out.length;i++){ const A=clip[i], B=clip[(i+1)%clip.length], inp=out, side=p=>(B[0]-A[0])*(p[1]-A[1])-(B[1]-A[1])*(p[0]-A[0]); out=[];
+    for(let j=0;j<inp.length;j++){ const P=inp[j], Q=inp[(j+1)%inp.length], sp=side(P), sq=side(Q);
+      if(sp>=0) out.push(P);
+      if((sp>=0)!==(sq>=0)){ const t=sp/(sp-sq); out.push([P[0]+(Q[0]-P[0])*t,P[1]+(Q[1]-P[1])*t]); } } }
+  return out; }
+function arRing(pid){   // 筆の外周（いちばん大きい部分）の頂点 [緯度, 経度]。閉じの重複・同じ点の続きは除く
+  const g=parcels[pid].feature.geometry, polys=g.type==='Polygon'?[g.coordinates]:g.coordinates; let best=null, ba=-1;
+  for(const p of polys){ const r=p[0]; let s=0; for(let i=0;i<r.length-1;i++) s+=r[i][0]*r[i+1][1]-r[i+1][0]*r[i][1]; if(Math.abs(s)>ba){ ba=Math.abs(s); best=r; } }
+  const v=best.map(([lon,lat])=>[lat,lon]).filter((q,i,a)=>i===0||q[0]!==a[i-1][0]||q[1]!==a[i-1][1]);
+  if(v.length>1&&v[0][0]===v[v.length-1][0]&&v[0][1]===v[v.length-1][1]) v.pop(); return v; }
+function arCornerIdx(P){   // 本当の角（ふつう4つ）の番号: 3m より小さい凹凸の頂点を除き、曲がりが 35°以上の頂点
+  let k=P.map((_,i)=>i);
+  const dev=i=>{ const n=k.length, a=P[k[(i-1+n)%n]], b=P[k[i]], c=P[k[(i+1)%n]], L=Math.hypot(c[0]-a[0],c[1]-a[1]); return L<1e-6?0:Math.abs((c[0]-a[0])*(b[1]-a[1])-(c[1]-a[1])*(b[0]-a[0]))/L; };
+  while(k.length>3){ let j=-1, m=3; for(let i=0;i<k.length;i++){ const d=dev(i); if(d<m){ m=d; j=i; } } if(j<0) break; k.splice(j,1); }
+  const turn=i=>{ const n=k.length, a=P[k[(i-1+n)%n]], b=P[k[i]], c=P[k[(i+1)%n]], u=Math.atan2(b[1]-a[1],b[0]-a[0]), v=Math.atan2(c[1]-b[1],c[0]-b[0]); let d=Math.abs(v-u)%(2*Math.PI); return Math.min(d,2*Math.PI-d)*180/Math.PI; };
+  const c=k.filter((_,i)=>turn(i)>=35); return c.length>=3?c:k; }
+function arRecommend(V){   // おすすめ: 角の形でいちばん長い辺の両はし（2点が遠いほど向きが正確）
+  const E=arEnu(V[0][0],V[0][1]), P=V.map(q=>E.fw(q[0],q[1])), C=arCornerIdx(P); let best=[C[0],C[1]], bl=-1;
+  for(let i=0;i<C.length;i++){ const a=C[i], b=C[(i+1)%C.length], l=Math.hypot(P[b][0]-P[a][0],P[b][1]-P[a][1]); if(l>bl){ bl=l; best=[a,b]; } }
+  return {pair:best,corners:C,len:bl}; }
+async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日にこの田が半分以上雲なら、その年のいちばん新しい晴れた日）
+  const P=parcels[pid]; if(!P||!P.cell) return {err:'この筆には衛星の画素がありません'};
+  const d0=document.getElementById('colorDate').value, y=/^\d{4}-/.test(d0)?d0.slice(0,4):String(allDates.length?allDates[allDates.length-1].slice(0,4):new Date().getFullYear());
+  const r=await pxLoad(P.cell,y); if(!r||!r.g) return {err:`${y}年の画像がまだありません`};
+  const {m,g}=r, R=pxRegion(pid,m); if(!R) return {err:'筆が小さすぎます'}; const {c0,r0,cw,ch,inside}=R;
+  const ins=[]; for(let yy=0;yy<ch;yy++) for(let x=0;x<cw;x++) if(inside(c0+x+.5,r0+yy+.5)) ins.push(yy*cw+x);
+  const px=(k,i)=>g[(k*m.h+r0+(i/cw|0))*m.w+c0+i%cw], okAt=k=>ins.length&&ins.filter(i=>px(k,i)>0).length>=ins.length*0.5;
+  let k=m.dates.indexOf(d0); if(k<0||!okAt(k)){ k=-1; for(let j=m.dates.length-1;j>=0;j--) if(okAt(j)){ k=j; break; } }
+  if(k<0) return {err:`${y}年に、この筆が晴れて写った日がありません`};
+  const val=new Float32Array(cw*ch).fill(NaN); let sm=0,nm=0; for(const i of ins){ const v=px(k,i); if(v>0){ val[i]=(v-1)/254*1.2-0.2; sm+=val[i]; nm++; } }   // 地図と同じく、真ん中が筆の中の画素だけ使う（縁の画素はあぜ・道が混ざる）
+  for(let pass=0;pass<3;pass++){ const nv=val.slice(); for(let i=0;i<cw*ch;i++){ if(!isNaN(val[i])) continue; const x=i%cw, yy=i/cw|0; let s=0,n=0;   // 雲・外の画素は周りでうめる
+      for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const xx=x+dx, y2=yy+dy; if(xx<0||y2<0||xx>=cw||y2>=ch) continue; const w=val[y2*cw+xx]; if(!isNaN(w)){ s+=w; n++; } } if(n) nv[i]=s/n; } val.set(nv); }
+  for(let i=0;i<cw*ch;i++) if(isNaN(val[i])) val[i]=sm/nm;   // 残りは筆の中の平均
+  const ll=(a,b)=>{ const q=L.CRS.EPSG3857.unproject(L.point(m.x0+a*m.px,m.y1-b*m.px)); return [q.lat,q.lng]; }, cells=[];
+  for(let i=0;i<cw*ch;i++){ const gx=c0+i%cw, gy=r0+(i/cw|0), v=val[i]; cells.push({sq:[ll(gx,gy),ll(gx,gy+1),ll(gx+1,gy+1),ll(gx+1,gy)],rgb:rgbOf(ndviColor(v)),txt:`NDVI ${v.toFixed(2)}`}); }
+  const d=m.dates[k]; return {cells,legend:{grad:`linear-gradient(90deg,${[0,.25,.5,.75,1].map(t=>ndviColor(0.2+0.7*t)).join(',')})`,lo:'0.2',hi:'0.9',unit:'NDVI'},note:`${+d.slice(5,7)}/${+d.slice(8)} の画像${d!==d0?'（地図の日付はこの田に雲があるため）':''}`}; }
+
+// ---- 地図で 角1・角2 を選ぶ ----
+function arCss(){ if(document.getElementById('arCss')) return; const st=document.createElement('style'); st.id='arCss'; st.textContent=`
+#arPrep{position:absolute;left:6px;right:6px;bottom:6px;z-index:1200;background:#fff;border:2px solid var(--accent);border-radius:12px;padding:6px 10px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14px;max-height:45%;overflow:auto}
+#arPrep .h{font-weight:700;font-size:15px;color:var(--ink)} #arPrep .row{margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center} #arPrep .hint{font-size:12.5px;margin-top:2px}
+#arPrep .c1{color:#d84315;font-weight:700} #arPrep .c2{color:#1565c0;font-weight:700} #arPrep .msg{color:var(--warn);font-size:13px} #arPrep select{font:inherit;font-size:14px;max-width:100%}
+.arVh{position:absolute;left:-22px;top:-22px;width:44px;height:44px;cursor:pointer} .arVh.sm{left:-15px;top:-15px;width:30px;height:30px} .arVh .arV{position:absolute;left:50%;top:50%}
+.arV{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;border:2px solid #455a64;color:#263238;font:700 13px/22px sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:pointer}
+.arV.sm{width:14px;height:14px;margin:-7px 0 0 -7px;font-size:0;line-height:0} .arV.rec{border-color:#f9a825;box-shadow:0 0 0 3px rgba(249,168,37,.55)}
+.arV.c1{background:#ff5a1f;border-color:#fff;color:#fff;width:34px;height:34px;margin:-17px 0 0 -17px;line-height:30px;font-size:12px} .arV.c2{background:#1e88e5;border-color:#fff;color:#fff;width:34px;height:34px;margin:-17px 0 0 -17px;line-height:30px;font-size:12px}
+#arView{position:fixed;inset:0;z-index:5000;background:#000;touch-action:none} #arView[hidden]{display:none}
+@media (max-width:860px){ body.arPrepOn .layout{grid-template-rows:80vh auto} body.arPrepOn #map{height:80vh} }
+#arHud{position:absolute;inset:0;font:16px/1.45 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff;pointer-events:none;-webkit-user-select:none;user-select:none}
+#arHud .p{position:absolute;left:8px;right:8px;background:rgba(0,0,0,.62);border-radius:14px;padding:8px 12px;pointer-events:auto}
+#arHud button{pointer-events:auto;font:inherit;font-weight:700;font-size:14.5px;line-height:1.2;min-height:50px;min-width:48px;padding:4px 8px;border:0;border-radius:12px;background:rgba(255,255,255,.94);color:#17372a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+#arTopP{top:calc(8px + env(safe-area-inset-top));display:flex;gap:10px;align-items:flex-start} #arTopP .t{flex:1;min-width:0}
+#arTitle{font-size:13px;color:#cfd8dc} #arMsg{font-size:17px;font-weight:700;margin-top:2px} #arMsg b{color:#ffcc80} #arMsg i{font-style:normal;color:#90caf9}
+#arSk{flex:0 0 auto;width:96px;height:96px;background:rgba(255,255,255,.12);border-radius:10px}
+#arLeg{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px} #arLeg i{flex:1;height:12px;border-radius:6px}
+#arWarn{position:absolute;left:8px;right:8px;bottom:calc(130px + env(safe-area-inset-bottom));background:rgba(198,40,40,.93);border-radius:12px;padding:10px 12px;font-weight:700;text-align:center;pointer-events:none}
+#arWarn .s{font-weight:400;font-size:13.5px}
+#arValP{bottom:calc(66px + env(safe-area-inset-bottom));font-size:15px} #arValP b{font-size:20px;color:#fff59d}
+#arBtns{position:absolute;left:4px;right:4px;bottom:calc(6px + env(safe-area-inset-bottom));display:flex;gap:5px} #arBtns button{flex:1 1 0;min-width:0} #arBtns button.go{background:#ffd54a;color:#3a2e00}
+#arHud [hidden]{display:none!important}`; document.head.appendChild(st); }
+function arNote(btn,msg){   // 押したボタンのすぐ横に知らせる（スマホでは下の知らせの欄が画面の外のことがある）
+  setStatus(msg); if(!btn) return; let n=btn.nextElementSibling; if(!n||!n.classList.contains('arNote')){ n=document.createElement('span'); n.className='hint arNote'; n.style.cssText='color:var(--warn);font-weight:700;margin-left:4px'; btn.after(n); }
+  n.textContent=msg; clearTimeout(n._t); n._t=setTimeout(()=>n.remove(),8000); }
+function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
+  arSupport.then(ok=>{ if(!ok) return arNote(btn,'この端末ではAR表示に対応していません');
+    if(!selected.length) return arNote(btn,'先に地図で筆を選んでください');
+    arCss(); arLoad3().catch(()=>{});   // 部品は先に読み込んでおく（AR を始めるときに待たないように）
+    const pid=pid0&&selected.some(s=>s.pid===pid0)?pid0:selected[selected.length-1].pid;   // ふだんは最後に選んだ筆
+    if(arP.on){ arP.src=src&&AR_SRC.some(s=>s.k===src)?src:arP.src; arP.srcUser=!!src; arPrepField(pid); return; }
+    Object.assign(arP,{on:true,pid,src:src&&AR_SRC.some(s=>s.k===src)?src:null,srcUser:!!src,pick:1,data:{},err:'',zs:map.options.zoomSnap,layer:L.layerGroup().addTo(map)});
+    let box=$('arPrep'); if(!box){ box=document.createElement('div'); box.id='arPrep'; document.querySelector('.mapwrap').appendChild(box); L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box); }
+    box.hidden=false; document.body.classList.add('arPrepOn'); map.options.zoomSnap=0.25; map.invalidateSize();   // スマホでは地図を大きく・地図を画面に出す
+    const mw=document.querySelector('.mapwrap'), rc=mw.getBoundingClientRect(); if(rc.top<0||rc.top>innerHeight*0.3) mw.scrollIntoView({block:'start'});
+    history.pushState({arPrep:1},''); arP.pushed=true;   // 戻るボタンで閉じる
+    if(!arP.zh){ arP.zh=()=>{ if(arP.on&&arP.V) arPrepDraw(); }; map.on('zoomend',arP.zh); }
+    arPrepField(pid); }); }
+function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,c1:R.pair[0],c2:R.pair[1],pick:1,model:null,err:''});
+  if(!same&&arP.srcUser&&arP.src!=='top') arP.srcUser=false;
+  arPrepDraw(); const h=document.getElementById('arPrep').offsetHeight;   // 案内の欄の上に筆がぜんぶ見えるように
+  map.fitBounds(parcels[pid].layer.getBounds(),{paddingTopLeft:[24,24],paddingBottomRight:[24,Math.min(h+30,map.getSize().y*0.6)],maxZoom:19}); arPrepData(); }
+function arPrepClose(fromNav){ const b=document.getElementById('arPrep'); if(b) b.hidden=true; if(arP.layer){ map.removeLayer(arP.layer); arP.layer=null; }
+  if(!arP.on) return; arP.on=false; document.body.classList.remove('arPrepOn'); map.options.zoomSnap=arP.zs==null?1:arP.zs; map.invalidateSize();
+  if(arP.pushed&&!fromNav) history.back(); arP.pushed=false; }
+function arPrepSync(){ if(!arP.on) return;   // 選んだ筆が変わったとき（すべて解除・×）
+  if(!selected.length) return arPrepClose(); if(!selected.some(s=>s.pid===arP.pid)) return arPrepField(selected[selected.length-1].pid); arPrepDraw(); }
+function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.rec, cs=new Set(R.corners);
+  arP.layer.clearLayers();
+  L.polyline([V[arP.c1],V[arP.c2]],{color:'#fff',weight:5,opacity:.9,dashArray:'8 8',interactive:false}).addTo(arP.layer);
+  const big=new Set(), kept=[], pt=i=>map.latLngToContainerPoint(V[i]);   // 番号つきの点は画面の上で 28px 以上はなす（近い頂点は小さな点に）。角1・角2・おすすめ・曲がりの大きい角の順
+  for(const i of [arP.c1,arP.c2,...R.pair,...R.corners]){ if(big.has(i)) continue; const q=pt(i); if(i!==arP.c1&&i!==arP.c2&&kept.some(k=>k.distanceTo(q)<28)) continue; big.add(i); kept.push(q); }
+  V.forEach((q,i)=>{ const c=i===arP.c1?'c1':i===arP.c2?'c2':'', rec=R.pair.includes(i)?' rec':'', sm=!c&&!big.has(i)?' sm':'';   // 本当の角は番号つき、ほかの頂点は小さな点。さわれる範囲は見た目より広く
+    const mk=L.marker(q,{icon:L.divIcon({className:'',html:`<div class="arVh${sm}"><div class="arV ${c}${rec}${sm}">${c==='c1'?'角1':c==='c2'?'角2':i+1}</div></div>`,iconSize:[0,0]}),zIndexOffset:c?1000:rec?500:sm?0:200,bubblingMouseEvents:false}).addTo(arP.layer);
+    mk.on('click',e=>{ L.DomEvent.stopPropagation(e); arPrepPick(i); }); });
+  const src=AR_SRC.map(s=>`<option value="${s.k}">${escH(s.name)}</option>`).join(''), d=Math.round(Math.hypot(...(()=>{ const E=arEnu(V[arP.c1][0],V[arP.c1][1]); return E.fw(V[arP.c2][0],V[arP.c2][1]); })()));
+  const recNote=R.pair.includes(arP.c1)&&R.pair.includes(arP.c2)?'（おすすめ: 長い辺の両はし）':d<10||d<0.5*R.len?'<span style="color:var(--warn)">（2つの角が近いと向きがずれやすくなります。長い辺の両はし＝黄色のふちの点がおすすめ）</span>':'<span style="color:var(--warn)">（おすすめは長い辺の両はし: 黄色のふちの点）</span>';
+  const fs=selected.length>1?`<select id="arFld">${selected.map(s=>`<option value="${s.pid}"${s.pid===arP.pid?' selected':''}>${escH(selLabel(s.pid))}</option>`).join('')}</select>`:`<b>${escH(selLabel(arP.pid))}</b>`;
+  $('arPrep').innerHTML=`<div class="h">ARで見る：${fs} <span class="c1">角1</span> ${arP.c1+1}番・<span class="c2">角2</span> ${arP.c2+1}番（${d}m）${recNote}</div>
+<div class="hint">地図の点をタップして選び直せます（次は${arP.pick===1?'<span class="c1">角1</span>':'<span class="c2">角2</span>'}）。現地で見分けやすい角を選んでください</div>
+<div class="row">色 <select id="arSrc">${src}</select> <span class="hint" id="arSrcNote"></span></div>
+<div class="row"><button class="btn primary" id="arGo" disabled>ARを始める</button><button class="btn" id="arPrepX">やめる</button><span class="msg" id="arPrepMsg"></span></div>`;
+  $('arSrc').value=arP.src||AR_SRC[0].k; $('arSrc').onchange=e=>{ arP.src=e.target.value; arP.srcUser=true; arPrepData(); };
+  if($('arFld')) $('arFld').onchange=e=>arPrepField(e.target.value);
+  $('arPrepX').onclick=()=>arPrepClose(); $('arGo').onclick=()=>arStart(); arPrepReady(); }
+function arPrepPick(i){ if(arP.pick===1){ if(i===arP.c2) arP.c2=arP.c1; arP.c1=i; arP.pick=2; } else { if(i===arP.c1) return; arP.c2=i; arP.pick=1; } arP.model=null; arPrepDraw(); arPrepData(); }
+async function arPrepData(){ const k=arP.src||(document.getElementById('arSrc')||{}).value||AR_SRC[0].k, pid=arP.pid; arP.src=k; arP.model=null; arP.err=''; arPrepReady();
+  for(const s of AR_SRC){ const key=pid+'|'+s.k+'|'+document.getElementById('colorDate').value; if(!arP.data[key]) arP.data[key]=s.get(pid).catch(e=>({err:e.message||String(e)})); }
+  const r=await arP.data[pid+'|'+k+'|'+document.getElementById('colorDate').value]; if(!arP.on||arP.pid!==pid||arP.src!==k) return;
+  const note=document.getElementById('arSrcNote'); if(note) note.textContent=r.err||r.note||'';
+  if(r.err&&!arP.srcUser){ const i=AR_SRC.findIndex(s=>s.k===k); if(i<AR_SRC.length-1){ arP.src=AR_SRC[i+1].k; const sel=document.getElementById('arSrc'); if(sel) sel.value=arP.src; return arPrepData(); } }   // 選んでいなければ、使える色へ
+  if(!r.err){ try{ await arLoad3(); }catch(e){ arP.err=e.message; return arPrepReady(); } if(!arP.on||arP.pid!==pid||arP.src!==k) return; arP.model=arModel(pid,k,r,arP.V,arP.c1,arP.c2); } else arP.err=r.err; arPrepReady(); }
+function arPrepReady(){ const b=document.getElementById('arGo'), m=document.getElementById('arPrepMsg'); if(!b) return; const d=arP.V?arPrepDist():99; b.disabled=!arP.model||d<5; if(m) m.textContent=d<5?'角1と角2 が近すぎます（5m 以上はなしてください）':arP.model?'':arP.err?(arP.err.includes('部品')?arP.err:'この色は使えません。「色」を変えてください'):'準備中…'; }
+function arPrepDist(){ const V=arP.V, E=arEnu(V[arP.c1][0],V[arP.c1][1]); return Math.hypot(...E.fw(V[arP.c2][0],V[arP.c2][1])); }
+function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にして、マスを筆の形で切る（筆を三角形に分け、三角形ごとにマスで切る。凹み・穴があっても外にはみ出さない）
+  const T=AR3, E=arEnu(V[c1][0],V[c1][1]), g=parcels[pid].feature.geometry, polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;
+  const ringOf=r=>{ let q=r.map(([lon,lat])=>E.fw(lat,lon)); const a=q[0], b=q[q.length-1]; if(q.length>1&&Math.hypot(a[0]-b[0],a[1]-b[1])<1e-3) q=q.slice(0,-1); return q; };
+  const parts=[], holes=[], tris=[];
+  for(const pl of polys){ const o=ringOf(pl[0]); if(o.length<3) continue; if(arArea(o)<0) o.reverse(); const hs=pl.slice(1).map(ringOf).filter(h=>h.length>=3).map(h=>arArea(h)>0?h.reverse():h);
+    parts.push(o); holes.push(hs); const all=o.concat(...hs);
+    for(const t of T.ShapeUtils.triangulateShape(o.map(p=>new T.Vector2(p[0],p[1])),hs.map(h=>h.map(p=>new T.Vector2(p[0],p[1]))))){ let tr=t.map(i=>all[i]); if(arArea(tr)<0) tr.reverse(); if(arArea(tr)>1e-6) tris.push({tr,bb:[Math.min(...tr.map(q=>q[0])),Math.min(...tr.map(q=>q[1])),Math.max(...tr.map(q=>q[0])),Math.max(...tr.map(q=>q[1]))]}); } }
+  const cells=[]; for(const c of S.cells){ let sq=c.sq.map(q=>E.fw(q[0],q[1])); if(arArea(sq)<0) sq.reverse(); const xs=sq.map(q=>q[0]), ys=sq.map(q=>q[1]), b=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
+    const pieces=[]; let ar2=0; for(const t of tris){ if(t.bb[2]<b[0]||t.bb[0]>b[2]||t.bb[3]<b[1]||t.bb[1]>b[3]) continue; const q=arClip(t.tr,sq); const a=q.length>=3?arArea(q):0; if(a>1e-4){ pieces.push(q); ar2+=a; } }   // 三角形もマスも凸なので、切った形も凸
+    if(ar2<0.3) continue; const px=pieces.flat();
+    cells.push({pieces,rgb:c.rgb,txt:c.txt,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
+  const P=V.map(q=>E.fw(q[0],q[1]));
+  return {pid,k,name:selLabel(pid),src:(AR_SRC.find(s=>s.k===k)||{}).name,E,V,P,parts,holes,c1,c2,cells,legend:S.legend,note:S.note||''}; }
+
+// ---- AR の画面 ----
+function arDom(){ let v=document.getElementById('arView'); if(v) return v; arCss();
+  v=document.createElement('div'); v.id='arView'; v.hidden=true;
+  v.innerHTML=`<div id="arHud"><div class="p" id="arTopP"><div class="t"><div id="arTitle"></div><div id="arMsg"></div><div id="arLeg" hidden><em id="arLo"></em><i id="arGrad"></i><em id="arHi"></em></div></div><canvas id="arSk" width="192" height="192"></canvas></div>
+<div id="arWarn" hidden></div><div class="p" id="arValP" hidden></div>
+<div id="arBtns"><button id="arRedo">やり直す</button><button id="arSrcB" hidden>色</button><button id="arUp" hidden>色の高さ<br>▲</button><button id="arDn" hidden>色の高さ<br>▼</button><button id="arEnd">終わる</button></div></div>`;
+  document.body.appendChild(v); const $=id=>document.getElementById(id);
+  $('arEnd').onclick=()=>arEnd(); $('arRedo').onclick=()=>arRedo();
+  $('arSrcB').onclick=()=>arNextSrc(); $('arUp').onclick=()=>arLift(0.1); $('arDn').onclick=()=>arLift(-0.1);
+  $('arHud').addEventListener('beforexrselect',e=>{ if(e.target.closest('button,.p')) e.preventDefault(); });   // ボタン・案内の欄を押しても AR の「タップ」にしない
+  return v; }
+function arText(s,bg){ const T=AR3, key=s+'|'+(bg||''); ar.tex=ar.tex||new Map(); let mt=ar.tex.get(key);
+  if(!mt){ const c=document.createElement('canvas'), x=c.getContext('2d'); c.width=256; c.height=128; x.font='bold 72px system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+    if(bg){ x.fillStyle=bg; x.beginPath(); x.roundRect?x.roundRect(8,8,240,112,30):x.rect(8,8,240,112); x.fill(); }
+    x.lineWidth=12; x.lineJoin='round'; x.strokeStyle='rgba(0,0,0,.8)'; x.strokeText(s,128,68); x.fillStyle='#fff'; x.fillText(s,128,68);
+    const tx=new T.CanvasTexture(c); tx.colorSpace=T.SRGBColorSpace; mt=new T.SpriteMaterial({map:tx,transparent:true,depthTest:false,depthWrite:false}); ar.tex.set(key,mt); }
+  const sp=new T.Sprite(mt); sp.renderOrder=10; return sp; }
+function arPin(p,lbl,col){ const T=AR3, g=new T.Group(), m=new T.MeshBasicMaterial({color:col});
+  const s=new T.Mesh(new T.CylinderGeometry(0.03,0.03,1.2,10),m); s.position.y=0.6; g.add(s); const b=new T.Mesh(new T.SphereGeometry(0.1,16,12),m); b.position.y=1.2; g.add(b);
+  const t=arText(lbl,col); t.scale.set(0.9,0.45,1); t.position.y=1.6; g.add(t); g.position.set(p[0],p[1],p[2]); ar.scene.add(g); return g; }
+async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document.getElementById(id), hud=(arDom(),$('arHud'));
+  $('arView').hidden=false;   // dom-overlay の親は見えている必要がある（隠れたままだと全画面にできない）
+  let s; try{ s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],optionalFeatures:['anchors'],domOverlay:{root:hud}}); }   // 押した直後に呼ぶ（待つと「押した」扱いが切れる）
+  catch(e){ console.error(e); $('arView').hidden=true; $('arPrepMsg').textContent='AR を始められませんでした（'+(e.message||e.name)+'）。この端末ではAR表示に対応していない可能性があります'; return; }
+  Object.assign(ar,{on:true,session:s,model:M,phase:'scan',p1:null,p2:null,anc:[],pins:[],hit:null,hitSrc:null,tap:false,lift:null,liftAuto:true,fy:[],fit:null,fitBad:false,warnT:0,paint:null});
+  history.pushState({ar:1},''); ar.pushed=true; arHud();
+  s.addEventListener('end',()=>{ if(ar.on&&ar.session===s) arEnd('session'); }); s.addEventListener('select',()=>{ if(ar.session===s) ar.tap=true; });   // タップは次の絵のときに、その時のリングの所で受ける
+  const gone=()=>!ar.on||ar.session!==s;   // 用意の途中で終わった（戻る・終わる）
+  try{ await arLoad3(); if(gone()) return; const T=AR3;
+    if(!ar.renderer){ ar.renderer=new T.WebGLRenderer({antialias:true,alpha:true}); ar.renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1)); $('arView').insertBefore(ar.renderer.domElement,hud);
+      ar.renderer.xr.addEventListener('sessionend',()=>{ if(!ar.on) ar.renderer.setAnimationLoop(null); }); }   // three.js は AR が終わると画面の絵の繰り返しを始め直すので止める
+    const R=ar.renderer; R.xr.enabled=true; R.xr.setReferenceSpaceType('local'); R.setClearColor(0x000000,0);   // 'local' は setSession より前に（three.js の初めの値 local-floor は求めていないので失敗する）
+    ar.scene=new T.Scene(); ar.cam=new T.PerspectiveCamera(60,1,0.1,1000); ar.scene.add(ar.cam); ar.geo=new T.Group(); ar.scene.add(ar.geo);   // far は AR に渡される。200m 先まで描けるように
+    const rt=new T.Group(), rm=new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.95,side:T.DoubleSide,depthTest:false});   // 照準（リング）
+    rt.add(new T.Mesh(new T.RingGeometry(0.16,0.22,48).rotateX(-Math.PI/2),rm)); rt.add(new T.Mesh(new T.CircleGeometry(0.03,16).rotateX(-Math.PI/2),rm)); rt.matrixAutoUpdate=false; rt.visible=false; rt.renderOrder=20; ar.reticle=rt; ar.scene.add(rt);
+    let lost=0;
+    R.setAnimationLoop((t,frame)=>{ if(!frame||!ar.on) return; try{ const ref=R.xr.getReferenceSpace(), pose=frame.getViewerPose(ref);   // setSession より前に置く（three.js の決まり）
+      if(!pose){ ar.reticle.visible=false; ar.hit=null; ar.tap=false; if(++lost>15) arWarn('カメラの動きを見失いました。ゆっくり地面やあぜ・まわりの景色を映してください'); return; }   // 見失ったら描かない（古い位置の絵を出さない）
+      if(lost){ lost=0; arWarn(''); }
+      let h=null, hr=null; if(ar.hitSrc) for(const x of frame.getHitTestResults(ar.hitSrc)){ const hp=x.getPose(ref); if(!hp) continue; const o=hp.transform.orientation;   // いちばん近い、水平な面（壁などは除く: 面の上向きが 20°以内）
+        if(1-2*(o.x*o.x+o.z*o.z)<0.94) continue; h=hp.transform; hr=x; break; }
+      if(h){ ar.reticle.visible=true; ar.reticle.matrix.fromArray(h.matrix); ar.hit=[h.position.x,h.position.y,h.position.z]; if(ar.phase==='scan'){ ar.phase='c1'; arHud(); } }
+      else { ar.reticle.visible=false; ar.hit=null; }
+      ar.eye=pose.transform.position;
+      if(ar.tap){ ar.tap=false; arTap(hr,frame,ref); }
+      if(ar.phase==='show'){ arAnchors(frame,ref); arShowTick(); }
+      R.render(ar.scene,ar.cam); }catch(e){ console.error(e); } });   // 1回の失敗で AR が止まらないように
+    // three.js r169 は、Chrome 147 からの新しい描き方（WebXR Layers）を通る。スマホで長く使われてきた XRWebGLLayer の描き方にする（?xrlayer=proj で新しい方）
+    if(!/[?&]xrlayer=proj/.test(location.search)) try{ Object.defineProperty(s.renderState,'layers',{value:undefined,configurable:true}); }catch(e){}
+    await R.xr.setSession(s); if(gone()) return;
+    const vs=await s.requestReferenceSpace('viewer'); if(gone()) return;
+    const src=await s.requestHitTestSource({space:vs}); if(gone()){ try{ src.cancel(); }catch(e){} return; } ar.hitSrc=src; }
+  catch(e){ console.error(e); if(gone()) return; await arEnd(); const m=$('arPrepMsg'); if(m) m.textContent='AR を始められませんでした（'+(e.message||e.name)+'）'; } }
+function arTap(hr,frame,ref){ if(!ar.on||!(ar.phase==='c1'||ar.phase==='c2')) return;   // 画面のタップ → リングの所を角1・角2 にする（ARCore のアンカーも置く）
+  if(!ar.hit){ arWarn('地面が見つかっていません。リング（白い輪）が出ている所でタップしてください',2500); return; }
+  const p=ar.hit.slice(), far=ar.eye?Math.hypot(p[0]-ar.eye.x,p[2]-ar.eye.z):0, k=ar.phase==='c1'?0:1;
+  ar.anc[k]=null; if(hr&&hr.createAnchor) hr.createAnchor().then(a=>{ if(ar.on&&(k===0?ar.p1:ar.p2)===p) ar.anc[k]={a,p}; else a.delete&&a.delete(); }).catch(()=>{});
+  if(k===0){ ar.p1=p; ar.pins.push(arPin(p,'角1','#ff5a1f')); ar.phase='c2'; }
+  else { ar.p2=p; const a0=ar.anc[0]&&frame&&frame.getPose(ar.anc[0].a.anchorSpace,ref); if(a0){ const q=a0.transform.position; ar.p1=[q.x,q.y,q.z]; ar.anc[0].p=ar.p1; }   // 角1 はアンカーの今の位置（歩くあいだに ARCore が地図を直すことがある）
+    ar.pins.push(arPin(p,'角2','#1e88e5')); arAlign(); ar.phase='show'; arPaint(); for(const q of ar.pins) q.visible=false; }   // 合わせたら、タップの印は隠す（地図の角の棒が同じ所に立つ）
+  if(far>15) arWarn(`${Math.round(far)}m 先をタップしました。遠い所はずれやすいので、角の近く（数m）まで行ってタップすると正確です`,4000);
+  arHud(); }
+function arAnchors(frame,ref){   // ARCore が自分の地図を直すと、アンカー（角1・角2）も動く。動いたら、その2点で合わせ直す
+  const a=ar.anc; if(!a[0]||!a[1]) return; const q=a.map(x=>{ const ps=frame.getPose(x.a.anchorSpace,ref); return ps?[ps.transform.position.x,ps.transform.position.y,ps.transform.position.z]:null; });
+  if(!q[0]||!q[1]) return; const mv=(u,v)=>Math.hypot(u[0]-v[0],u[1]-v[1],u[2]-v[2]);
+  if(mv(q[0],ar.p1)>0.02||mv(q[1],ar.p2)>0.02){ ar.p1=q[0]; ar.p2=q[1]; a[0].p=q[0]; a[1].p=q[1]; ar.pins[0]&&ar.pins[0].position.set(...q[0]); ar.pins[1]&&ar.pins[1].position.set(...q[1]); const was=ar.fitBad; arAlign(); if(was!==ar.fitBad||(ar.hudT2||0)<performance.now()-1000){ ar.hudT2=performance.now(); arHud(); } } }
+function arAlign(){   // 2点で合わせる: 回転 = 地図の方位 − AR の向き、位置 = 2点の真ん中どうし、高さ = 2点の平均
+  const T=AR3, M=ar.model, g2=M.P[M.c2], p1=ar.p1, p2=ar.p2, dM=Math.hypot(g2[0],g2[1]), dA=Math.hypot(p2[0]-p1[0],p2[2]-p1[2]);
+  const th=Math.atan2(g2[0],g2[1])-Math.atan2(p2[0]-p1[0],-(p2[2]-p1[2]));   // 方位: 北から東まわり（three.js の −Z から +X まわり）
+  const mid=new T.Vector3(g2[0]/2,0,-g2[1]/2).applyAxisAngle(new T.Vector3(0,1,0),th);
+  ar.gy=(p1[1]+p2[1])/2; ar.geo.rotation.set(0,th,0); ar.geo.position.set((p1[0]+p2[0])/2-mid.x,ar.gy,(p1[2]+p2[2])/2-mid.z); ar.geo.updateMatrixWorld(true);
+  ar.fit={th,dM,dA}; ar.fitBad=Math.abs(dM-dA)>=1; }   // 距離の確かめも、いま描いている2点で
+function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭・頂点の番号
+  const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); }
+  const g=new T.Group(), pos=[], col=[], rib=[];
+  for(const c of M.cells){ const k=new T.Color().setRGB(c.rgb[0]/255,c.rgb[1]/255,c.rgb[2]/255,T.SRGBColorSpace);
+    for(const q of c.pieces) for(let i=1;i<q.length-1;i++) for(const v of [q[0],q[i],q[i+1]]){ pos.push(v[0],0,-v[1]); col.push(k.r,k.g,k.b); } }   // 切った形は凸なので扇形に分ける
+  if(pos.length){ const geo=new T.BufferGeometry(); geo.setAttribute('position',new T.Float32BufferAttribute(pos,3)); geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
+    const m=new T.Mesh(geo,new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:AR_OP,side:T.DoubleSide,depthWrite:false})); m.name='cells'; g.add(m); }
+  for(const p of M.parts.concat(...(M.holes||[]))) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, ox=-dy/L*0.12, oy=dx/L*0.12;   // 輪郭（幅 24cm の帯。穴のふちも）
+    for(const q of [[a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],[b[0]+ox,b[1]+oy],[a[0]-ox,a[1]-oy],[b[0]+ox,b[1]+oy],[a[0]+ox,a[1]+oy]]) rib.push(q[0],0.01,-q[1]); }
+  const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rib,3)); const rm=new T.Mesh(rg,new T.MeshBasicMaterial({color:0xffe14d,side:T.DoubleSide,depthWrite:false})); rm.renderOrder=2; g.add(rm);
+  const cs=new Set(arCornerIdx(M.P)), pm=new T.MeshBasicMaterial({color:0xffe14d}), pg=new T.CylinderGeometry(0.025,0.025,0.5,8);
+  M.P.forEach((q,i)=>{ if(!cs.has(i)&&i!==M.c1&&i!==M.c2) return;   // 目印の棒は本当の角と 角1・角2 だけ
+    const m=new T.Mesh(pg,pm); m.position.set(q[0],0.25,-q[1]); g.add(m);
+    const s=arText(i===M.c1?'角1':i===M.c2?'角2':(i+1)+'番',i===M.c1?'#d84315':i===M.c2?'#1565c0':'rgba(0,0,0,.5)'); s.scale.set(0.8,0.4,1); s.position.set(q[0],0.75,-q[1]); g.add(s); });
+  ar.paint=g; ar.geo.add(g); arLiftApply(); }
+function arLiftApply(){ if(ar.paint){ ar.paint.position.y=ar.lift||0; ar.paint.updateMatrixWorld(true); } const b=document.getElementById('arValP'); if(b&&ar.phase==='show') arShowTick(true); }
+function arLift(d){ ar.liftAuto=false; ar.lift=Math.round(((ar.lift||0)+d)*10)/10; arLiftApply(); arHud(); }
+function arInside(M,x,y,mg){ if(!M.parts.some((p,k)=>inRing(p,x,y)&&!(M.holes&&M.holes[k]||[]).some(h=>inRing(h,x,y)))) return false; for(const p of M.parts.concat(...(M.holes||[]))) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1, t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/L2)); if(Math.hypot(a[0]+dx*t-x,a[1]+dy*t-y)<mg) return false; } return true; }
+function arShowTick(force){ const T=AR3, M=ar.model, now=performance.now(); if(!force&&now-(ar.tickT||0)<150) return; ar.tickT=now; let txt='';
+  if(ar.hit){ const q=new T.Vector3(...ar.hit); ar.geo.worldToLocal(q); const x=q.x, y=-q.z;
+    if(ar.liftAuto&&arInside(M,x,y,2)){ ar.fy.push(q.y); if(ar.fy.length>40) ar.fy.shift();   // 田の中（縁から 2m 内側）で見つかった面の高さ → 塗る高さ
+      if(ar.fy.length>=10){ const s=ar.fy.slice().sort((a,b)=>a-b), md=s[s.length>>1]; if(Math.abs(md)<1.5&&Math.abs(md-(ar.lift||0))>0.05){ ar.lift=Math.round(md*20)/20; ar.paint.position.y=ar.lift; ar.paint.updateMatrixWorld(true); arHud(); } } }
+    const c=M.cells.find(c=>x>=c.bb[0]&&y>=c.bb[1]&&x<=c.bb[2]&&y<=c.bb[3]&&c.pieces.some(q=>inRing(q,x,y)));
+    txt=c?`リングの所: <b>${escH(c.txt)}</b>`:arInside(M,x,y,0)?'リングの所: 筆の中':'リングの所: 筆の外'; }
+  else txt='リングを田に向けると、その所の値を出します';
+  const b=document.getElementById('arValP'); if(b&&b.innerHTML!==txt) b.innerHTML=txt; }
+function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.phase, sh=ph==='show';
+  $('arTitle').textContent=`${M.name}・${M.src}${M.note?'・'+M.note:''}`;
+  $('arMsg').innerHTML=ph==='scan'?'スマホをゆっくり動かして、地面（あぜ・田）を映してください'
+    :ph==='c1'?`白いリングを <b>角1（${M.c1+1}番）</b> に合わせて、画面をタップ`
+    :ph==='c2'?`角2 の近くまで行って、リングを <i>角2（${M.c2+1}番）</i> に合わせて、画面をタップ`
+    :(ar.fitBad?`<span style="color:#ff8a80">タップ位置を確認してください</span><div style="font-size:13.5px;font-weight:400">角1〜角2 の距離が 地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m で ${Math.abs(ar.fit.dM-ar.fit.dA).toFixed(1)}m 違います。「やり直す」でタップし直してください</div>`
+      :`合わせました（角1〜角2 地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。ずれていたら「やり直す」`)+`<div style="font-size:13px;font-weight:400">色の高さ ${ar.lift>0?'+':''}${(ar.lift||0).toFixed(1)}m${ar.liftAuto?'（田の中に合わせて自動）':'（手で合わせた高さ）'}</div>`;
+  const lg=sh&&M.legend; $('arLeg').hidden=!lg; if(lg){ $('arGrad').style.background=M.legend.grad; $('arLo').textContent=M.legend.lo; $('arHi').textContent=`${M.legend.hi} ${M.legend.unit}`; }
+  $('arSk').hidden=sh; if(!sh) arSketch();
+  $('arValP').hidden=!sh; $('arSrcB').hidden=!sh||AR_SRC.length<2; $('arUp').hidden=$('arDn').hidden=!sh; $('arSrcB').innerHTML=`色<br>${escH((M.src||'').replace(/（.*$/,''))}`; }
+function arSketch(){ const cv=document.getElementById('arSk'), x=cv.getContext('2d'), M=ar.model, W=192, P=M.P;   // 北が上の、筆の形と 角1・角2
+  const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2, sc=(W-44)/Math.max(10,Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  const S=p=>[W/2+(p[0]-cx)*sc,W/2-(p[1]-cy)*sc]; x.clearRect(0,0,W,W); x.lineWidth=4; x.strokeStyle='#ffe14d'; x.fillStyle='rgba(255,225,77,.2)';
+  x.beginPath(); P.forEach((q,i)=>{ const s=S(q); x[i?'lineTo':'moveTo'](s[0],s[1]); }); x.closePath(); x.fill(); x.stroke();
+  for(const [i,c,l,on] of [[M.c1,'#ff5a1f','1',ar.phase!=='c2'],[M.c2,'#1e88e5','2',ar.phase==='c2']]){ const s=S(P[i]); x.fillStyle=c; x.beginPath(); x.arc(s[0],s[1],on?20:14,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=on?4:2; x.stroke(); x.fillStyle='#fff'; x.font=`bold ${on?24:17}px sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.fillText(l,s[0],s[1]+1); }
+  x.fillStyle='#fff'; x.font='bold 18px sans-serif'; x.textAlign='center'; x.fillText('北↑',W/2,14); }
+function arWarn(t,ms){ const w=document.getElementById('arWarn'); if(!w) return; clearTimeout(ar.warnT); if(!t){ w.hidden=true; return; } w.innerHTML=t; w.hidden=false; if(ms) ar.warnT=setTimeout(()=>{ w.hidden=true; },ms); }
+const arDispose=o=>o&&o.traverse(x=>{ if(x.isSprite) return; if(x.geometry) x.geometry.dispose(); if(x.material) x.material.dispose(); });   // 文字の板の絵（ar.tex）は使い回すので消さない
+function arRedo(){ if(!ar.on) return; for(const p of ar.pins){ ar.scene.remove(p); arDispose(p); } ar.pins=[]; ar.p1=ar.p2=null; ar.fit=null; for(const x of ar.anc||[]) if(x&&x.a.delete) x.a.delete(); ar.anc=[];
+  if(ar.paint){ ar.geo.remove(ar.paint); arDispose(ar.paint); ar.paint=null; } ar.lift=null; ar.liftAuto=true; ar.fy=[]; ar.fitBad=false; arWarn(''); ar.phase=ar.hit?'c1':'scan'; arHud(); }
+async function arNextSrc(){   // 色の出どころを切り替える（位置合わせはそのまま）
+  const i=AR_SRC.findIndex(s=>s.k===ar.model.k); for(let j=1;j<=AR_SRC.length;j++){ const s=AR_SRC[(i+j)%AR_SRC.length], key=ar.model.pid+'|'+s.k+'|'+document.getElementById('colorDate').value;
+    const r=await (arP.data[key]||(arP.data[key]=s.get(ar.model.pid).catch(e=>({err:e.message})))); if(r.err) continue;
+    const M=ar.model; ar.model=arModel(M.pid,s.k,r,M.V,M.c1,M.c2); arPaint(); arHud(); return; } }
+async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう戻った）・'session'（AR が外から終わった）・なし（終わるボタンなど）
+  if(!ar.on) return; ar.on=false; const R=ar.renderer;
+  if(ar.hitSrc){ try{ ar.hitSrc.cancel(); }catch(e){} ar.hitSrc=null; }
+  for(const x of ar.anc||[]) if(x&&x.a.delete) try{ x.a.delete(); }catch(e){} ar.anc=[];
+  if(R) R.setAnimationLoop(null);
+  if(ar.session){ const s=ar.session; ar.session=null; try{ await s.end(); }catch(e){} }
+  if(R){ R.setAnimationLoop(null); R.xr.enabled=false; }
+  if(ar.scene) arDispose(ar.scene); ar.scene=null; ar.pins=[]; ar.paint=null;
+  document.getElementById('arView').hidden=true; arWarn('');
+  if(ar.pushed&&why!=='nav') history.back(); ar.pushed=false; }
+document.getElementById('btnAr').onclick=e=>arPrepOpen(null,null,e.currentTarget);
+window.addEventListener('popstate',e=>{ const st=e.state||{}; if(ar.on&&!st.ar) arEnd('nav'); if(arP.on&&!st.arPrep&&!st.ar) arPrepClose(true); });   // 戻るボタン: AR → 角を選ぶ画面 → 地図
 loadPriv().then(boot);
 </script>
 </body>
