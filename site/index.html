@@ -1816,12 +1816,17 @@ function arCornerIdx(P){   // 本当の角（ふつう4つ）の番号: 3m よ�
   while(k.length>3){ let j=-1, m=3; for(let i=0;i<k.length;i++){ const d=dev(i); if(d<m){ m=d; j=i; } } if(j<0) break; k.splice(j,1); }
   const turn=i=>{ const n=k.length, a=P[k[(i-1+n)%n]], b=P[k[i]], c=P[k[(i+1)%n]], u=Math.atan2(b[1]-a[1],b[0]-a[0]), v=Math.atan2(c[1]-b[1],c[0]-b[0]); let d=Math.abs(v-u)%(2*Math.PI); return Math.min(d,2*Math.PI-d)*180/Math.PI; };
   const c=k.filter((_,i)=>turn(i)>=35); return c.length>=3?c:k; }
-function arRecommend(V,side){   // 角の形でいちばん長い辺の両はし（2点が遠いほど向きが正確）か、いちばん短い辺（5m 以上）の両はし（歩く距離が短い）
-  const E=arEnu(V[0][0],V[0][1]), P=V.map(q=>E.fw(q[0],q[1])), C=arCornerIdx(P); let best=[C[0],C[1]], bl=-1, sh=null, sl=1/0;
-  for(let i=0;i<C.length;i++){ const a=C[i], b=C[(i+1)%C.length], l=Math.hypot(P[b][0]-P[a][0],P[b][1]-P[a][1]); if(l>bl){ bl=l; best=[a,b]; } if(l>=5&&l<sl){ sl=l; sh=[a,b]; } }
-  const short=side==='short'&&sh&&sl<bl*0.95;   // 長い辺と短い辺がほぼ同じ（正方形に近い）なら長い辺のまま
-  return {pair:short?sh:best,long:best,short:sh,corners:C,len:bl,slen:sh?sl:bl,side:short?'short':'long'}; }
-let arSide=(()=>{ try{ return localStorage.getItem('fhmArSide')==='short'?'short':'long'; }catch(e){ return 'long'; } })();   // 角の選び方（前に選んだほう）
+function arRecommend(V,side){   // 角（ふつう4つ）と、はじめの 角1・角2: 長い辺ならいちばん長い辺の両はし（向きが正確）、短い辺なら 5m 以上でいちばん短い辺の両はし（歩く距離が短い）
+  const E=arEnu(V[0][0],V[0][1]), P=V.map(q=>E.fw(q[0],q[1])), C=arCornerIdx(P), R={corners:C,P}; let lg=[C[0],C[1]], ll=-1, sh=null, sl=1/0;
+  for(let i=0;i<C.length;i++){ const a=C[i], b=C[(i+1)%C.length], l=arLen(R,a,b); if(l>ll){ ll=l; lg=[a,b]; } if(l>=5&&l<sl){ sl=l; sh=[a,b]; } }
+  const q=side==='short'&&sh?sh:lg; R.c1=q[0]; R.c2=q[1]; return R; }
+const arLen=(R,a,b)=>Math.hypot(R.P[b][0]-R.P[a][0],R.P[b][1]-R.P[a][1]);
+function arNb(R,i){   // 角 i のとなりの2つの角（角の形で前と後ろ）: 長い辺の先・短い辺の先
+  const C=R.corners, n=C.length, k=C.indexOf(i), a=C[(k-1+n)%n], b=C[(k+1)%n], la=arLen(R,i,a), lb=arLen(R,i,b);
+  return la>=lb?{long:a,ll:la,short:b,sl:lb}:{long:b,ll:lb,short:a,sl:la}; }
+function arDir(R,a,b){ const t=(Math.atan2(R.P[b][0]-R.P[a][0],R.P[b][1]-R.P[a][1])*180/Math.PI+360)%180; return t<22.5||t>=157.5?'南北':t<67.5?'北東〜南西':t<112.5?'東西':'北西〜南東'; }   // 辺の向き（長さがほぼ同じときの名前）
+let arSide=(()=>{ try{ return localStorage.getItem('fhmArSide')==='short'?'short':'long'; }catch(e){ return 'long'; } })();   // 角1 から歩く辺（前に選んだほう）
+function arSet1(i,how){ const N=arNb(arP.rec,i), sd=arSide==='short'&&N.sl>=5?'short':'long'; Object.assign(arP,{c1:i,c2:N[sd],side:sd,how,model:null}); }   // 角1 を決めると、角2 は歩く辺の先の角
 async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日にこの田が半分以上雲なら、その年のいちばん新しい晴れた日）
   const P=parcels[pid]; if(!P||!P.cell) return {err:'この筆には衛星の画素がありません'};
   const d0=document.getElementById('colorDate').value, y=/^\d{4}-/.test(d0)?d0.slice(0,4):String(allDates.length?allDates[allDates.length-1].slice(0,4):new Date().getFullYear());
@@ -1843,7 +1848,9 @@ async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日
 function arCss(){ if(document.getElementById('arCss')) return; const st=document.createElement('style'); st.id='arCss'; st.textContent=`
 #arPrep{position:absolute;left:6px;right:6px;bottom:6px;z-index:1200;background:#fff;border:2px solid var(--accent);border-radius:12px;padding:6px 10px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14px;max-height:45%;overflow:auto}
 #arPrep .h{font-weight:700;font-size:15px;color:var(--ink)} #arPrep .row{margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center} #arPrep .hint{font-size:12.5px;margin-top:2px}
-#arPrep .arSeg{display:inline-flex;border:1.5px solid var(--accent);border-radius:8px;overflow:hidden} #arPrep .arSeg button{font:inherit;font-size:13.5px;border:0;background:#fff;color:var(--accent);padding:6px 10px;min-height:36px;cursor:pointer} #arPrep .arSeg button.on{background:var(--accent);color:#fff;font-weight:700}
+#arPrep .st{margin-top:6px;font-size:14.5px} #arPrep .st .hint{margin:1px 0 0} #arPrep .arSeg button:disabled{color:#aaa;cursor:default}
+.arV.dot{width:18px;height:18px;margin:-9px 0 0 -9px;border:3px solid #455a64}
+#arPrep .arSeg{display:inline-flex;vertical-align:middle;border:1.5px solid var(--accent);border-radius:8px;overflow:hidden} #arPrep .arSeg button{font:inherit;font-size:13.5px;border:0;background:#fff;color:var(--accent);padding:6px 10px;min-height:36px;cursor:pointer} #arPrep .arSeg button.on{background:var(--accent);color:#fff;font-weight:700}
 #arPrep .c1{color:#d84315;font-weight:700} #arPrep .c2{color:#1565c0;font-weight:700} #arPrep .msg{color:var(--warn);font-size:13px} #arPrep select{font:inherit;font-size:14px;max-width:100%}
 .arVh{position:absolute;left:-22px;top:-22px;width:44px;height:44px;cursor:pointer} .arVh.sm{left:-15px;top:-15px;width:30px;height:30px} .arVh .arV{position:absolute;left:50%;top:50%}
 .arV{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;border:2px solid #455a64;color:#263238;font:700 13px/22px sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:pointer}
@@ -1881,39 +1888,47 @@ function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
     history.pushState({arPrep:1},''); arP.pushed=true;   // 戻るボタンで閉じる
     if(!arP.zh){ arP.zh=()=>{ if(arP.on&&arP.V) arPrepDraw(); }; map.on('zoomend',arP.zh); }
     arPrepField(pid); }); }
-function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V,arSide), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,side:R.side,c1:R.pair[0],c2:R.pair[1],pick:1,model:null,err:''});
+function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V,arSide), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,err:''}); arSet1(R.c1,'');
   if(!same&&arP.srcUser&&arP.src!=='top') arP.srcUser=false;
   arPrepDraw(); const h=document.getElementById('arPrep').offsetHeight;   // 案内の欄の上に筆がぜんぶ見えるように
-  map.fitBounds(parcels[pid].layer.getBounds(),{paddingTopLeft:[24,24],paddingBottomRight:[24,Math.min(h+30,map.getSize().y*0.6)],maxZoom:19}); arPrepData(); }
-function arPrepSide(side){ arSide=side; try{ localStorage.setItem('fhmArSide',side); }catch(e){} const R=arRecommend(arP.V,side);   // 長い辺・短い辺を切り替える
-  Object.assign(arP,{rec:R,side:R.side,c1:R.pair[0],c2:R.pair[1],pick:1,model:null}); arPrepDraw(); arPrepData(); }
+  map.fitBounds(parcels[pid].layer.getBounds(),{paddingTopLeft:[24,24],paddingBottomRight:[24,Math.min(h+30,map.getSize().y*0.6)],maxZoom:19}); arPrepData(); arPrepNear(pid); }
+function arPrepNear(pid){   // 現在地を使ってよいと前に許可されていれば、今いる所にいちばん近い角を 角1 にする（許可を新しく聞くことはしない）
+  if(!navigator.geolocation||!navigator.permissions||!navigator.permissions.query) return;
+  navigator.permissions.query({name:'geolocation'}).then(st=>{ if(st.state!=='granted') return;
+    navigator.geolocation.getCurrentPosition(g=>{ if(!arP.on||arP.pid!==pid||arP.how==='tap') return; const R=arP.rec, E=arEnu(arP.V[0][0],arP.V[0][1]), me=E.fw(g.coords.latitude,g.coords.longitude);
+      let bi=-1, bd=1/0; for(const i of R.corners){ const d=Math.hypot(R.P[i][0]-me[0],R.P[i][1]-me[1]); if(d<bd){ bd=d; bi=i; } }
+      if(bi<0||bd>300) return; if(bi!==arP.c1){ arSet1(bi,'near'); arPrepDraw(); arPrepData(); } else { arP.how='near'; arPrepDraw(); } },()=>{},{enableHighAccuracy:true,maximumAge:60000,timeout:10000}); }).catch(()=>{}); }
+function arPrepSide(side){ arSide=side; try{ localStorage.setItem('fhmArSide',side); }catch(e){} arSet1(arP.c1,arP.how); arPrepDraw(); arPrepData(); }   // 角1 はそのまま、歩く辺（＝角2）を変える
 function arPrepClose(fromNav){ const b=document.getElementById('arPrep'); if(b) b.hidden=true; if(arP.layer){ map.removeLayer(arP.layer); arP.layer=null; }
   if(!arP.on) return; arP.on=false; document.body.classList.remove('arPrepOn'); map.options.zoomSnap=arP.zs==null?1:arP.zs; map.invalidateSize();
   if(arP.pushed&&!fromNav) history.back(); arP.pushed=false; }
 function arPrepSync(){ if(!arP.on) return;   // 選んだ筆が変わったとき（すべて解除・×）
   if(!selected.length) return arPrepClose(); if(!selected.some(s=>s.pid===arP.pid)) return arPrepField(selected[selected.length-1].pid); arPrepDraw(); }
-function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.rec, cs=new Set(R.corners);
+function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.rec, N=arNb(R,arP.c1);
   arP.layer.clearLayers();
-  L.polyline([V[arP.c1],V[arP.c2]],{color:'#fff',weight:5,opacity:.9,dashArray:'8 8',interactive:false}).addTo(arP.layer);
-  const big=new Set(), kept=[], pt=i=>map.latLngToContainerPoint(V[i]);   // 番号つきの点は画面の上で 28px 以上はなす（近い頂点は小さな点に）。角1・角2・おすすめ・曲がりの大きい角の順
-  for(const i of [arP.c1,arP.c2,...R.pair,...R.corners]){ if(big.has(i)) continue; const q=pt(i); if(i!==arP.c1&&i!==arP.c2&&kept.some(k=>k.distanceTo(q)<28)) continue; big.add(i); kept.push(q); }
-  V.forEach((q,i)=>{ const c=i===arP.c1?'c1':i===arP.c2?'c2':'', rec=R.pair.includes(i)?' rec':'', sm=!c&&!big.has(i)?' sm':'';   // 本当の角は番号つき、ほかの頂点は小さな点。さわれる範囲は見た目より広く
-    const mk=L.marker(q,{icon:L.divIcon({className:'',html:`<div class="arVh${sm}"><div class="arV ${c}${rec}${sm}">${c==='c1'?'角1':c==='c2'?'角2':i+1}</div></div>`,iconSize:[0,0]}),zIndexOffset:c?1000:rec?500:sm?0:200,bubblingMouseEvents:false}).addTo(arP.layer);
-    mk.on('click',e=>{ L.DomEvent.stopPropagation(e); arPrepPick(i); }); });
-  const src=AR_SRC.map(s=>`<option value="${s.k}">${escH(s.name)}</option>`).join(''), d=Math.round(Math.hypot(...(()=>{ const E=arEnu(V[arP.c1][0],V[arP.c1][1]); return E.fw(V[arP.c2][0],V[arP.c2][1]); })()));
-  const on=q=>q&&q.includes(arP.c1)&&q.includes(arP.c2);
-  const recNote=on(R.long)?'（長い辺の両はし: 向きがいちばん正確）':on(R.short)?'（短い辺の両はし: 歩く距離が短い。遠くの色は少しずれやすい）':d<10||d<0.5*R.len?'<span style="color:var(--warn)">（2つの角が近いと向きがずれやすくなります。黄色のふちの点がおすすめ）</span>':'<span style="color:var(--warn)">（おすすめは黄色のふちの点）</span>';
-  const sideB=R.short&&R.slen<R.len*0.95?`<div class="row">角の選び方 <span class="arSeg"><button type="button" data-side="long"${arP.side==='long'?' class="on"':''}>長い辺（${Math.round(R.len)}m）</button><button type="button" data-side="short"${arP.side==='short'?' class="on"':''}>短い辺（${Math.round(R.slen)}m）</button></span></div>`:'';
+  L.polyline([V[arP.c1],V[arP.c2]],{color:'#ffd54a',weight:8,opacity:.9,interactive:false}).addTo(arP.layer);   // 歩く辺
+  L.polyline([V[arP.c1],V[arP.c2]],{color:'#fff',weight:3,opacity:.95,dashArray:'8 8',interactive:false}).addTo(arP.layer);
+  const kept=[], pt=i=>map.latLngToContainerPoint(V[i]);   // 出すのは田の角だけ（番号は出さない）。角1・角2 のほかは白い点。画面の上で近すぎる点は出さない
+  for(const i of [arP.c1,arP.c2,...R.corners]){ if(kept.some(k=>k.i===i)) continue; const q=pt(i); if(i!==arP.c1&&i!==arP.c2&&kept.some(k=>k.q.distanceTo(q)<28)) continue; kept.push({i,q}); }
+  for(const {i} of kept){ const c=i===arP.c1?'c1':i===arP.c2?'c2':'';
+    const mk=L.marker(V[i],{icon:L.divIcon({className:'',html:`<div class="arVh"><div class="arV ${c||'dot'}" data-i="${i}">${c==='c1'?'角1':c==='c2'?'角2':''}</div></div>`,iconSize:[0,0]}),zIndexOffset:c?1000:200,bubblingMouseEvents:false}).addTo(arP.layer);
+    mk.on('click',e=>{ L.DomEvent.stopPropagation(e); arPrepPick(i); }); }
+  const src=AR_SRC.map(s=>`<option value="${s.k}">${escH(s.name)}</option>`).join('');
+  const eq=Math.abs(N.ll-N.sl)<0.05*N.ll, nm=k=>eq?`${arDir(R,arP.c1,N[k])}の辺`:k==='long'?'長い辺':'短い辺';   // 2つの辺の長さがほぼ同じなら、向きで呼ぶ
+  const seg=['long','short'].map(k=>`<button type="button" data-side="${k}"${arP.side===k?' class="on"':''}${k==='short'&&N.sl<5?' disabled':''}>${nm(k)} ${Math.round(k==='long'?N.ll:N.sl)}m</button>`).join('');
+  const why=eq?'':arP.side==='long'?'長い辺は、向きがいちばん正確です':'短い辺は、歩く距離が短くてすみます（田の奥の色は 1m ほどずれることがあります）';
   const fs=selected.length>1?`<select id="arFld">${selected.map(s=>`<option value="${s.pid}"${s.pid===arP.pid?' selected':''}>${escH(selLabel(s.pid))}</option>`).join('')}</select>`:`<b>${escH(selLabel(arP.pid))}</b>`;
-  $('arPrep').innerHTML=`<div class="h">${escH(AR_TITLE)}：${fs} <span class="c1">角1</span> ${arP.c1+1}番・<span class="c2">角2</span> ${arP.c2+1}番（${d}m）${recNote}</div>
-${sideB}<div class="hint">地図の点をタップして選び直せます（次は${arP.pick===1?'<span class="c1">角1</span>':'<span class="c2">角2</span>'}）。現地で見分けやすい角を選んでください</div>
+  $('arPrep').innerHTML=`<div class="h">${escH(AR_TITLE)}：${fs}</div>
+<div class="st"><span class="c1">角1</span>＝歩きはじめる角${arP.how==='near'?'（今いる所にいちばん近い角）':''}<div class="hint">地図の白い点をタップすると、そこが角1 になります</div></div>
+<div class="st"><span class="c2">角2</span>＝角1 から歩く辺の先の角<div class="row"><span class="arSeg">${seg}</span></div><div class="hint">${why}</div></div>
 <div class="row">色 <select id="arSrc">${src}</select> <span class="hint" id="arSrcNote"></span></div>
 <div class="row"><button class="btn primary" id="arGo" disabled>ARを始める</button><button class="btn" id="arPrepX">やめる</button>${AR_HELP?'<button class="btn" id="arHelpB">使い方</button>':''}<span class="msg" id="arPrepMsg"></span></div>`;
   $('arSrc').value=arP.src||AR_SRC[0].k; $('arSrc').onchange=e=>{ arP.src=e.target.value; arP.srcUser=true; arPrepData(); };
   if($('arFld')) $('arFld').onchange=e=>arPrepField(e.target.value);
   document.querySelectorAll('#arPrep .arSeg button').forEach(b=>b.onclick=()=>arPrepSide(b.dataset.side));
   $('arPrepX').onclick=()=>arPrepClose(); $('arGo').onclick=()=>arStart(); if($('arHelpB')) $('arHelpB').onclick=()=>AR_HELP(); arPrepReady(); }
-function arPrepPick(i){ if(arP.pick===1){ if(i===arP.c2) arP.c2=arP.c1; arP.c1=i; arP.pick=2; } else { if(i===arP.c1) return; arP.c2=i; arP.pick=1; } arP.model=null; arPrepDraw(); arPrepData(); }
+function arPrepPick(i){   // 角をタップ: そこが 角1（歩きはじめる角）。角2 をタップしたときは入れ替え（同じ辺を逆に歩く）
+  if(i===arP.c1) return; if(i===arP.c2){ const c2=arP.c1; Object.assign(arP,{c1:i,c2,side:arNb(arP.rec,i).long===c2?'long':'short',how:'tap',model:null}); } else arSet1(i,'tap'); arPrepDraw(); arPrepData(); }
 async function arPrepData(){ const k=arP.src||(document.getElementById('arSrc')||{}).value||AR_SRC[0].k, pid=arP.pid; arP.src=k; arP.model=null; arP.err=''; arPrepReady();
   for(const s of AR_SRC){ const key=pid+'|'+s.k+'|'+document.getElementById('colorDate').value; if(!arP.data[key]) arP.data[key]=s.get(pid).catch(e=>({err:e.message||String(e)})); }
   const r=await arP.data[pid+'|'+k+'|'+document.getElementById('colorDate').value]; if(!arP.on||arP.pid!==pid||arP.src!==k) return;
@@ -2037,8 +2052,8 @@ function arShowTick(force){ const T=AR3, M=ar.model, now=performance.now(); if(!
 function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.phase, sh=ph==='show';
   $('arTitle').textContent=`${M.name}・${M.src}${M.note?'・'+M.note:''}`;
   $('arMsg').innerHTML=ph==='scan'?'スマホをゆっくり動かして、地面（あぜ・田）を映してください'
-    :ph==='c1'?`白いリングを <b>角1（${M.c1+1}番）</b> に合わせて、画面をタップ`
-    :ph==='c2'?`角2 の近くまで行って、リングを <i>角2（${M.c2+1}番）</i> に合わせて、画面をタップ`
+    :ph==='c1'?`白いリングを <b>角1</b>（歩きはじめる角）に合わせて、画面をタップ`
+    :ph==='c2'?`あぜを歩いて <i>角2</i> へ（約${Math.round(Math.hypot(M.P[M.c2][0]-M.P[M.c1][0],M.P[M.c2][1]-M.P[M.c1][1]))}m）。リングを角2 に合わせて、画面をタップ`
     :(ar.fitBad?`<span style="color:#ff8a80">タップ位置を確認してください</span><div style="font-size:13.5px;font-weight:400">角1〜角2 の距離が 地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m で ${Math.abs(ar.fit.dM-ar.fit.dA).toFixed(1)}m 違います。「やり直す」でタップし直してください</div>`
       :`合わせました（角1〜角2 地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。ずれていたら「やり直す」`)+`<div style="font-size:13px;font-weight:400">色の高さ ${ar.lift>0?'+':''}${(ar.lift||0).toFixed(1)}m${ar.liftAuto?'（田の中に合わせて自動）':'（手で合わせた高さ）'}</div>`;
   const lg=sh&&M.legend; $('arLeg').hidden=!lg; if(lg){ $('arGrad').style.background=M.legend.grad; $('arLo').textContent=M.legend.lo; $('arHi').textContent=`${M.legend.hi} ${M.legend.unit}`; }
