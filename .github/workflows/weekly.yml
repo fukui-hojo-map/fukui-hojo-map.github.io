@@ -88,6 +88,10 @@ jobs:
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: python pipeline/update_ndvi.py --max-minutes ${{ inputs.max_minutes || '300' }} --workers 4 ${{ inputs.full && '--full' || '' }}
 
+      - name: 最新の画面を取り込む（この更新の途中で site.yml が画面だけ出していても、古い画面で上書きしない）
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -E '\.(html|svg|png|ico|webmanifest)$')
       - uses: peaceiris/actions-gh-pages@v4
         if: steps.gate.outputs.run == '1'
         with:
@@ -139,6 +143,10 @@ jobs:
           git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
           git add -A wet && { git diff --cached --quiet && echo "変わりなし" || { git commit -qm "wet sums" && git push -q origin HEAD:wet-state; }; }
 
+      - name: 最新の画面を取り込む（この更新の途中で site.yml が画面だけ出していても、古い画面で上書きしない）
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -E '\.(html|svg|png|ico|webmanifest)$')
       - uses: peaceiris/actions-gh-pages@v4
         if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || steps.vig.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))
         with:
