@@ -1866,10 +1866,11 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 #arTitle{font-size:13px;color:#cfd8dc} #arMsg{font-size:17px;font-weight:700;margin-top:2px} #arMsg b{color:#ffcc80} #arMsg i{font-style:normal;color:#90caf9}
 #arSk{flex:0 0 auto;width:96px;height:96px;background:rgba(255,255,255,.12);border-radius:10px}
 #arLeg{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px} #arLeg i{flex:1;height:12px;border-radius:6px}
-#arWarn{position:absolute;left:8px;right:8px;bottom:calc(130px + env(safe-area-inset-bottom));background:rgba(198,40,40,.93);border-radius:12px;padding:10px 12px;font-weight:700;text-align:center;pointer-events:none}
+#arWarn{position:absolute;left:8px;right:8px;bottom:calc(214px + env(safe-area-inset-bottom));background:rgba(198,40,40,.93);border-radius:12px;padding:10px 12px;font-weight:700;text-align:center;pointer-events:none}
 #arWarn .s{font-weight:400;font-size:13.5px}
-#arValP{bottom:calc(66px + env(safe-area-inset-bottom));font-size:15px} #arValP b{font-size:20px;color:#fff59d}
-#arBtns{position:absolute;left:4px;right:4px;bottom:calc(6px + env(safe-area-inset-bottom));display:flex;gap:5px} #arBtns button{flex:1 1 0;min-width:0} #arBtns button.go{background:#ffd54a;color:#3a2e00}
+#arValP{bottom:calc(150px + env(safe-area-inset-bottom));font-size:15px} #arValP b{font-size:20px;color:#fff59d}
+/* 下のボタンは画面のいちばん下から少し上げる（AR を始めたとき、Chrome の「全画面表示を終了するには…」の知らせが下に出て、ボタンが押せなくなるため） */
+#arBtns{position:absolute;left:4px;right:4px;bottom:calc(90px + env(safe-area-inset-bottom));display:flex;gap:5px} #arBtns button{flex:1 1 0;min-width:0} #arBtns button.go{background:#ffd54a;color:#3a2e00}
 #arHud [hidden]{display:none!important}`; document.head.appendChild(st); }
 function arNote(btn,msg){   // 押したボタンのすぐ横に知らせる（スマホでは下の知らせの欄が画面の外のことがある）
   setStatus(msg); if(!btn) return; let n=btn.nextElementSibling; if(!n||!n.classList.contains('arNote')){ n=document.createElement('span'); n.className='hint arNote'; n.style.cssText='color:var(--warn);font-weight:700;margin-left:4px'; btn.after(n); }
