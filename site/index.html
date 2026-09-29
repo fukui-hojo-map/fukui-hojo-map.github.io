@@ -1863,7 +1863,9 @@ function arNote(btn,msg){   // 押したボタンのすぐ横に知らせる（�
   setStatus(msg); if(!btn) return; let n=btn.nextElementSibling; if(!n||!n.classList.contains('arNote')){ n=document.createElement('span'); n.className='hint arNote'; n.style.cssText='color:var(--warn);font-weight:700;margin-left:4px'; btn.after(n); }
   n.textContent=msg; clearTimeout(n._t); n._t=setTimeout(()=>n.remove(),8000); }
 function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
-  arSupport.then(ok=>{ if(!ok) return arNote(btn,'この端末ではAR表示に対応していません');
+  const chk=()=>arSupport.then(ok=>ok||!navigator.xr?ok:navigator.xr.isSessionSupported('immersive-ar').catch(()=>false).then(v=>arOk=!!v));   // 読み込み直後は ARCore の確認が終わっておらず false のことがあるので、押したときに聞き直す
+  chk().then(ok=>{ if(!navigator.xr||!navigator.xr.requestSession) return arNote(btn,'この端末ではAR表示に対応していません');
+    arP.warn=ok?'':'この端末は「AR 非対応」と答えています。「ARを始める」で試せます（Play ストアの「Google Play 開発者サービス for AR」を入れる・更新すると使えることがあります）';
     if(!selected.length) return arNote(btn,'先に地図で筆を選んでください');
     arCss(); arLoad3().catch(()=>{});   // 部品は先に読み込んでおく（AR を始めるときに待たないように）
     const pid=pid0&&selected.some(s=>s.pid===pid0)?pid0:selected[selected.length-1].pid;   // ふだんは最後に選んだ筆
@@ -1909,7 +1911,7 @@ async function arPrepData(){ const k=arP.src||(document.getElementById('arSrc')|
   const note=document.getElementById('arSrcNote'); if(note) note.textContent=r.err||r.note||'';
   if(r.err&&!arP.srcUser){ const i=AR_SRC.findIndex(s=>s.k===k); if(i<AR_SRC.length-1){ arP.src=AR_SRC[i+1].k; const sel=document.getElementById('arSrc'); if(sel) sel.value=arP.src; return arPrepData(); } }   // 選んでいなければ、使える色へ
   if(!r.err){ try{ await arLoad3(); }catch(e){ arP.err=e.message; return arPrepReady(); } if(!arP.on||arP.pid!==pid||arP.src!==k) return; arP.model=arModel(pid,k,r,arP.V,arP.c1,arP.c2); } else arP.err=r.err; arPrepReady(); }
-function arPrepReady(){ const b=document.getElementById('arGo'), m=document.getElementById('arPrepMsg'); if(!b) return; const d=arP.V?arPrepDist():99; b.disabled=!arP.model||d<5; if(m) m.textContent=d<5?'角1と角2 が近すぎます（5m 以上はなしてください）':arP.model?'':arP.err?(arP.err.includes('部品')?arP.err:'この色は使えません。「色」を変えてください'):'準備中…'; }
+function arPrepReady(){ const b=document.getElementById('arGo'), m=document.getElementById('arPrepMsg'); if(!b) return; const d=arP.V?arPrepDist():99; b.disabled=!arP.model||d<5; if(m) m.textContent=arP.warn&&arP.model&&d>=5?arP.warn:d<5?'角1と角2 が近すぎます（5m 以上はなしてください）':arP.model?'':arP.err?(arP.err.includes('部品')?arP.err:'この色は使えません。「色」を変えてください'):'準備中…'; }
 function arPrepDist(){ const V=arP.V, E=arEnu(V[arP.c1][0],V[arP.c1][1]); return Math.hypot(...E.fw(V[arP.c2][0],V[arP.c2][1])); }
 function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にして、マスを筆の形で切る（筆を三角形に分け、三角形ごとにマスで切る。凹み・穴があっても外にはみ出さない）
   const T=AR3, E=arEnu(V[c1][0],V[c1][1]), g=parcels[pid].feature.geometry, polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;
@@ -1948,7 +1950,7 @@ function arPin(p,lbl,col){ const T=AR3, g=new T.Group(), m=new T.MeshBasicMateri
 async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document.getElementById(id), hud=(arDom(),$('arHud'));
   $('arView').hidden=false;   // dom-overlay の親は見えている必要がある（隠れたままだと全画面にできない）
   let s; try{ s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],optionalFeatures:['anchors'],domOverlay:{root:hud}}); }   // 押した直後に呼ぶ（待つと「押した」扱いが切れる）
-  catch(e){ console.error(e); $('arView').hidden=true; $('arPrepMsg').textContent='AR を始められませんでした（'+(e.message||e.name)+'）。この端末ではAR表示に対応していない可能性があります'; return; }
+  catch(e){ console.error(e); $('arView').hidden=true; $('arPrepMsg').textContent='AR を始められませんでした（'+(e.message||e.name)+'）。この端末ではAR表示に対応していない可能性があります（Play ストアの「Google Play 開発者サービス for AR」を入れる・更新すると使えることがあります）'; return; }
   Object.assign(ar,{on:true,session:s,model:M,phase:'scan',p1:null,p2:null,anc:[],pins:[],hit:null,hitSrc:null,tap:false,lift:null,liftAuto:true,fy:[],fit:null,fitBad:false,warnT:0,paint:null});
   history.pushState({ar:1},''); ar.pushed=true; arHud();
   s.addEventListener('end',()=>{ if(ar.on&&ar.session===s) arEnd('session'); }); s.addEventListener('select',()=>{ if(ar.session===s) ar.tap=true; });   // タップは次の絵のときに、その時のリングの所で受ける
