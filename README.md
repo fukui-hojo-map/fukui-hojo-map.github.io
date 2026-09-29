@@ -69,7 +69,7 @@
 専門用語なしの手順書は `SETUP_やさしい版.md` を参照。
 
 ### 1. Google Earth Engine（計算エンジン）
-1. Google Cloud プロジェクトを Earth Engine に登録（非営利・研究用途。試験場の研究として登録）
+1. Google Cloud プロジェクトを Earth Engine に登録（非営利・研究用途として登録）
 2. Cloud コンソール → IAM → **サービスアカウント** を作成し、JSON 鍵をダウンロード
 3. そのサービスアカウントに `Earth Engine Resource Viewer` と `Service Usage Consumer` のロールを付与
 4. Cloud コンソールで `Earth Engine API` を有効化（まだなら）
@@ -144,7 +144,7 @@ cd site && python -m http.server 8000   # → http://localhost:8000/
 - 土壌: 出典：農研機構 日本土壌インベントリー（https://soil-inventory.rad.naro.go.jp/）CC BY 4.0
 - 耕地・森: ESA WorldCover 2021（CC BY 4.0）。雪・雨: ERA5-Land（Copernicus Climate Change Service）
 - 計算: Google Earth Engine。**非営利（研究・教育）用途は無償、行政の実務運用は有償ライセンス** の対象になり得ます。
-  試験場の研究として試作→本運用時に Earth Engine 商用ライセンスか、計算部分を Copernicus openEO に置き換える
+  試作の段階から本運用に移すときは、 Earth Engine 商用ライセンスか、計算部分を Copernicus openEO に置き換える
   （`pipeline/update_ndvi.py` の `GEEBackend` を差し替えるだけ）のどちらかを判断してください。
 
 ## 限界
