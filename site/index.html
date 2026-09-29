@@ -850,7 +850,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
       <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません"></select><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><input type="checkbox" id="colorOn" checked hidden></div>
-      <div class="ctl" style="margin:2px 0 0"><span>塗り方</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      <div class="ctl" style="margin:2px 0 0"><span>表示モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
     </div>
@@ -862,7 +862,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
     <div class="ctl">
-      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnAr" title="田んぼでスマホをかざすと、選んだ筆の色が地面に重なって見えます（Android の Chrome）">ARで見る</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
+      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
@@ -1115,11 +1115,12 @@ const CanvasOverlay=L.ImageOverlay.extend({
   initialize(cv,bounds,opt){ L.ImageOverlay.prototype.initialize.call(this,'',bounds,opt); this._cv=cv; },
   _initImage(){ const el=this._image=this._cv; L.DomUtil.addClass(el,'leaflet-image-layer'); if(this._zoomAnimated) L.DomUtil.addClass(el,'leaflet-zoom-animated');
     el.onselectstart=L.Util.falseFn; el.onmousemove=L.Util.falseFn; if(this.options.zIndex) this._updateZIndex(); } });
-function ovDraw(key,fn){   // 描いた絵と結果を覚えておき、同じ田・塗り方・日付なら描き直さない（選んだ田も、選んでいない田も）
+function ovDraw(key,fn){   // 描いた絵と結果を覚えておき、同じ田・表示モード・日付なら描き直さない（選んだ田も、選んでいない田も）
   const c=ovCache.get(key); if(c){ if(c.ov) pxLayer.addLayer(c.ov); ovCache.delete(key); ovCache.set(key,c); return c.res; }
   lastOv=null; const res=fn(); ovCache.set(key,{ov:lastOv,res}); while(ovCache.size>OV_MAX) ovCache.delete(ovCache.keys().next().value); return res; }
 const REL_MIN=0.02;   // 相対表示の目盛りの最低幅（平均との差 ±2%）。これより小さい差はノイズと区別しにくい
-function fillMode(){ return document.getElementById('fillMode').value; }
+function fillMode(){ const v=document.getElementById('fillMode').value; return v==='ar'?'top':v; }   // AR追肥モード（開発者の端末だけ）は、地図の上では追肥マップと同じに塗る
+function fillRaw(){ return document.getElementById('fillMode').value; }
 function pxLoad(cell,year){ const key=cell+'|'+year;
   if(!(key in pxCache)) pxCache[key]=fetch(`${DATA}cells/${cell}/px_${year}.json`).then(r=>r.ok?r.json():null).then(async m=>{
     if(!m||!m.dates.length) return m?{m,g:null}:null;
@@ -1218,7 +1219,7 @@ const TREND_MIN_YEARS=2;
 const TREND_MIN_SPAN=0.02;
 // 地図の色は下の「生育傾向マップ（例年の育ち）」。ここ（drawTrend）はその田の中の差・深い所など、圃場の評価（非公開側）に使う値だけを計算する
 const trCache={};
-function isTrend(m){ return m==='trend'||m==='score'; }   // 圃場スコアマップも、塗り方・グラフは生育傾向マップと同じ
+function isTrend(m){ return m==='trend'||m==='score'; }   // 圃場スコアマップも、表示モード・グラフは生育傾向マップと同じ
 const csCache={};   // crop_s.json（作物の見分け）。生育傾向と作付計画のローテーションで同じものを使う
 function csLoad(cell){ return csCache[cell]||(csCache[cell]=fetch(`${DATA}cells/${cell}/crop_s.json`).then(r=>r.ok?r.json():null).catch(()=>null)); }
 function trLoad(cell){ vigStatsLoad();
@@ -1375,7 +1376,7 @@ async function renderTrend(gen,mode,note,lbl){
   note.textContent=msg.join(' / ');
   renderSummary(); drawChart();
 }
-const MODE_DESC={   // 塗り方ごとのひとこと説明
+const MODE_DESC={   // 表示モードごとのひとこと説明
   abs:'生育の量（NDVI）をそのまま色にします。ほかの田との比較に。',
   rel:'田の中の差を7段階に強調します。田の中のムラを見るときに。',
   trend:'例年（稲の年）の育ちの強い田・弱い田。近くの、同じころに植えて同じころに刈った田と、いちばん茂った時をくらべるので、品種や田植えの時期の違いは出ません。濃いほど例年よく育ち、薄いほど育ちが弱い。'};
@@ -1383,7 +1384,7 @@ let relRange='';   // 相対表示の色の幅（説明の欄に出す）
 async function renderPx(){ relRange='';
   const gen=++pxGen, fm=fillMode(), mode=fm==='top'?'abs':fm, on=document.getElementById('colorOn').checked, note=document.getElementById('pxNote');   // 追肥マップは今は絶対表示で塗る
   const bar=document.getElementById('lgBar'), lbl=document.getElementById('lgLbl');
-  document.getElementById('modeDesc').textContent=MODE_DESC[fm]||'';
+  document.getElementById('modeDesc').textContent=MODE_DESC[fillRaw()]||'';
   bar.classList.toggle('rel',mode!=='abs');
   bar.style.background=bandOn()&&(selected.length||map.getZoom()>=BULK_ZOOM)&&document.getElementById('colorOn').checked?bandBar(mode==='abs'?'abs':isTrend(mode)?'vig':'rel'):isTrend(mode)?VIG_GRAD:'';
   lbl.innerHTML=mode==='rel'?'<span>その田の平均より低い</span><span>田の中の差</span><span>高い</span>':isTrend(mode)?VIG_LBL:'<span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span>';
@@ -1448,7 +1449,7 @@ function renderChips(){
 // ---------- chart ----------
 const W=560,H=340,ML=40,MR=10,MT=14,MB=40; let hoverPts=[];
 const fmtD=d=>`${+d.slice(5,7)}/${+d.slice(8,10)}`;
-document.getElementById('mbInfo').onclick=()=>document.querySelector('.mapbar').classList.toggle('open');   // 塗り方の説明は ⓘ で出す
+document.getElementById('mbInfo').onclick=()=>document.querySelector('.mapbar').classList.toggle('open');   // 表示モードの説明は ⓘ で出す
 // 代かき（水張り）より前の点は出さない: 5/10〜6/15 に初めて水面の値（NDVI 0.05 以下）になった点から先だけを描く（その前は雑草・土で、稲の育ちではない）
 const FLOOD_MAX=0.05;
 function fromFlood(pts,y){ const a=Date.UTC(y,4,10), b=Date.UTC(y,5,15), i=pts.findIndex(p=>p.t>=a&&p.t<=b&&!p.rad&&p.ndvi<=FLOOD_MAX); return i>0?pts.slice(i):pts; }
@@ -1708,7 +1709,7 @@ function nearEnough(){ if(map.getZoom()<MIN_ZOOM) return false; const b=map.getB
 const cellLayers={}, cellShown={}; let shownPids=null;
 function cullCells(){
   const show=nearEnough();
-  const bar=document.querySelector('.mapbar'); if(bar) bar.style.display=show?'':'none';   // 塗り方の欄も、区画が出る拡大のときだけ
+  const bar=document.querySelector('.mapbar'); if(bar) bar.style.display=show?'':'none';   // 表示モードの欄も、区画が出る拡大のときだけ
   if(geoLayer&&show!==map.hasLayer(geoLayer)){ if(show){ geoLayer.addTo(map); pxLayer.addTo(map); } else { map.removeLayer(geoLayer); map.removeLayer(pxLayer); } }
   const b=map.getBounds().pad(0.25); let changed=false;
   for(const id in cellLayers){ const c=index.cells.find(x=>x.id===id).bbox, v=show&&c[0]<=b.getEast()&&c[2]>=b.getWest()&&c[1]<=b.getNorth()&&c[3]>=b.getSouth();
@@ -1897,20 +1898,20 @@ function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.r
   const src=AR_SRC.map(s=>`<option value="${s.k}">${escH(s.name)}</option>`).join(''), d=Math.round(Math.hypot(...(()=>{ const E=arEnu(V[arP.c1][0],V[arP.c1][1]); return E.fw(V[arP.c2][0],V[arP.c2][1]); })()));
   const recNote=R.pair.includes(arP.c1)&&R.pair.includes(arP.c2)?'（おすすめ: 長い辺の両はし）':d<10||d<0.5*R.len?'<span style="color:var(--warn)">（2つの角が近いと向きがずれやすくなります。長い辺の両はし＝黄色のふちの点がおすすめ）</span>':'<span style="color:var(--warn)">（おすすめは長い辺の両はし: 黄色のふちの点）</span>';
   const fs=selected.length>1?`<select id="arFld">${selected.map(s=>`<option value="${s.pid}"${s.pid===arP.pid?' selected':''}>${escH(selLabel(s.pid))}</option>`).join('')}</select>`:`<b>${escH(selLabel(arP.pid))}</b>`;
-  $('arPrep').innerHTML=`<div class="h">ARで見る：${fs} <span class="c1">角1</span> ${arP.c1+1}番・<span class="c2">角2</span> ${arP.c2+1}番（${d}m）${recNote}</div>
+  $('arPrep').innerHTML=`<div class="h">${escH(AR_TITLE)}：${fs} <span class="c1">角1</span> ${arP.c1+1}番・<span class="c2">角2</span> ${arP.c2+1}番（${d}m）${recNote}</div>
 <div class="hint">地図の点をタップして選び直せます（次は${arP.pick===1?'<span class="c1">角1</span>':'<span class="c2">角2</span>'}）。現地で見分けやすい角を選んでください</div>
 <div class="row">色 <select id="arSrc">${src}</select> <span class="hint" id="arSrcNote"></span></div>
-<div class="row"><button class="btn primary" id="arGo" disabled>ARを始める</button><button class="btn" id="arPrepX">やめる</button><span class="msg" id="arPrepMsg"></span></div>`;
+<div class="row"><button class="btn primary" id="arGo" disabled>ARを始める</button><button class="btn" id="arPrepX">やめる</button>${AR_HELP?'<button class="btn" id="arHelpB">使い方</button>':''}<span class="msg" id="arPrepMsg"></span></div>`;
   $('arSrc').value=arP.src||AR_SRC[0].k; $('arSrc').onchange=e=>{ arP.src=e.target.value; arP.srcUser=true; arPrepData(); };
   if($('arFld')) $('arFld').onchange=e=>arPrepField(e.target.value);
-  $('arPrepX').onclick=()=>arPrepClose(); $('arGo').onclick=()=>arStart(); arPrepReady(); }
+  $('arPrepX').onclick=()=>arPrepClose(); $('arGo').onclick=()=>arStart(); if($('arHelpB')) $('arHelpB').onclick=()=>AR_HELP(); arPrepReady(); }
 function arPrepPick(i){ if(arP.pick===1){ if(i===arP.c2) arP.c2=arP.c1; arP.c1=i; arP.pick=2; } else { if(i===arP.c1) return; arP.c2=i; arP.pick=1; } arP.model=null; arPrepDraw(); arPrepData(); }
 async function arPrepData(){ const k=arP.src||(document.getElementById('arSrc')||{}).value||AR_SRC[0].k, pid=arP.pid; arP.src=k; arP.model=null; arP.err=''; arPrepReady();
   for(const s of AR_SRC){ const key=pid+'|'+s.k+'|'+document.getElementById('colorDate').value; if(!arP.data[key]) arP.data[key]=s.get(pid).catch(e=>({err:e.message||String(e)})); }
   const r=await arP.data[pid+'|'+k+'|'+document.getElementById('colorDate').value]; if(!arP.on||arP.pid!==pid||arP.src!==k) return;
   const note=document.getElementById('arSrcNote'); if(note) note.textContent=r.err||r.note||'';
-  if(r.err&&!arP.srcUser){ const i=AR_SRC.findIndex(s=>s.k===k); if(i<AR_SRC.length-1){ arP.src=AR_SRC[i+1].k; const sel=document.getElementById('arSrc'); if(sel) sel.value=arP.src; return arPrepData(); } }   // 選んでいなければ、使える色へ
-  if(!r.err){ try{ await arLoad3(); }catch(e){ arP.err=e.message; return arPrepReady(); } if(!arP.on||arP.pid!==pid||arP.src!==k) return; arP.model=arModel(pid,k,r,arP.V,arP.c1,arP.c2); } else arP.err=r.err; arPrepReady(); }
+  if(r.err&&!r.wait&&!arP.srcUser){ const i=AR_SRC.findIndex(s=>s.k===k); if(i<AR_SRC.length-1){ arP.src=AR_SRC[i+1].k; const sel=document.getElementById('arSrc'); if(sel) sel.value=arP.src; return arPrepData(); } }   // 選んでいなければ、使える色へ
+  if(!r.err){ try{ await arLoad3(); }catch(e){ arP.err=e.message; return arPrepReady(); } if(!arP.on||arP.pid!==pid||arP.src!==k) return; arP.model=arModel(pid,k,r,arP.V,arP.c1,arP.c2); } else arP.err=r.wait?'':r.err; arPrepReady(); }   // wait: 色をまだ作っている（できたら作った側が arPrepData を呼び直す）
 function arPrepReady(){ const b=document.getElementById('arGo'), m=document.getElementById('arPrepMsg'); if(!b) return; const d=arP.V?arPrepDist():99; b.disabled=!arP.model||d<5; if(m) m.textContent=arP.warn&&arP.model&&d>=5?arP.warn:d<5?'角1と角2 が近すぎます（5m 以上はなしてください）':arP.model?'':arP.err?(arP.err.includes('部品')?arP.err:'この色は使えません。「色」を変えてください'):'準備中…'; }
 function arPrepDist(){ const V=arP.V, E=arEnu(V[arP.c1][0],V[arP.c1][1]); return Math.hypot(...E.fw(V[arP.c2][0],V[arP.c2][1])); }
 function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にして、マスを筆の形で切る（筆を三角形に分け、三角形ごとにマスで切る。凹み・穴があっても外にはみ出さない）
@@ -2059,7 +2060,7 @@ async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう�
   if(ar.scene) arDispose(ar.scene); ar.scene=null; ar.pins=[]; ar.paint=null;
   document.getElementById('arView').hidden=true; arWarn('');
   if(ar.pushed&&why!=='nav') history.back(); ar.pushed=false; }
-document.getElementById('btnAr').onclick=e=>arPrepOpen(null,null,e.currentTarget);
+let AR_HELP=null, AR_TITLE='ARで見る';   // AR_HELP: 使い方の小窓（開発者の機能が入れる）。あれば角を選ぶ画面に「使い方」ボタンを出す
 window.addEventListener('popstate',e=>{ const st=e.state||{}; if(ar.on&&!st.ar) arEnd('nav'); if(arP.on&&!st.arPrep&&!st.ar) arPrepClose(true); });   // 戻るボタン: AR → 角を選ぶ画面 → 地図
 loadPriv().then(boot);
 </script>
