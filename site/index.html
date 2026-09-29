@@ -793,9 +793,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .foot{font-size:12.5px;color:#888;margin-top:14px}
   .pbig{font-size:16px;font-weight:700;margin:2px 0 4px} .pratio{width:auto} .pratio input{width:5.5em;font-size:15px;margin-right:3px} .pratio td{padding:3px 6px 3px 0} .psum{width:auto;margin:6px 0} .ptab .rc{font-size:11.5px;color:#fff;background:#2f7d4f;border-radius:3px;padding:0 3px} .ptab input.pv-p,.ptab input.pv-h{width:4.2em;font-size:13.5px} details.pset{margin-top:4px}
   #mode{font:inherit;font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#f0f1f3} .chartctl{align-items:stretch;flex-wrap:wrap}
-  details.ideal{margin:0;border-top:0;padding-top:0;position:relative} details.ideal summary{font-size:15px;color:var(--ink);padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:#f0f1f3;list-style:none;cursor:pointer;height:100%;box-sizing:border-box;display:flex;align-items:center;gap:6px}
-  details.ideal summary::-webkit-details-marker{display:none} details.ideal summary::after{content:'▾';color:var(--ink2)}
-  #idealList{display:flex;flex-direction:column;gap:6px;padding:8px 10px;position:absolute;z-index:20;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 3px 10px rgba(0,0,0,.15);white-space:nowrap} .ideal label{display:flex;align-items:center;gap:6px;font-size:15px} .ideal i{display:inline-block;width:16px;border-top:2.5px dashed;margin-right:1px}
   .btn.gogo{font-weight:700;font-size:15px;padding:7px 20px;color:#fff;border:1px solid #1e3a2f;border-radius:6px;background:linear-gradient(180deg,#2f7d4f,#1e5a38);box-shadow:0 1px 3px rgba(0,0,0,.2);letter-spacing:.05em}
   .btn.gogo:hover{background:linear-gradient(180deg,#358a58,#22663f)} .btn.gogo:disabled{opacity:.6}
   .plno span{position:absolute;transform:translate(-50%,-50%);font:700 11px/1 sans-serif;color:#222;background:rgba(255,255,255,.88);border:1.5px solid #e0b800;border-radius:9px;padding:2px 5px;white-space:nowrap}
@@ -874,7 +871,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <select id="mode">
         <option value="date">今年（5/10〜9/30）</option>
         <option value="doy">前年と重ねる（5/10〜9/30）</option>
-      </select></span><details class="ideal" id="idealCtl"><summary id="idealSum">目標曲線</summary><div id="idealList"></div></details>
+      </select></span>
     </div>
     <div class="hint" id="trendHint" style="display:none">生育傾向マップのときは、グラフは稲の年（2022年から）の 5/10〜9/30 の平均を表示します</div>
     <div class="status" id="status"></div>
@@ -1449,32 +1446,7 @@ function renderChips(){
 // ---------- chart ----------
 const W=560,H=340,ML=40,MR=10,MT=14,MB=40; let hoverPts=[];
 const fmtD=d=>`${+d.slice(5,7)}/${+d.slice(8,10)}`;
-// ---------- 目標曲線 ----------
-//   NDVI = 土台 + (頂上 − 土台) × 立ち上がり × 下がり。T 移植日、m 立ち上がりの中点（移植から何日）、s 幅、P 頂上、pk 下がり始め（刈り取りの何日前）、H 刈り取り日、E 刈り取りのころの値
-const IDEALS=[{k:'hana',label:'ハナエチゼン（5/3移植）',color:'#8e24aa',T:'05-03',m:46.4,s:7.8,P:0.84,pk:30,H:'08-17',E:0.6},
-  {k:'koshi',label:'コシヒカリ（5/15移植）',color:'#00897b',T:'05-15',m:41.0,s:8.2,P:0.88,pk:32,H:'09-05',E:0.62},
-  {k:'ichi15',label:'いちほまれ（5/15移植）',color:'#e65100',T:'05-15',m:39.5,s:7.3,P:0.88,pk:35,H:'09-11',E:0.66},
-  {k:'niji',label:'虹のきらめき（5/15移植）',color:'#2e7d32',T:'05-15',m:37.6,s:8.8,P:0.87,pk:44,H:'09-10',E:0.66},
-  {k:'aki',label:'あきさかり（5/20移植）',color:'#3949ab',T:'05-20',m:34.4,s:5.8,P:0.86,pk:39,H:'09-14',E:0.66}];
-function idealCurve(d,y){   // [{t, ndvi}]（1日ごと、5/10〜9/30）
-  const day=md=>Date.UTC(y,+md.slice(0,2)-1,+md.slice(3))/864e5, T=day(d.T), H=day(d.H), pk=H-d.pk, out=[];
-  const a=Math.max(T,Date.UTC(y,4,10)/864e5), b=Math.min(H,Date.UTC(y,8,30)/864e5);
-  for(let t=a;t<=b;t++){ const rise=1/(1+Math.exp(-(t-T-d.m)/d.s)), u=Math.max(0,(t-pk)/(H-pk)), fall=1-(1-d.E/d.P)*u*u;
-    const B=0.2;   // 土台（10m画素に畦・藻・苗が混ざる分）
-    out.push({t:t*864e5,ndvi:B+(d.P-B)*rise*fall}); }
-  return out; }
 document.getElementById('mbInfo').onclick=()=>document.querySelector('.mapbar').classList.toggle('open');   // 塗り方の説明は ⓘ で出す
-{ const box=document.getElementById('idealList');   // 目標曲線のチェック（複数選べる）
-  { const dc=document.getElementById('idealCtl'); let tm=0;   // 一覧は、マウスが外へ出たら少しして閉じる。スマホなどは外を押すと閉じる
-    dc.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse'&&dc.open) tm=setTimeout(()=>{ dc.open=false; },350); });
-    dc.addEventListener('pointerenter',()=>clearTimeout(tm));
-    document.addEventListener('pointerdown',e=>{ if(dc.open&&!dc.contains(e.target)) dc.open=false; }); }
-  document.getElementById('idealCtl').addEventListener('toggle',e=>{ if(!e.target.open) return;   // 一覧は左端をそろえ、右にはみ出すときだけ右端をそろえる
-    box.style.left='0'; box.style.right='auto'; const pr=box.closest('.side')||document.body;
-    if(box.getBoundingClientRect().right>Math.min(innerWidth,pr.getBoundingClientRect().right)-4){ box.style.left='auto'; box.style.right='0'; } });
-  const upd=()=>{ const n=idealOn().length; document.getElementById('idealSum').textContent=n?`目標曲線（${n}つ表示中）`:'目標曲線'; drawChart(); };
-  for(const d of IDEALS){ const l=document.createElement('label'); l.innerHTML=`<input type="checkbox" id="ideal_${d.k}"><i style="border-color:${d.color}"></i>${d.label}`; l.querySelector('input').onchange=upd; box.appendChild(l); } }
-function idealOn(){ return IDEALS.filter(d=>{ const c=document.getElementById('ideal_'+d.k); return c&&c.checked; }); }
 // 代かき（水張り）より前の点は出さない: 5/10〜6/15 に初めて水面の値（NDVI 0.05 以下）になった点から先だけを描く（その前は雑草・土で、稲の育ちではない）
 const FLOOD_MAX=0.05;
 function fromFlood(pts,y){ const a=Date.UTC(y,4,10), b=Date.UTC(y,5,15), i=pts.findIndex(p=>p.t>=a&&p.t<=b&&!p.rad&&p.ndvi<=FLOOD_MAX); return i>0?pts.slice(i):pts; }
@@ -1500,8 +1472,6 @@ function drawChart(){
     for(const s of src) series.push({...s,pts:fromFlood(s.pts.filter(p=>p.t>=xmin&&p.t<=xmax),y0).map(p=>({x:p.t,...p}))}); }
   else if(mode==='doy'){ xmin=0; xmax=(sEnd(y0)-sStart(y0))/864e5;
     for(const s of src) for(const [k,y] of [[0,y0],[1,y0-1]]){ const pts=fromFlood(s.pts.filter(p=>p.t>=sStart(y)&&p.t<=sEnd(y)),y).map(p=>({x:(p.t-sStart(y))/864e5,...p})); if(pts.length) series.push({...s,label:`${s.label} ${y}`,dash:k?(s.dash||'6 4'):s.dash,pts}); } }
-  for(const d of idealOn()){ const pts=idealCurve(d,y0).map(p=>({...p,x:mode==='date'&&!tmode?p.t:(p.t-sStart(y0))/864e5}));   // 目標曲線は点を打たない
-    series.push({label:d.label.replace('移植）','移植での理想値）'),color:d.color,dash:'7 4',ideal:true,pts}); }
   const xfC=mode==='date'?t=>t:t=>(t-sStart(y0))/864e5, TC=tmode?null:fillMode()==='top'?topChart(xfC):fillMode()==='gp'?gpChart(xfC):null; if(TC) series.push(...TC.series);   // 追肥マップ: 目標曲線・基肥の溶け方・生育の目印
   const X=v=>ML+(v-xmin)/(xmax-xmin)*(W-ML-MR), Y=v=>MT+(1-Math.max(-0.05,Math.min(1,v)))/1.05*(H-MT-MB);
   let g='';
