@@ -51,7 +51,7 @@
    - 検索欄に「Earth Engine」と打ち、「**Earth Engine Resource Viewer**」を選ぶ
    - 「＋ 別のロールを追加」→ 検索欄に「Service Usage」→「**Service Usage Consumer**」を選ぶ
    - 「続行」→「完了」
-6. 一覧に `tanbo-ndvi@expanded-symbol-455001-p8.iam.gserviceaccount.com` のような**メールアドレス**が出ます。これをメモ帳にコピーしておく（あとで使います）
+6. 一覧に `tanbo-ndvi@●●●●●●●.iam.gserviceaccount.com` のような**メールアドレス**が出ます。これをメモ帳にコピーしておく（あとで使います）
 7. そのメールアドレスをクリック → 上の「**キー**」タブ → 「鍵を追加」→「新しい鍵を作成」→ 種類は **JSON** のまま →「作成」
 8. パソコンに `expanded-symbol-...json` というファイルが自動でダウンロードされます。**これは合鍵です。**人に渡さない、メールに添付しない。ダウンロードフォルダに置いたままでOK
 
