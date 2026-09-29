@@ -1876,8 +1876,8 @@ function arNote(btn,msg){   // 押したボタンのすぐ横に知らせる（�
   n.textContent=msg; clearTimeout(n._t); n._t=setTimeout(()=>n.remove(),8000); }
 function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
   const chk=()=>arSupport.then(ok=>ok||!navigator.xr?ok:navigator.xr.isSessionSupported('immersive-ar').catch(()=>false).then(v=>arOk=!!v));   // 読み込み直後は ARCore の確認が終わっておらず false のことがあるので、押したときに聞き直す
-  chk().then(ok=>{ if(!navigator.xr||!navigator.xr.requestSession) return arNote(btn,'この端末ではAR表示に対応していません');
-    arP.warn=ok?'':'この端末は「AR 非対応」と答えています。「ARを始める」で試せます（Play ストアの「Google Play 開発者サービス for AR」を入れる・更新すると使えることがあります）';
+  chk().then(ok=>{ const noxr=!navigator.xr||!navigator.xr.requestSession, wiz=AR_WIZ&&AR_WIZ.on(); if(noxr&&!wiz) return arNote(btn,'この端末ではAR表示に対応していません');
+    arP.noxr=noxr; arP.warn=ok||noxr?'':'この端末は「AR 非対応」と答えています。「ARを始める」で試せます（Play ストアの「Google Play 開発者サービス for AR」を入れる・更新すると使えることがあります）';
     if(!selected.length) return arNote(btn,'先に地図で筆を選んでください');
     arCss(); arLoad3().catch(()=>{});   // 部品は先に読み込んでおく（AR を始めるときに待たないように）
     const pid=pid0&&selected.some(s=>s.pid===pid0)?pid0:selected[selected.length-1].pid;   // ふだんは最後に選んだ筆
@@ -1888,7 +1888,7 @@ function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
     const mw=document.querySelector('.mapwrap'), rc=mw.getBoundingClientRect(); if(rc.top<0||rc.top>innerHeight*0.3) mw.scrollIntoView({block:'start'});
     history.pushState({arPrep:1},''); arP.pushed=true;   // 戻るボタンで閉じる
     if(!arP.zh){ arP.zh=()=>{ if(arP.on&&arP.V) arPrepDraw(); }; map.on('zoomend',arP.zh); }
-    arPrepField(pid); }); }
+    arPrepField(pid); if(wiz&&AR_WIZ.sync) AR_WIZ.sync(); }); }
 function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V,arSide), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,err:''}); arSet1(R.c1,'');
   if(!same&&arP.srcUser&&arP.src!=='top') arP.srcUser=false;
   arPrepDraw(); const h=document.getElementById('arPrep').offsetHeight;   // 案内の欄の上に筆がぜんぶ見えるように
@@ -1902,8 +1902,8 @@ function arPrepNear(pid){   // 現在地を使ってよいと前に許可され�
 function arPrepSide(side){ arSide=side; try{ localStorage.setItem('fhmArSide',side); }catch(e){} arSet1(arP.c1,arP.how); arPrepDraw(); arPrepData(); }   // 角1 はそのまま、歩く辺（＝角2）を変える
 function arPrepClose(fromNav){ const b=document.getElementById('arPrep'); if(b) b.hidden=true; if(arP.layer){ map.removeLayer(arP.layer); arP.layer=null; }
   if(!arP.on) return; arP.on=false; document.body.classList.remove('arPrepOn'); map.options.zoomSnap=arP.zs==null?1:arP.zs; map.invalidateSize();
-  if(arP.pushed&&!fromNav) history.back(); arP.pushed=false; }
-function arPrepSync(){ if(!arP.on) return;   // 選んだ筆が変わったとき（すべて解除・×）
+  if(arP.pushed&&!fromNav) history.back(); arP.pushed=false; if(AR_WIZ&&AR_WIZ.sync) setTimeout(AR_WIZ.sync,0); }
+function arPrepSync(){ if(AR_WIZ&&AR_WIZ.sync) setTimeout(AR_WIZ.sync,0); if(!arP.on) return;   // 選んだ筆が変わったとき（すべて解除・×）
   if(!selected.length) return arPrepClose(); if(!selected.some(s=>s.pid===arP.pid)) return arPrepField(selected[selected.length-1].pid); arPrepDraw(); }
 function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.rec, N=arNb(R,arP.c1);
   arP.layer.clearLayers();
@@ -1919,18 +1919,21 @@ function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.r
   const seg=['long','short'].map(k=>`<button type="button" data-side="${k}"${arP.side===k?' class="on"':''}${k==='short'&&N.sl<5?' disabled':''}>${nm(k)} ${Math.round(k==='long'?N.ll:N.sl)}m</button>`).join('');
   const why=eq?'':arP.side==='long'?'長い辺は、向きがいちばん正確です':'短い辺は、歩く距離が短くてすみます（田の奥の色は 1m ほどずれることがあります）';
   const fs=selected.length>1?`<select id="arFld">${selected.map(s=>`<option value="${s.pid}"${s.pid===arP.pid?' selected':''}>${escH(selLabel(s.pid))}</option>`).join('')}</select>`:`<b>${escH(selLabel(arP.pid))}</b>`;
-  const ex=AR_EXTRA?AR_EXTRA.html(arP.pid):'';
-  $('arPrep').innerHTML=`<div class="h">${escH(AR_TITLE)}：${fs}</div>${ex?`<div id="arExtra">${ex}</div>`:''}
-${ex?'<div class="sh">② 角を2つ決める</div>':''}<div class="st"><span class="c1">角1</span>＝歩きはじめる角${arP.how==='near'?'（今いる所にいちばん近い角）':''}<div class="hint">地図の白い点をタップすると、そこが角1 になります</div></div>
-<div class="st"><span class="c2">角2</span>＝角1 から歩く辺の先の角<div class="row"><span class="arSeg">${seg}</span></div><div class="hint">${why}</div></div>
+  const P={head:`${escH(AR_TITLE)}：${fs}`,
+    corners:`<div class="st"><span class="c1">角1</span>＝歩きはじめる角${arP.how==='near'?'（今いる所にいちばん近い角）':''}<div class="hint">地図の白い点をタップすると、そこが角1 になります</div></div>
+<div class="st"><span class="c2">角2</span>＝角1 から歩く辺の先の角<div class="row"><span class="arSeg">${seg}</span></div><div class="hint">${why}</div></div>`,
+    go:'<button class="btn primary" id="arGo" disabled>ARを始める</button>', help:AR_HELP?'<button class="btn" id="arHelpB">使い方</button>':'', msg:'<span class="msg" id="arPrepMsg"></span>'};
+  const wiz=AR_WIZ&&AR_WIZ.on();   // 開発者のモード（AR追肥モード）: 決めることを順に1つずつ出す
+  $('arPrep').innerHTML=wiz?AR_WIZ.html(P,arP.pid):`<div class="h">${P.head}</div>${P.corners}
 ${fix?`<div class="hint" id="arSrcNote"></div>`:`<div class="row">色 <select id="arSrc">${src}</select> <span class="hint" id="arSrcNote"></span></div>`}
-<div class="row"><button class="btn primary" id="arGo" disabled>ARを始める</button><button class="btn" id="arPrepX">田を選び直す</button>${AR_HELP?'<button class="btn" id="arHelpB">使い方</button>':''}<span class="msg" id="arPrepMsg"></span></div>`;
+<div class="row">${P.go}<button class="btn" id="arPrepX">田を選び直す</button>${P.help}${P.msg}</div>`;
+  if(!wiz) $('arPrep').classList.remove('wbig');
   if($('arSrc')){ $('arSrc').value=arP.src||AR_SRC[0].k; $('arSrc').onchange=e=>{ arP.src=e.target.value; arP.srcUser=true; arPrepData(); }; }
-  if(AR_EXTRA&&$('arExtra')) AR_EXTRA.bind($('arExtra'));
   if($('arFld')) $('arFld').onchange=e=>arPrepField(e.target.value);
   document.querySelectorAll('#arPrep .arSeg button').forEach(b=>b.onclick=()=>arPrepSide(b.dataset.side));
-  $('arPrepX').onclick=()=>{ selected=[]; refresh(); setStatus('地図で田をタップしてください'); };   // 選んだ田を外して閉じる（表示モードはそのまま）
-  $('arGo').onclick=()=>arStart(); if($('arHelpB')) $('arHelpB').onclick=()=>AR_HELP(); arPrepReady(); }
+  if($('arPrepX')) $('arPrepX').onclick=()=>{ selected=[]; refresh(); setStatus('地図で田をタップしてください'); };   // 選んだ田を外して閉じる（表示モードはそのまま）
+  if(wiz) AR_WIZ.bind($('arPrep'));
+  if($('arGo')) $('arGo').onclick=()=>{ if(!arP.noxr) arStart(); }; if($('arHelpB')) $('arHelpB').onclick=()=>AR_HELP(); arPrepReady(); }
 function arPrepPick(i){   // 角をタップ: そこが 角1（歩きはじめる角）。角2 をタップしたときは入れ替え（同じ辺を逆に歩く）
   if(i===arP.c1) return; if(i===arP.c2){ const c2=arP.c1; Object.assign(arP,{c1:i,c2,side:arNb(arP.rec,i).long===c2?'long':'short',how:'tap',model:null}); } else arSet1(i,'tap'); arPrepDraw(); arPrepData(); }
 async function arPrepData(){ if(AR_FIX()){ arP.src=AR_FIX(); arP.srcUser=true; } const k=arP.src||(document.getElementById('arSrc')||{}).value||AR_SRC[0].k, pid=arP.pid; arP.src=k; arP.model=null; arP.err=''; arPrepReady();
@@ -1939,7 +1942,7 @@ async function arPrepData(){ if(AR_FIX()){ arP.src=AR_FIX(); arP.srcUser=true; }
   const note=document.getElementById('arSrcNote'); if(note) note.textContent=r.err||r.note||'';
   if(r.err&&!r.wait&&!arP.srcUser){ const i=AR_SRC.findIndex(s=>s.k===k); if(i<AR_SRC.length-1){ arP.src=AR_SRC[i+1].k; const sel=document.getElementById('arSrc'); if(sel) sel.value=arP.src; return arPrepData(); } }   // 選んでいなければ、使える色へ
   if(!r.err){ try{ await arLoad3(); }catch(e){ arP.err=e.message; return arPrepReady(); } if(!arP.on||arP.pid!==pid||arP.src!==k) return; arP.model=arModel(pid,k,r,arP.V,arP.c1,arP.c2); } else arP.err=r.wait?'':r.err; arPrepReady(); }   // wait: 色をまだ作っている（できたら作った側が arPrepData を呼び直す）
-function arPrepReady(){ const b=document.getElementById('arGo'), m=document.getElementById('arPrepMsg'); if(!b) return; const d=arP.V?arPrepDist():99, xr=AR_EXTRA&&AR_EXTRA.ready?AR_EXTRA.ready():''; b.disabled=!arP.model||d<5||!!xr; if(m) m.textContent=xr?xr:arP.warn&&arP.model&&d>=5?arP.warn:d<5?'角1と角2 が近すぎます（5m 以上はなしてください）':arP.model?'':arP.err?(arP.err.includes('部品')?arP.err:'この色は使えません。「色」を変えてください'):'準備中…'; }
+function arPrepReady(){ const b=document.getElementById('arGo'), m=document.getElementById('arPrepMsg'); if(!b) return; const d=arP.V?arPrepDist():99, xr=arP.noxr?'この端末・ブラウザでは AR を使えません（Android のスマホの Chrome で開いてください）':AR_WIZ&&AR_WIZ.ready?AR_WIZ.ready():''; b.disabled=!arP.model||d<5||!!xr; if(m) m.textContent=xr?xr:arP.warn&&arP.model&&d>=5?arP.warn:d<5?'角1と角2 が近すぎます（5m 以上はなしてください）':arP.model?'':arP.err?(arP.err.includes('部品')?arP.err:'この色は使えません。「色」を変えてください'):'準備中…'; }
 function arPrepDist(){ const V=arP.V, E=arEnu(V[arP.c1][0],V[arP.c1][1]); return Math.hypot(...E.fw(V[arP.c2][0],V[arP.c2][1])); }
 function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にして、マスを筆の形で切る（筆を三角形に分け、三角形ごとにマスで切る。凹み・穴があっても外にはみ出さない）
   const T=AR3, E=arEnu(V[c1][0],V[c1][1]), g=parcels[pid].feature.geometry, polys=g.type==='Polygon'?[g.coordinates]:g.coordinates;
@@ -2087,7 +2090,7 @@ async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう�
   if(ar.scene) arDispose(ar.scene); ar.scene=null; ar.pins=[]; ar.paint=null;
   document.getElementById('arView').hidden=true; arWarn('');
   if(ar.pushed&&why!=='nav') history.back(); ar.pushed=false; }
-let AR_HELP=null, AR_TITLE='ARで見る', AR_FIX=()=>null, AR_EXTRA=null;   // AR_FIX: 色を決めてしまう（選ぶ欄を出さない）。AR_EXTRA: 角を選ぶ画面の上に足す欄 {html(pid), bind(el)}
+let AR_HELP=null, AR_TITLE='ARで見る', AR_FIX=()=>null, AR_WIZ=null;   // AR_FIX: 色を決めてしまう（選ぶ欄を出さない）。AR_WIZ: 角を選ぶ画面を、決めることを順に出す画面にする {on(), html(P,pid), bind(el), ready(), sync()}
 //   // AR_HELP: 使い方の小窓（開発者の機能が入れる）。あれば角を選ぶ画面に「使い方」ボタンを出す
 window.addEventListener('popstate',e=>{ const st=e.state||{}; if(ar.on&&!st.ar) arEnd('nav'); if(arP.on&&!st.arPrep&&!st.ar) arPrepClose(true); });   // 戻るボタン: AR → 角を選ぶ画面 → 地図
 loadPriv().then(boot);
