@@ -1956,7 +1956,7 @@ function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にし
   const cells=[]; for(const c of S.cells){ let sq=c.sq.map(q=>E.fw(q[0],q[1])); if(arArea(sq)<0) sq.reverse(); const xs=sq.map(q=>q[0]), ys=sq.map(q=>q[1]), b=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
     const pieces=[]; let ar2=0; for(const t of tris){ if(t.bb[2]<b[0]||t.bb[0]>b[2]||t.bb[3]<b[1]||t.bb[1]>b[3]) continue; const q=arClip(t.tr,sq); const a=q.length>=3?arArea(q):0; if(a>1e-4){ pieces.push(q); ar2+=a; } }   // 三角形もマスも凸なので、切った形も凸
     if(ar2<0.3) continue; const px=pieces.flat();
-    cells.push({pieces,rgb:c.rgb,txt:c.txt,lab:c.lab,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
+    cells.push({pieces,sq,rgb:c.rgb,txt:c.txt,lab:c.lab,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
   const P=V.map(q=>E.fw(q[0],q[1]));
   return {pid,k,name:selLabel(pid),src:(AR_SRC.find(s=>s.k===k)||{}).name,E,V,P,parts,holes,c1,c2,cells,legend:S.legend,note:S.note||''}; }
 
@@ -2005,7 +2005,7 @@ async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document
       else { ar.reticle.visible=false; ar.hit=null; }
       ar.eye=pose.transform.position;
       if(ar.tap){ ar.tap=false; arTap(hr,frame,ref); }
-      if(ar.phase==='show'){ arAnchors(frame,ref); arShowTick(); }
+      if(ar.phase==='show'){ arAnchors(frame,ref); arShowTick(); if(ar.labs&&(!ar.labT||t-ar.labT>100)){ ar.labT=t; arLabTick(); } }
       R.render(ar.scene,ar.cam); }catch(e){ console.error(e); } });   // 1回の失敗で AR が止まらないように
     // three.js r169 は、Chrome 147 からの新しい描き方（WebXR Layers）を通る。スマホで長く使われてきた XRWebGLLayer の描き方にする（?xrlayer=proj で新しい方）
     if(!/[?&]xrlayer=proj/.test(location.search)) try{ Object.defineProperty(s.renderState,'layers',{value:undefined,configurable:true}); }catch(e){}
@@ -2047,12 +2047,16 @@ function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭�
     for(const q of c.pieces) for(let i=1;i<q.length-1;i++) for(const v of [q[0],q[i],q[i+1]]){ pos.push(v[0],0,-v[1]); col.push(k.r,k.g,k.b); } }   // 切った形は凸なので扇形に分ける
   if(pos.length){ const geo=new T.BufferGeometry(); geo.setAttribute('position',new T.Float32BufferAttribute(pos,3)); geo.setAttribute('color',new T.Float32BufferAttribute(col,3));
     const m=new T.Mesh(geo,new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:AR_OP,side:T.DoubleSide,depthWrite:false})); m.name='cells'; g.add(m); }
-  { const L=M.cells.filter(c=>c.lab!=null&&c.pieces.length);   // マスごとの量の数字: 田の上に浮かぶ札（いつもこちらを向く）と、地面からの細い棒
-    if(L.length){ const lg=new T.Group(); lg.name='labs'; const st=[];
+  { const gl=[], seen=new Set(), W=0.035;   // マスのさかい目の白い線（地面。田の中の辺だけ）
+    for(const c of M.cells){ const q=c.sq; if(!q) continue; for(let i=0;i<q.length;i++){ const a=q[i], b=q[(i+1)%q.length], k=[a,b].map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).sort().join('|'); if(seen.has(k)) continue; seen.add(k);
+      if(!arInside(M,(a[0]+b[0])/2,(a[1]+b[1])/2,0.5)) continue; const dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, ox=-dy/L*W, oy=dx/L*W;
+      for(const v of [[a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],[b[0]+ox,b[1]+oy],[a[0]-ox,a[1]-oy],[b[0]+ox,b[1]+oy],[a[0]+ox,a[1]+oy]]) gl.push(v[0],0.006,-v[1]); } }
+    if(gl.length){ const gg=new T.BufferGeometry(); gg.setAttribute('position',new T.Float32BufferAttribute(gl,3)); const gm=new T.Mesh(gg,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.6,side:T.DoubleSide,depthWrite:false})); gm.renderOrder=1; g.add(gm); } }
+  ar.labs=null; { const L=M.cells.filter(c=>c.lab!=null&&c.pieces.length);   // マスごとの量の数字の札: 地面のすぐ上に立て、大きさ・出す札は見る場所から決める（arLabTick）
+    if(L.length){ const lg=new T.Group(); lg.name='labs'; const it=[];
       for(const c of L){ const q=c.pieces.reduce((a,b)=>Math.abs(arArea(b))>Math.abs(arArea(a))?b:a), x=q.reduce((s,v)=>s+v[0],0)/q.length, y=q.reduce((s,v)=>s+v[1],0)/q.length;
-        const sp=new T.Sprite(new T.SpriteMaterial({map:arLabTex(String(c.lab),c.rgb),transparent:true,depthWrite:false})); sp.scale.set(2.8,1.4,1); sp.position.set(x,2.3,-y); sp.renderOrder=4; lg.add(sp);
-        st.push(x,0.02,-y,x,1.62,-y); }
-      const sg=new T.BufferGeometry(); sg.setAttribute('position',new T.Float32BufferAttribute(st,3)); const sl=new T.LineSegments(sg,new T.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.75,depthWrite:false})); sl.renderOrder=3; lg.add(sl); g.add(lg); } }
+        const sp=new T.Sprite(new T.SpriteMaterial({map:arLabTex(String(c.lab),c.rgb),transparent:true,depthWrite:false,depthTest:false})); sp.position.set(x,0.5,-y); sp.renderOrder=4; sp.visible=false; lg.add(sp); it.push({sp,x,y,c}); }
+      lg.userData.it=it; g.add(lg); ar.labs=lg; } }
   for(const p of M.parts.concat(...(M.holes||[]))) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1], L=Math.hypot(dx,dy)||1, ox=-dy/L*0.12, oy=dx/L*0.12;   // 輪郭（幅 24cm の帯。穴のふちも）
     for(const q of [[a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],[b[0]+ox,b[1]+oy],[a[0]-ox,a[1]-oy],[b[0]+ox,b[1]+oy],[a[0]+ox,a[1]+oy]]) rib.push(q[0],0.01,-q[1]); }
   const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rib,3)); const rm=new T.Mesh(rg,new T.MeshBasicMaterial({color:0xffe14d,side:T.DoubleSide,depthWrite:false})); rm.renderOrder=2; g.add(rm);
@@ -2064,11 +2068,22 @@ function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭�
 function arLiftApply(){ if(ar.paint){ ar.paint.position.y=ar.lift||0; ar.paint.updateMatrixWorld(true); } const b=document.getElementById('arValP'); if(b&&ar.phase==='show') arShowTick(true); }
 function arLift(d){ ar.liftAuto=false; ar.lift=Math.round(((ar.lift||0)+d)*10)/10; arLiftApply(); arHud(); }
 function arInside(M,x,y,mg){ if(!M.parts.some((p,k)=>inRing(p,x,y)&&!(M.holes&&M.holes[k]||[]).some(h=>inRing(h,x,y)))) return false; for(const p of M.parts.concat(...(M.holes||[]))) for(let i=0;i<p.length;i++){ const a=p[i], b=p[(i+1)%p.length], dx=b[0]-a[0], dy=b[1]-a[1], L2=dx*dx+dy*dy||1, t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/L2)); if(Math.hypot(a[0]+dx*t-x,a[1]+dy*t-y)<mg) return false; } return true; }
+// 札の大きさと出し方（目の高さ 1.5m ほどで田を見るとき）: 遠い札ほど少し大きく（距離の 0.6 乗。10m で高さ約 0.9m）、地面のすぐ上に置く。
+//   画面の上で重なる札は、近いものを残して隠す（遠くの札が一列の壁にならないように）。リングを向けたマスの札はいつも出す。90m より遠い札は出さない
+function arLabTick(){ const lg=ar.labs, cam=ar.cam; if(!lg||!cam||!ar.paint) return; const T=AR3, cp=new T.Vector3().setFromMatrixPosition(cam.matrixWorld), P=cam.projectionMatrix.elements, tx=1/Math.abs(P[0]||1), ty=1/Math.abs(P[5]||1);
+  const vw=new T.Vector3(), vc=new T.Vector3(), hitC=ar.hitCell, L=[];
+  for(const o of lg.userData.it){ vw.set(o.x,0,-o.y); lg.localToWorld(vw); const d=vw.distanceTo(cp); if(d>90||d<0.8){ o.sp.visible=false; continue; }
+    const h=Math.max(0.35,0.22*Math.pow(d,0.6)); o.sp.scale.set(2*h,h,1); o.sp.position.y=0.08+h/2;
+    vc.set(o.x,0.08+h/2,-o.y); lg.localToWorld(vc); vc.applyMatrix4(cam.matrixWorldInverse); if(vc.z>-0.5){ o.sp.visible=false; continue; }   // カメラの後ろ
+    const z=-vc.z, nx=vc.x/(z*tx), ny=vc.y/(z*ty), hw=h/(z*tx)*1.05, hh=h/2/(z*ty)*1.1;
+    if(Math.abs(nx)>1+hw||Math.abs(ny)>1+hh){ o.sp.visible=false; continue; } L.push({o,d,x0:nx-hw,x1:nx+hw,y0:ny-hh,y1:ny+hh,pri:o.c===hitC?-1:d}); }
+  L.sort((a,b)=>a.pri-b.pri); const kept=[];
+  for(const r of L){ const ok=!kept.some(k=>r.x0<k.x1&&r.x1>k.x0&&r.y0<k.y1&&r.y1>k.y0); r.o.sp.visible=ok; if(ok) kept.push(r); } }
 function arShowTick(force){ const T=AR3, M=ar.model, now=performance.now(); if(!force&&now-(ar.tickT||0)<150) return; ar.tickT=now; let txt='';
   if(ar.hit){ const q=new T.Vector3(...ar.hit); ar.geo.worldToLocal(q); const x=q.x, y=-q.z;
     if(ar.liftAuto&&arInside(M,x,y,2)){ ar.fy.push(q.y); if(ar.fy.length>40) ar.fy.shift();   // 田の中（縁から 2m 内側）で見つかった面の高さ → 塗る高さ
       if(ar.fy.length>=10){ const s=ar.fy.slice().sort((a,b)=>a-b), md=s[s.length>>1]; if(Math.abs(md)<1.5&&Math.abs(md-(ar.lift||0))>0.05){ ar.lift=Math.round(md*20)/20; ar.paint.position.y=ar.lift; ar.paint.updateMatrixWorld(true); arHud(); } } }
-    const c=M.cells.find(c=>x>=c.bb[0]&&y>=c.bb[1]&&x<=c.bb[2]&&y<=c.bb[3]&&c.pieces.some(q=>inRing(q,x,y)));
+    const c=M.cells.find(c=>x>=c.bb[0]&&y>=c.bb[1]&&x<=c.bb[2]&&y<=c.bb[3]&&c.pieces.some(q=>inRing(q,x,y))); ar.hitCell=c||null;
     txt=c?`リングの所: <b>${escH(c.txt)}</b>`:arInside(M,x,y,0)?'リングの所: 筆の中':'リングの所: 筆の外'; }
   else txt='リングを田に向けると、その所の値を出します';
   const b=document.getElementById('arValP'); if(b&&b.innerHTML!==txt) b.innerHTML=txt; }
