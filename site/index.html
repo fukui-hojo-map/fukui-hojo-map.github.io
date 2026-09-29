@@ -1816,10 +1816,12 @@ function arCornerIdx(P){   // 本当の角（ふつう4つ）の番号: 3m よ�
   while(k.length>3){ let j=-1, m=3; for(let i=0;i<k.length;i++){ const d=dev(i); if(d<m){ m=d; j=i; } } if(j<0) break; k.splice(j,1); }
   const turn=i=>{ const n=k.length, a=P[k[(i-1+n)%n]], b=P[k[i]], c=P[k[(i+1)%n]], u=Math.atan2(b[1]-a[1],b[0]-a[0]), v=Math.atan2(c[1]-b[1],c[0]-b[0]); let d=Math.abs(v-u)%(2*Math.PI); return Math.min(d,2*Math.PI-d)*180/Math.PI; };
   const c=k.filter((_,i)=>turn(i)>=35); return c.length>=3?c:k; }
-function arRecommend(V){   // おすすめ: 角の形でいちばん長い辺の両はし（2点が遠いほど向きが正確）
-  const E=arEnu(V[0][0],V[0][1]), P=V.map(q=>E.fw(q[0],q[1])), C=arCornerIdx(P); let best=[C[0],C[1]], bl=-1;
-  for(let i=0;i<C.length;i++){ const a=C[i], b=C[(i+1)%C.length], l=Math.hypot(P[b][0]-P[a][0],P[b][1]-P[a][1]); if(l>bl){ bl=l; best=[a,b]; } }
-  return {pair:best,corners:C,len:bl}; }
+function arRecommend(V,side){   // 角の形でいちばん長い辺の両はし（2点が遠いほど向きが正確）か、いちばん短い辺（5m 以上）の両はし（歩く距離が短い）
+  const E=arEnu(V[0][0],V[0][1]), P=V.map(q=>E.fw(q[0],q[1])), C=arCornerIdx(P); let best=[C[0],C[1]], bl=-1, sh=null, sl=1/0;
+  for(let i=0;i<C.length;i++){ const a=C[i], b=C[(i+1)%C.length], l=Math.hypot(P[b][0]-P[a][0],P[b][1]-P[a][1]); if(l>bl){ bl=l; best=[a,b]; } if(l>=5&&l<sl){ sl=l; sh=[a,b]; } }
+  const short=side==='short'&&sh&&sl<bl*0.95;   // 長い辺と短い辺がほぼ同じ（正方形に近い）なら長い辺のまま
+  return {pair:short?sh:best,long:best,short:sh,corners:C,len:bl,slen:sh?sl:bl,side:short?'short':'long'}; }
+let arSide=(()=>{ try{ return localStorage.getItem('fhmArSide')==='short'?'short':'long'; }catch(e){ return 'long'; } })();   // 角の選び方（前に選んだほう）
 async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日にこの田が半分以上雲なら、その年のいちばん新しい晴れた日）
   const P=parcels[pid]; if(!P||!P.cell) return {err:'この筆には衛星の画素がありません'};
   const d0=document.getElementById('colorDate').value, y=/^\d{4}-/.test(d0)?d0.slice(0,4):String(allDates.length?allDates[allDates.length-1].slice(0,4):new Date().getFullYear());
@@ -1841,6 +1843,7 @@ async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日
 function arCss(){ if(document.getElementById('arCss')) return; const st=document.createElement('style'); st.id='arCss'; st.textContent=`
 #arPrep{position:absolute;left:6px;right:6px;bottom:6px;z-index:1200;background:#fff;border:2px solid var(--accent);border-radius:12px;padding:6px 10px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14px;max-height:45%;overflow:auto}
 #arPrep .h{font-weight:700;font-size:15px;color:var(--ink)} #arPrep .row{margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center} #arPrep .hint{font-size:12.5px;margin-top:2px}
+#arPrep .arSeg{display:inline-flex;border:1.5px solid var(--accent);border-radius:8px;overflow:hidden} #arPrep .arSeg button{font:inherit;font-size:13.5px;border:0;background:#fff;color:var(--accent);padding:6px 10px;min-height:36px;cursor:pointer} #arPrep .arSeg button.on{background:var(--accent);color:#fff;font-weight:700}
 #arPrep .c1{color:#d84315;font-weight:700} #arPrep .c2{color:#1565c0;font-weight:700} #arPrep .msg{color:var(--warn);font-size:13px} #arPrep select{font:inherit;font-size:14px;max-width:100%}
 .arVh{position:absolute;left:-22px;top:-22px;width:44px;height:44px;cursor:pointer} .arVh.sm{left:-15px;top:-15px;width:30px;height:30px} .arVh .arV{position:absolute;left:50%;top:50%}
 .arV{width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;border:2px solid #455a64;color:#263238;font:700 13px/22px sans-serif;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.4);cursor:pointer}
@@ -1878,10 +1881,12 @@ function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
     history.pushState({arPrep:1},''); arP.pushed=true;   // 戻るボタンで閉じる
     if(!arP.zh){ arP.zh=()=>{ if(arP.on&&arP.V) arPrepDraw(); }; map.on('zoomend',arP.zh); }
     arPrepField(pid); }); }
-function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,c1:R.pair[0],c2:R.pair[1],pick:1,model:null,err:''});
+function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V,arSide), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,side:R.side,c1:R.pair[0],c2:R.pair[1],pick:1,model:null,err:''});
   if(!same&&arP.srcUser&&arP.src!=='top') arP.srcUser=false;
   arPrepDraw(); const h=document.getElementById('arPrep').offsetHeight;   // 案内の欄の上に筆がぜんぶ見えるように
   map.fitBounds(parcels[pid].layer.getBounds(),{paddingTopLeft:[24,24],paddingBottomRight:[24,Math.min(h+30,map.getSize().y*0.6)],maxZoom:19}); arPrepData(); }
+function arPrepSide(side){ arSide=side; try{ localStorage.setItem('fhmArSide',side); }catch(e){} const R=arRecommend(arP.V,side);   // 長い辺・短い辺を切り替える
+  Object.assign(arP,{rec:R,side:R.side,c1:R.pair[0],c2:R.pair[1],pick:1,model:null}); arPrepDraw(); arPrepData(); }
 function arPrepClose(fromNav){ const b=document.getElementById('arPrep'); if(b) b.hidden=true; if(arP.layer){ map.removeLayer(arP.layer); arP.layer=null; }
   if(!arP.on) return; arP.on=false; document.body.classList.remove('arPrepOn'); map.options.zoomSnap=arP.zs==null?1:arP.zs; map.invalidateSize();
   if(arP.pushed&&!fromNav) history.back(); arP.pushed=false; }
@@ -1896,14 +1901,17 @@ function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.r
     const mk=L.marker(q,{icon:L.divIcon({className:'',html:`<div class="arVh${sm}"><div class="arV ${c}${rec}${sm}">${c==='c1'?'角1':c==='c2'?'角2':i+1}</div></div>`,iconSize:[0,0]}),zIndexOffset:c?1000:rec?500:sm?0:200,bubblingMouseEvents:false}).addTo(arP.layer);
     mk.on('click',e=>{ L.DomEvent.stopPropagation(e); arPrepPick(i); }); });
   const src=AR_SRC.map(s=>`<option value="${s.k}">${escH(s.name)}</option>`).join(''), d=Math.round(Math.hypot(...(()=>{ const E=arEnu(V[arP.c1][0],V[arP.c1][1]); return E.fw(V[arP.c2][0],V[arP.c2][1]); })()));
-  const recNote=R.pair.includes(arP.c1)&&R.pair.includes(arP.c2)?'（おすすめ: 長い辺の両はし）':d<10||d<0.5*R.len?'<span style="color:var(--warn)">（2つの角が近いと向きがずれやすくなります。長い辺の両はし＝黄色のふちの点がおすすめ）</span>':'<span style="color:var(--warn)">（おすすめは長い辺の両はし: 黄色のふちの点）</span>';
+  const on=q=>q&&q.includes(arP.c1)&&q.includes(arP.c2);
+  const recNote=on(R.long)?'（長い辺の両はし: 向きがいちばん正確）':on(R.short)?'（短い辺の両はし: 歩く距離が短い。遠くの色は少しずれやすい）':d<10||d<0.5*R.len?'<span style="color:var(--warn)">（2つの角が近いと向きがずれやすくなります。黄色のふちの点がおすすめ）</span>':'<span style="color:var(--warn)">（おすすめは黄色のふちの点）</span>';
+  const sideB=R.short&&R.slen<R.len*0.95?`<div class="row">角の選び方 <span class="arSeg"><button type="button" data-side="long"${arP.side==='long'?' class="on"':''}>長い辺（${Math.round(R.len)}m）</button><button type="button" data-side="short"${arP.side==='short'?' class="on"':''}>短い辺（${Math.round(R.slen)}m）</button></span></div>`:'';
   const fs=selected.length>1?`<select id="arFld">${selected.map(s=>`<option value="${s.pid}"${s.pid===arP.pid?' selected':''}>${escH(selLabel(s.pid))}</option>`).join('')}</select>`:`<b>${escH(selLabel(arP.pid))}</b>`;
   $('arPrep').innerHTML=`<div class="h">${escH(AR_TITLE)}：${fs} <span class="c1">角1</span> ${arP.c1+1}番・<span class="c2">角2</span> ${arP.c2+1}番（${d}m）${recNote}</div>
-<div class="hint">地図の点をタップして選び直せます（次は${arP.pick===1?'<span class="c1">角1</span>':'<span class="c2">角2</span>'}）。現地で見分けやすい角を選んでください</div>
+${sideB}<div class="hint">地図の点をタップして選び直せます（次は${arP.pick===1?'<span class="c1">角1</span>':'<span class="c2">角2</span>'}）。現地で見分けやすい角を選んでください</div>
 <div class="row">色 <select id="arSrc">${src}</select> <span class="hint" id="arSrcNote"></span></div>
 <div class="row"><button class="btn primary" id="arGo" disabled>ARを始める</button><button class="btn" id="arPrepX">やめる</button>${AR_HELP?'<button class="btn" id="arHelpB">使い方</button>':''}<span class="msg" id="arPrepMsg"></span></div>`;
   $('arSrc').value=arP.src||AR_SRC[0].k; $('arSrc').onchange=e=>{ arP.src=e.target.value; arP.srcUser=true; arPrepData(); };
   if($('arFld')) $('arFld').onchange=e=>arPrepField(e.target.value);
+  document.querySelectorAll('#arPrep .arSeg button').forEach(b=>b.onclick=()=>arPrepSide(b.dataset.side));
   $('arPrepX').onclick=()=>arPrepClose(); $('arGo').onclick=()=>arStart(); if($('arHelpB')) $('arHelpB').onclick=()=>AR_HELP(); arPrepReady(); }
 function arPrepPick(i){ if(arP.pick===1){ if(i===arP.c2) arP.c2=arP.c1; arP.c1=i; arP.pick=2; } else { if(i===arP.c1) return; arP.c2=i; arP.pick=1; } arP.model=null; arPrepDraw(); arPrepData(); }
 async function arPrepData(){ const k=arP.src||(document.getElementById('arSrc')||{}).value||AR_SRC[0].k, pid=arP.pid; arP.src=k; arP.model=null; arP.err=''; arPrepReady();
