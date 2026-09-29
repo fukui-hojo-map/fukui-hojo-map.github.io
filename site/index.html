@@ -1239,9 +1239,9 @@ const VIG_LBL='<span>育ち 弱い</span><span>近くの田なみ</span><span>�
 function vigOf(pid,r){   // {s: 田の値（NDVI の差。年が足りなければ null）, yrs:[{y, d: その年の差, vmax: 頭打ち, n: くらべた田の数, t50, th}]} か null
   const a=r&&r.vg&&r.vg.p&&r.vg.p[pid]; if(!a) return null;
   return {s:a[0]==null?null:a[0]/1000,yrs:a.slice(1).map(q=>({y:q[0],d:q[1]==null?null:q[1]/1000,vmax:q[2]/1000,n:q[3],t50:q[4],th:q[5]}))}; }
-let vigStats=null, vigStatsP=null;   // 県全体の田の値の分布（上位何%か）。生育傾向のデータを初めて読むときに読む
+let vigStats=null, vigStatsP=null;   // 県全体の田の値の分布。生育傾向のデータを初めて読むときに読む
 function vigStatsLoad(){ return vigStatsP||(vigStatsP=fetch(`${DATA}vig_stats.json`).then(r=>r.ok?r.json():null).then(j=>{ vigStats=j; if(j&&selected.length){ renderSummary(); if(isTrend(fillMode())) drawChart(); } }).catch(()=>{})); }
-function vigTop(s){ const q=vigStats&&vigStats.q; if(!q||q.length<101||s==null) return null; const v=Math.round(s*1000); let i=0; while(i<100&&q[i+1]<=v) i++; return Math.max(1,100-i); }   // 県内で上位何%
+const vigLevel=s=>s==null?'':s>=0.02?'よく育つ':s>=0.008?'やや よく育つ':s>-0.01?'近くの田なみ':s>-0.03?'やや弱い':'弱い';   // 例年の育ちの目安（ことば）
 const vigTxt=s=>s==null?'—':(s>=0?'+':'−')+Math.abs(s).toFixed(3);
 const vigOdd=V=>{ const a=V?V.yrs.filter(q=>q.d!=null):[]; return a.length>=2&&a.reduce((x,q)=>x+q.vmax,0)/a.length<0.65; };   // 稲の年の頭打ちの平均が 0.65 未満（ふつうの稲は 0.8 前後）
 const escH=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -1503,8 +1503,8 @@ function drawVigChart(svg){   // 生育傾向マップのときのグラフ: 稲
     for(let i=0;i+1<pts.length;i++) if(pts[i+1].i===pts[i].i+1) g+=`<line x1="${(X(pts[i].i)+dx).toFixed(1)}" y1="${Yv(pts[i].a.d).toFixed(1)}" x2="${(X(pts[i+1].i)+dx).toFixed(1)}" y2="${Yv(pts[i+1].a.d).toFixed(1)}" stroke="${c}" stroke-width="2"/>`;
     for(const p of pts){ const a=p.a; g+=`<circle cx="${(X(p.i)+dx).toFixed(1)}" cy="${Yv(a.d).toFixed(1)}" r="5.5" fill="${c}" stroke="#fff" stroke-width="1.5"><title>${escH(selLabel(q.s.pid))} ${a.y}年: ${vigTxt(a.d)}（いちばん茂った時 ${a.vmax.toFixed(2)}、くらべた田 ${a.n}枚）</title></circle>`; } });
   let ly=HH+6; const lg=[];
-  for(const q of rows){ const V=q.V, t=V&&V.s!=null?vigTop(V.s):null;
-    lg.push({c:q.s.color,t:`${selLabel(q.s.pid)}　例年 ${V&&V.s!=null?vigTxt(V.s)+(t!=null?`（県内で${t<=50?`上位 ${t}`:`下位 ${101-t}`}%）`:''):'出せません（くらべられた稲の年が2回に足りない）'}`});
+  for(const q of rows){ const V=q.V;
+    lg.push({c:q.s.color,t:`${selLabel(q.s.pid)}　例年 ${V&&V.s!=null?vigTxt(V.s)+`（${vigLevel(V.s)}）`:'出せません（くらべられた稲の年が2回に足りない）'}`});
     if(vigOdd(V)) lg.push({c:q.s.color,t:'　※いちばん茂った時でも NDVI が低く、ふつうの稲作でないかもしれません',note:true}); }
   for(const q of lg){ ly+=q.note?20:24; g+=q.note?`<text x="${ML+26}" y="${ly}" font-size="13" fill="${q.c}">${escH(q.t)}</text>`:`<line x1="${ML}" x2="${ML+18}" y1="${ly-5}" y2="${ly-5}" stroke="${q.c}" stroke-width="2" stroke-dasharray="7 5"/><circle cx="${ML+9}" cy="${ly-5}" r="4.5" fill="${q.c}"/><text x="${ML+26}" y="${ly}" font-size="15" fill="${q.c}" font-weight="700">${escH(q.t)}</text>`; }
   ly+=24; g+=`<text x="${ML}" y="${ly}" font-size="13" fill="#4c5a52">点＝その年の差（その年いちばん茂った時の NDVI）、点線＝例年の値（地図の色）</text>`;
@@ -1530,10 +1530,10 @@ function renderSummary(){
   const t=document.getElementById('sum'); document.getElementById('sumH').hidden=!selected.length; if(!selected.length){t.innerHTML='';return;}
   const dot=s=>`<td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px"></i><span style="color:${s.color};font-weight:700">${selLabel(s.pid)}</span></td>`;
   if(isTrend(fillMode())){   // 生育傾向マップ: 例年の育ち（近くの同じ作期の田との差）と県内の順位
-    t.innerHTML='<tr><th>圃場</th><th class="num">例年の育ち</th><th>県内</th><th>稲の年</th></tr>'+selected.map(s=>{
-      const r=trReady[parcels[s.pid]?.cell], V=r?vigOf(s.pid,r):null, ok=V?V.yrs.filter(q=>q.d!=null):[], tp=V&&V.s!=null?vigTop(V.s):null;
+    t.innerHTML='<tr><th>圃場</th><th class="num">例年の育ち</th><th>目安</th><th>稲の年</th></tr>'+selected.map(s=>{
+      const r=trReady[parcels[s.pid]?.cell], V=r?vigOf(s.pid,r):null, ok=V?V.yrs.filter(q=>q.d!=null):[];
       const col=V&&V.s!=null?`rgb(${vigColor(V.s).map(c=>Math.round(c*.8)).join(',')})`:'var(--ink2)';
-      return `<tr>${dot(s)}<td class="num" style="color:${col};font-weight:700">${r?(V&&V.s!=null?vigTxt(V.s):'—'):'…'}</td><td>${tp!=null?(tp<=50?`上位 ${tp}%`:`下位 ${101-tp}%`):''}</td><td>${ok.length?`${ok.length}回中 ${ok.filter(q=>q.d>0).length}回が上`:''}${vigOdd(V)?'<br><small>NDVI が低い（稲作でないかも）</small>':''}</td></tr>`; }).join('');
+      return `<tr>${dot(s)}<td class="num" style="color:${col};font-weight:700">${r?(V&&V.s!=null?vigTxt(V.s):'—'):'…'}</td><td>${V&&V.s!=null?vigLevel(V.s):''}</td><td>${ok.length?`${ok.length}回中 ${ok.filter(q=>q.d>0).length}回 近くの田より良い`:''}${vigOdd(V)?'<br><small>NDVI が低い（稲作でないかも）</small>':''}</td></tr>`; }).join('');
     return; }
   const nb=document.getElementById('nbOn').checked?neighborSeries():null;
   t.innerHTML='<tr><th>圃場</th><th class="num">直近</th><th>日付</th><th class="num">今年の最大</th><th>日付</th>'+(nb&&nb.n?'<th class="num">近隣との差(直近)</th>':'')+'</tr>'+selected.map(s=>{
@@ -1636,7 +1636,7 @@ document.getElementById('btnXlsx').onclick=async()=>{
       if(MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(id,{tl:{col:0,row:2},ext:{width:w,height:h}}); row=3+Math.ceil(h/20)+2; }   // 行の高さは 20px
       else { const wm=wb.addWorksheet('地図'); wm.getCell('A1').value='選んだ圃場の地図（番号は「一覧」のシートの番号）'; wm.getCell('A1').font={bold:true};
         const w=Math.min(1400,map_.W), h=Math.round(map_.H*w/map_.W); wm.addImage(id,{tl:{col:0,row:1},ext:{width:w,height:h}}); } }
-    const R=data.rows.some(o=>o.rank), cols=[['番号',6],['圃場',15],['面積(a)',9],['例年の育ち（近くの同じ作期の田との差・NDVI）',14],['県内の順位',10],['年ごとの差',34],
+    const R=data.rows.some(o=>o.rank), cols=[['番号',6],['圃場',15],['面積(a)',9],['例年の育ち（近くの同じ作期の田との差・NDVI）',14],['目安',12],['年ごとの差',34],
       ...(R?[['ランク',7],['点数',7],['広さ/35',8],['生育のそろい/15',10],['作業効率性/15',10],['深いところの少なさ/10',12],['例年の旺盛さ/25',10],['獣害(減点)/20',10],['住宅地(減点)/15',10],['田の中の鉄塔',8],['説明',60]]:[]),
       ['直近のNDVI',10],['直近の日付',11],['今年の最大NDVI',11],['最大の日付',11],...data.years.map(yy=>[`${yy}年の作物`,10]),['緯度',11],['経度',11],['地図で開く',12],['区画ID',38]];
     ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'};
@@ -1644,8 +1644,8 @@ document.getElementById('btnXlsx').onclick=async()=>{
     cols.forEach((c,i)=>{ ws.getColumn(i+1).width=c[1]; });
     const base=location.href.split('#')[0].split('?')[0], r1=v=>v==null?null:Math.round(v*10)/10;
     for(const o of data.rows){ row++; const k=o.rank, P=k&&k.p.pts;
-      const V=o.vig, vs=V&&V.s!=null?V.s:null, tp=vs!=null?vigTop(vs):null;
-      const v=[o.no,o.label,Math.round(o.area*10)/10,vs!=null?Math.round(vs*1000)/1000:'出せません',tp!=null?(tp<=50?`上位 ${tp}%`:`下位 ${101-tp}%`):'',
+      const V=o.vig, vs=V&&V.s!=null?V.s:null;
+      const v=[o.no,o.label,Math.round(o.area*10)/10,vs!=null?Math.round(vs*1000)/1000:'出せません',vs!=null?vigLevel(vs):'',
         V?V.yrs.filter(q=>q.d!=null).map(q=>`${q.y} ${vigTxt(q.d)}`).join('、'):'',
         ...(R?(k?[k.rk,k.sc,r1(P.area),r1(P.unif),r1(P.eff),r1(P.hama),r1(P.vig),k.mt&&k.mt.ok?-(k.mt.wpen||0):null,k.mt&&k.mt.hp?-k.mt.hp.pen:null,P&&k.p.ef.tw||0,k.text]:['','','','','','','','','','','稲の年が足りない・データ準備中のため評価なし']):[]),
         o.last?Math.round(o.last.ndvi*100)/100:null,o.last?o.last.date:'',o.max?Math.round(o.max.ndvi*100)/100:null,o.max?o.max.date:'',
