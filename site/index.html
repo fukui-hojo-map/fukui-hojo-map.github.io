@@ -885,7 +885,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
       <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より0.1以上低いV字の点（雲・かすみの疑い）を灰色にして線から外す</label></div>
-      <div class="ctl"><label><input type="checkbox" id="lsOn" checked>前後の Sentinel-2 と0.15以上違う Landsat の点を除く</label></div>
+      <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
       <div class="excl" id="excl"></div>
       <div class="ctl"><select id="addExcl"></select><button class="btn small" id="btnAddExcl">この日を除外</button></div>
@@ -975,10 +975,17 @@ function loadPackage(p, label){
 function thr(){ return (+document.getElementById('thr').value||70)/100; }
 function dipOn(){ return document.getElementById('dipOn').checked; }
 function lsCheckOn(){ return document.getElementById('lsOn').checked; }
-function lsFits(s2,t,v){ // Landsat の値が前後の Sentinel-2（各20日以内）を結んだ線から0.15未満のずれか。前後が揃わなければ判定しない
+// Landsat（HLS L30, 30m画素）は畦・道が画素に混ざり、同じ田の同じ日の Sentinel-2 より、茂った時期は低く（平均 −0.03）、水・土のころは高く（+0.10）出る。
+// 県内の同じ日の組（約36万組）から作った換算表で Sentinel-2 相当に直す。直しても1回ごとのばらつき（±0.07ほど）は残るので、
+// 前後3日以内に Sentinel-2 がある日は使わず（梅雨どきなどの穴埋めだけ）、前後の Sentinel-2 を結んだ線から 0.08 以上ずれる点も除く（lsFits）
+const LS_X=[0.033, 0.08, 0.129, 0.18, 0.228, 0.276, 0.324, 0.374, 0.423, 0.473, 0.524, 0.575, 0.626, 0.677, 0.727, 0.776, 0.824, 0.866, 0.909], LS_Y=[0.022, 0.057, 0.101, 0.138, 0.179, 0.216, 0.255, 0.303, 0.356, 0.413, 0.477, 0.549, 0.62, 0.688, 0.746, 0.799, 0.84, 0.87, 0.894];
+function lsConv(v){ const X=LS_X,Y=LS_Y; if(v<=X[0]) return v+(Y[0]-X[0]); if(v>=X[X.length-1]) return v+(Y[Y.length-1]-X[X.length-1]);
+  let i=1; while(X[i]<v) i++; return Y[i-1]+(Y[i]-Y[i-1])*(v-X[i-1])/(X[i]-X[i-1]); }
+function lsFits(s2,t,v){ // 前後3日以内に Sentinel-2 がない、かつ前後の Sentinel-2（各20日以内）を結んだ線から0.08未満のずれか。前後が揃わなければずれは判定しない
   let i=0; while(i<s2.length&&s2[i][0]<t) i++; const pv=s2[i-1], nx=s2[i];
+  if((pv&&t-pv[0]<=3*864e5)||(nx&&nx[0]-t<=3*864e5)) return false;
   if(!pv||!nx||t-pv[0]>20*864e5||nx[0]-t>20*864e5) return true;
-  return Math.abs(v-(pv[1]+(nx[1]-pv[1])*(t-pv[0])/(nx[0]-pv[0])))<0.15;
+  return Math.abs(v-(pv[1]+(nx[1]-pv[1])*(t-pv[0])/(nx[0]-pv[0])))<0.08;
 }
 const dayMs=new Map(), tOf=d=>{ let v=dayMs.get(d); if(v===undefined){ v=Date.parse(d); dayMs.set(d,v); } return v; };   // 日付の文字 → ms（毎回 Date.parse しない）
 const DIP=0.10;   // 前後の両方より、これ以上低い点を「雲・かすみの疑い」にする（片側だけ低い段差＝田植え・収穫などは対象外）
@@ -1478,7 +1485,7 @@ function drawChart(){
   let lx=ML, ly=H-MB+40; for(const s of series){ const w=s.label.length*16+40; if(lx+w>W-MR){lx=ML;ly+=23;} g+=`<line x1="${lx}" x2="${lx+18}" y1="${ly-5}" y2="${ly-5}" stroke="${s.color}" stroke-width="2.5" stroke-dasharray="${s.dash}"/><text x="${lx+22}" y="${ly}" font-size="16.5" font-weight="700" fill="${s.color}">${s.label}</text>`; lx+=w; }
   if(series.some(s=>s.pts.some(p=>p.rad))){ ly+=23; g+=`<path d="M${ML+9},${ly-9}l4,4l-4,4l-4,-4z" fill="#fff" stroke="#4c5a52" stroke-width="1.4"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">ひし形はレーダー（Sentinel-1）からの推定</text>`; }
   if(series.some(s=>s.pts.some(p=>p.prov))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="6" fill="none" stroke="#1e3a2f" stroke-width="1.2" stroke-dasharray="2 2"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">点線の輪は速報（あとで変わることがあります。赤はもやの疑い）</text>`; }
-  if(series.some(s=>s.pts.some(p=>p.ls))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="3.5" fill="#fff" stroke="#4c5a52" stroke-width="1.6"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">白抜きの点は Landsat（30m画素）</text>`; }
+  if(series.some(s=>s.pts.some(p=>p.ls))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="3.5" fill="#fff" stroke="#4c5a52" stroke-width="1.6"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">白抜きの点は Landsat（30m画素。Sentinel-2 相当に換算）</text>`; }
   svg.setAttribute('viewBox',`0 0 ${W} ${ly+8}`); svg.innerHTML=g;
 
 }
@@ -1745,8 +1752,8 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
       const [g,n]=await Promise.all([fetch(`${DATA}cells/${c.id}/parcels.geojson`).then(r=>r.json()), fetch(`${DATA}cells/${c.id}/ndvi.json`).then(r=>r.ok?r.json():{dates:[],p:{}})]);
       const full={}; for(const f of g.features){ f.properties.pid=String(f.properties.pid); full[f.properties.pid]=f.properties.full||1; }
       if(n.v===2){ // [添字, NDVI×1000, 有効画素率%] の並び。Landsat（ldates/lp）は同じ日に Sentinel-2 がなければ使う
-        const by={}, put=(dates,p,src)=>{ for(const pid in p||{}){ const a=p[pid], m=by[pid]||(by[pid]=new Map()); for(let k=0;k<a.length;k+=3){ const d=dates[a[k]]; if(!m.has(d)) m.set(d,[d,a[k+1]/1000,a[k+2]/100,src]); } } };
-        put(n.dates,n.p,'S'); put(n.ldates,n.lp,'L');
+        const by={}, put=(dates,p,src,cv=v=>v)=>{ for(const pid in p||{}){ const a=p[pid], m=by[pid]||(by[pid]=new Map()); for(let k=0;k<a.length;k+=3){ const d=dates[a[k]]; if(!m.has(d)) m.set(d,[d,cv(a[k+1]/1000),a[k+2]/100,src]); } } };
+        put(n.dates,n.p,'S'); put(n.ldates,n.lp,'L',lsConv);
         const fit=radarOn()?radarFit(n):null;   // レーダーの推定（ふだんは使わない）は、使うときだけ計算する   // レーダーは範囲ごとの換算式で推定 NDVI にする（5/10〜7/31 だけ）
         if(fit) for(const pid in n.rp){ const a=n.rp[pid], rows=[]; for(let k=0;k<a.length;k+=3){ const d=n.rdates[a[k]], md=d.slice(5); if(md<'05-10'||md>'07-31') continue;
           rows.push([d,Math.max(-0.1,Math.min(1,fit.a+fit.b*a[k+1]/1000)),a[k+2]/100,'R']); } pkg.radar[pid]=rows.sort((x,y)=>x[0]<y[0]?-1:1); }
