@@ -1353,7 +1353,7 @@ const medOf=a=>{ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y), 
 function polyArea(geom){ const ring=c=>{ const k=Math.cos(c[0][1]*Math.PI/180); let s=0; for(let i=0;i<c.length;i++){ const [x1,y1]=c[i],[x2,y2]=c[(i+1)%c.length]; s+=x1*y2-x2*y1; } return Math.abs(s)/2*111320*k*110540; };
   return (geom.type==='Polygon'?[geom.coordinates]:geom.coordinates).reduce((a,p)=>a+ring(p[0])-p.slice(1).reduce((b,h)=>b+ring(h),0),0); }
 let SHOW_PLAN=false;   // 作付計画（開発者の端末だけ。priv.js が読み込まれたら true）
-function onParcelTap(pid){ if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid){ arNote(document.getElementById('arPrepX'),'ほかの田にするときは、その田をタップ。この田をやめるときは「田を選び直す」'); return; }   // AR の角を選んでいる間: ほかの田のタップ → その田に切り替える（角の点のタップのつもりで同じ田に当たっても、何も変えない）
+function onParcelTap(pid){ if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid){ arNote(document.getElementById('arPrepX'),'ほかの田にするときは、その田をタップ。この田をやめるときは「圃場を再選択」'); return; }   // AR の角を選んでいる間: ほかの田のタップ → その田に切り替える（角の点のタップのつもりで同じ田に当たっても、何も変えない）
     selected=[]; toggleSelect(pid); return; }
   if(SHOW_PLAN&&fillMode()==='plan'&&typeof planTap==='function') return planTap(pid); toggleSelect(pid); }
 async function renderTrend(gen,mode,note,lbl){
@@ -1947,7 +1947,7 @@ function arPrepDraw(){ const $=id=>document.getElementById(id), V=arP.V, R=arP.r
   const wiz=AR_WIZ&&AR_WIZ.on();   // 開発者のモード（AR追肥モード）: 決めることを順に1つずつ出す
   $('arPrep').innerHTML=wiz?AR_WIZ.html(P,arP.pid):`<div class="h">${P.head}</div>${P.corners}
 ${fix?`<div class="hint" id="arSrcNote"></div>`:`<div class="row">色 <select id="arSrc">${src}</select> <span class="hint" id="arSrcNote"></span></div>`}
-<div class="row">${P.go}<button class="btn" id="arPrepX">田を選び直す</button>${P.help}${P.msg}</div>`;
+<div class="row">${P.go}<button class="btn" id="arPrepX">圃場を再選択</button>${P.help}${P.msg}</div>`;
   if(!wiz) $('arPrep').classList.remove('wbig');
   if($('arSrc')){ $('arSrc').value=arP.src||AR_SRC[0].k; $('arSrc').onchange=e=>{ arP.src=e.target.value; arP.srcUser=true; arPrepData(); }; }
   if($('arFld')) $('arFld').onchange=e=>arPrepField(e.target.value);
