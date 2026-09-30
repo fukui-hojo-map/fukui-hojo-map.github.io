@@ -1877,7 +1877,7 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 #arHud button{pointer-events:auto;font:inherit;font-weight:700;font-size:14.5px;line-height:1.2;min-height:50px;min-width:48px;padding:4px 8px;border:0;border-radius:12px;background:rgba(255,255,255,.94);color:#17372a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 #arTopP{top:calc(8px + env(safe-area-inset-top));display:flex;gap:10px;align-items:flex-start} #arTopP .t{flex:1;min-width:0}
 #arTitle{font-size:13px;color:#cfd8dc} #arMsg{font-size:17px;font-weight:700;margin-top:2px} #arMsg b{color:#ffcc80} #arMsg i{font-style:normal;color:#90caf9}
-#arSk{flex:0 0 auto;width:96px;height:96px;background:rgba(255,255,255,.12);border-radius:10px} #arTopP.mm #arSk{order:-1;width:128px;height:128px;background:rgba(255,255,255,.9)}
+#arSk{flex:0 0 auto;width:96px;height:96px;background:rgba(255,255,255,.12);border-radius:10px} #arTopP.mm #arSk{order:-1;width:128px;height:128px;background:rgba(255,255,255,.9)} #arTopP.mm:not(.bad){background:none;padding:0;right:auto} #arTopP.mm:not(.bad) .t{display:none}   /* 合わせたあとは、上の案内の欄を消してミニマップだけ（ずれているときだけ案内を出す） */
 #arLeg{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:4px} #arLeg i{flex:1;height:12px;border-radius:6px}
 #arWarn{margin-top:6px;background:rgba(198,40,40,.92);border-radius:8px;padding:4px 8px;font-size:13.5px;font-weight:700;pointer-events:none}   /* 知らせは上の案内の中に小さく（画面の真ん中をふさがない） */
 #arWarn .s{font-weight:400;font-size:13.5px}
@@ -2114,7 +2114,7 @@ function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.pha
     :(ar.fitBad?`<span style="color:#ff8a80">タップ位置を確認してください</span><div style="font-size:13.5px;font-weight:400">角1〜角2 の距離が 地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m で ${Math.abs(ar.fit.dM-ar.fit.dA).toFixed(1)}m 違います。「やり直す」でタップし直してください</div>`
       :`合わせました（角1〜角2 地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。ずれていたら「やり直す」`);
   const lg=sh&&M.legend; $('arLeg').hidden=!lg; if(lg){ $('arGrad').style.background=M.legend.grad; $('arLo').textContent=M.legend.lo; $('arHi').textContent=`${M.legend.hi} ${M.legend.unit}`; }
-  $('arSk').hidden=false; $('arTopP').classList.toggle('mm',sh); if(sh) arMiniDraw(ar.mmP||null); else arSketch();   // 合わせたあとは、上から見た地図（ミニマップ）を左に出す
+  $('arSk').hidden=false; $('arTopP').classList.toggle('mm',sh); $('arTopP').classList.toggle('bad',sh&&!!ar.fitBad); if(sh) arMiniDraw(ar.mmP||null); else arSketch();   // 合わせたあとは、上から見た地図（ミニマップ）を左に出す
   $('arValP').hidden=!sh; $('arSrcB').hidden=!sh||AR_SRC.length<2||!!AR_FIX(); $('arSrcB').innerHTML=`色<br>${escH((M.src||'').replace(/（.*$/,''))}`; }
 function arSketch(){ const cv=document.getElementById('arSk'), x=cv.getContext('2d'), M=ar.model, W=192, P=M.P;   // 北が上の、筆の形と 角1・角2
   const xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2, sc=(W-44)/Math.max(10,Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
