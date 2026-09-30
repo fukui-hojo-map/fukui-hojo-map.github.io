@@ -1459,6 +1459,8 @@ function renderChips(){
 // ---------- chart ----------
 const W=560,H=340,ML=40,MR=10,MT=14,MB=40; let hoverPts=[];
 const fmtD=d=>`${+d.slice(5,7)}/${+d.slice(8,10)}`;
+{ const h=document.querySelector('header h1'), home=()=>{ history.replaceState(null,'',location.pathname+location.search); location.reload(); };   // 左上のロゴ・名前を押すと、最初の画面にもどる（地図の位置・選んだ田・表示モードをはじめにもどす）
+  h.tabIndex=0; h.setAttribute('role','link'); h.title='最初の画面にもどる'; h.style.cursor='pointer'; h.onclick=home; h.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); home(); } }; }
 document.getElementById('mbInfo').onclick=()=>document.querySelector('.mapbar').classList.toggle('open');   // 表示モードの説明は ⓘ で出す
 // 代かき（水張り）より前の点は出さない: 5/10〜6/15 に初めて水面の値（NDVI 0.05 以下）になった点から先だけを描く（その前は雑草・土で、稲の育ちではない）
 const FLOOD_MAX=0.05;
