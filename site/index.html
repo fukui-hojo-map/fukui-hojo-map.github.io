@@ -1858,6 +1858,7 @@ async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日
 
 // ---- 地図で 角1・角2 を選ぶ ----
 function arCss(){ if(document.getElementById('arCss')) return; const st=document.createElement('style'); st.id='arCss'; st.textContent=`
+#arPrep.inSide [data-k=exit]{display:none}   /* パソコン: 地図の左下の「表示モード」で切りかえられるので、やめるボタンは出さない（スマホは手順の画面が選択欄を隠すので出す） */
 #arPrep.inSide{position:static;left:auto;right:auto;bottom:auto;z-index:auto;max-height:none;overflow:visible;box-shadow:none;margin:0 0 12px;padding:8px 12px;border-width:1.5px}
 #arPrep{position:absolute;left:6px;right:6px;bottom:6px;z-index:1200;background:#fff;border:2px solid var(--accent);border-radius:12px;padding:6px 10px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14px;max-height:58%;overflow:auto}
 #arPrep .h{font-weight:700;font-size:15px;color:var(--ink)} #arPrep .row{margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center} #arPrep .hint{font-size:12.5px;margin-top:2px}
