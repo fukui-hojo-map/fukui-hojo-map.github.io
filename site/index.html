@@ -1986,9 +1986,26 @@ function arText(s,bg){ const T=AR3, key=s+'|'+(bg||''); ar.tex=ar.tex||new Map()
     x.lineWidth=12; x.lineJoin='round'; x.strokeStyle='rgba(0,0,0,.8)'; x.strokeText(s,128,68); x.fillStyle='#fff'; x.fillText(s,128,68);
     const tx=new T.CanvasTexture(c); tx.colorSpace=T.SRGBColorSpace; mt=new T.SpriteMaterial({map:tx,transparent:true,depthTest:false,depthWrite:false}); ar.tex.set(key,mt); }
   const sp=new T.Sprite(mt); sp.renderOrder=10; return sp; }
-function arPin(p,lbl,col){ const T=AR3, g=new T.Group(), m=new T.MeshBasicMaterial({color:col});
-  const s=new T.Mesh(new T.CylinderGeometry(0.03,0.03,1.2,10),m); s.position.y=0.6; g.add(s); const b=new T.Mesh(new T.SphereGeometry(0.1,16,12),m); b.position.y=1.2; g.add(b);
-  const t=arText(lbl,col); t.scale.set(0.9,0.45,1); t.position.y=1.6; g.add(t); g.position.set(p[0],p[1],p[2]); ar.scene.add(g); return g; }
+function arMascotCanvas(n){   // 角1・角2 の「ゆるキャラ」: まるいふくふくした白いこが、みじかい棒の看板（角1／角2）を持って立つ。看板の棒の足もとが角
+  const W=340, H=300, c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d'), col=n===1?'#e8541f':'#1e6fd1', ink='#1b1b1b', cream='#fbf7ef', PX=220;
+  const rr=(a,b,w,h,r)=>{ x.beginPath(); if(x.roundRect) x.roundRect(a,b,w,h,r); else x.rect(a,b,w,h); };
+  x.lineJoin='round'; x.lineCap='round';
+  x.fillStyle='rgba(0,0,0,.16)'; x.beginPath(); x.ellipse(135,284,112,9,0,0,7); x.fill();   // 地面の影
+  x.fillStyle='#b08d57'; x.strokeStyle=ink; x.lineWidth=6; rr(PX-7,100,14,176,5); x.fill(); x.stroke();   // 看板の棒（約30cm）
+  rr(110,6,220,98,22); x.fillStyle=col; x.fill(); x.lineWidth=8; x.strokeStyle=ink; x.stroke(); rr(118,14,204,82,16); x.lineWidth=3; x.strokeStyle='rgba(255,255,255,.7)'; x.stroke();   // 看板
+  x.font='bold 70px system-ui,"Hiragino Sans","Noto Sans JP",sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.lineWidth=12; x.strokeStyle='rgba(0,0,0,.75)'; x.strokeText('角'+n,PX,57); x.fillStyle='#fff'; x.fillText('角'+n,PX,57);
+  const blob=(cx,cy,rx,ry,rot=0)=>{ x.fillStyle=cream; x.strokeStyle=ink; x.lineWidth=7; x.beginPath(); x.ellipse(cx,cy,rx,ry,rot,0,7); x.fill(); x.stroke(); };
+  blob(88,272,24,11); blob(138,272,24,11);   // 足
+  x.fillStyle=cream; x.strokeStyle=ink; x.lineWidth=7; x.beginPath(); x.moveTo(113,266); x.bezierCurveTo(10,266,18,124,113,120); x.bezierCurveTo(208,124,216,266,113,266); x.closePath(); x.fill(); x.stroke();   // からだ（たまご形）
+  x.strokeStyle=ink; x.lineWidth=36; x.beginPath(); x.moveTo(184,198); x.lineTo(PX,184); x.stroke(); x.strokeStyle=cream; x.lineWidth=24; x.beginPath(); x.moveTo(184,198); x.lineTo(PX,184); x.stroke();   // 腕（棒をにぎる）
+  blob(24,214,17,34,0.28);   // もう片方の腕（たらす）
+  x.fillStyle=ink; for(const dx of [-30,30]){ x.beginPath(); x.ellipse(113+dx,182,5.5,8,0,0,7); x.fill(); }   // 目
+  x.strokeStyle=ink; x.lineWidth=5; x.beginPath(); x.moveTo(100,202); x.lineTo(126,202); x.stroke();   // 口
+  return c; }
+function arMascot(n){ const T=AR3; ar.tex=ar.tex||new Map(); const key='mascot'+n; let mt=ar.tex.get(key);
+  if(!mt){ const tx=new T.CanvasTexture(arMascotCanvas(n)); tx.colorSpace=T.SRGBColorSpace; mt=new T.SpriteMaterial({map:tx,transparent:true,depthTest:false,depthWrite:false}); ar.tex.set(key,mt); }
+  const sp=new T.Sprite(mt); sp.center.set(220/340,16/300); sp.scale.set(0.68,0.6,1); sp.renderOrder=10; return sp; }   // 看板の棒の足もとが地面の角。高さ 60cm（看板をふくむ）・からだは 32cm くらい
+function arPin(p,lbl,col){ const T=AR3, g=new T.Group(); g.add(arMascot(lbl==='角2'?2:1)); g.position.set(p[0],p[1],p[2]); ar.scene.add(g); return g; }
 async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document.getElementById(id), hud=(arDom(),$('arHud'));
   $('arView').hidden=false;   // dom-overlay の親は見えている必要がある（隠れたままだと全画面にできない）
   let s; try{ s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],optionalFeatures:['anchors'],domOverlay:{root:hud}}); }   // 押した直後に呼ぶ（待つと「押した」扱いが切れる）
@@ -2078,8 +2095,9 @@ function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭�
   const rg=new T.BufferGeometry(); rg.setAttribute('position',new T.Float32BufferAttribute(rib,3)); const rm=new T.Mesh(rg,new T.MeshBasicMaterial({color:0xffe14d,side:T.DoubleSide,depthWrite:false})); rm.renderOrder=2; g.add(rm);
   const cs=new Set(arCornerIdx(M.P)), pm=new T.MeshBasicMaterial({color:0xffe14d}), pg=new T.CylinderGeometry(0.025,0.025,0.5,8);
   M.P.forEach((q,i)=>{ if(!cs.has(i)&&i!==M.c1&&i!==M.c2) return;   // 目印の棒は本当の角と 角1・角2 だけ
+    if(i===M.c1||i===M.c2){ const k=arMascot(i===M.c1?1:2); k.position.set(q[0],0,-q[1]); g.add(k); return; }   // 角1・角2 は看板をもったゆるキャラ
     const m=new T.Mesh(pg,pm); m.position.set(q[0],0.25,-q[1]); g.add(m);
-    const s=arText(i===M.c1?'角1':i===M.c2?'角2':(i+1)+'番',i===M.c1?'#d84315':i===M.c2?'#1565c0':'rgba(0,0,0,.5)'); s.scale.set(0.8,0.4,1); s.position.set(q[0],0.75,-q[1]); g.add(s); });
+    const s=arText((i+1)+'番','rgba(0,0,0,.5)'); s.scale.set(0.8,0.4,1); s.position.set(q[0],0.75,-q[1]); g.add(s); });
   ar.paint=g; ar.geo.add(g); arLiftApply(); ar.mm=null; }
 function arLiftApply(){ if(ar.paint){ ar.paint.position.y=ar.lift||0; ar.paint.updateMatrixWorld(true); } const b=document.getElementById('arValP'); if(b&&ar.phase==='show') arShowTick(true); }
 function arLift(d){ ar.liftAuto=false; ar.lift=Math.round(((ar.lift||0)+d)*10)/10; arLiftApply(); arHud(); }
