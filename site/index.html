@@ -1657,16 +1657,14 @@ document.getElementById('btnXlsx').onclick=async()=>{
       if(MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(id,{tl:{col:0,row:2},ext:{width:w,height:h}}); row=3+Math.ceil(h/20)+2; }   // 行の高さは 20px
       else { const wm=wb.addWorksheet('地図'); wm.getCell('A1').value='選んだ圃場の地図（番号は「一覧」のシートの「圃場」）'; wm.getCell('A1').font={bold:true};
         const w=Math.min(1400,map_.W), h=Math.round(map_.H*w/map_.W); wm.addImage(id,{tl:{col:0,row:1},ext:{width:w,height:h}}); } }
-    const R=data.rows.some(o=>o.rank), cols=[['圃場',15],['面積(a)',9],
-      ...(R?[['ランク',7],['点数',7],['広さ/35',8],['生育のそろい/15',10],['作業効率性/15',10],['深いところの少なさ/10',12],['例年の旺盛さ/25',10],['獣害(減点)/20',10],['住宅地(減点)/15',10],['田の中の鉄塔',8],['説明',60]]:[]),
+    const cols=[['圃場',15],['面積(a)',9],
       ['直近のNDVI',10],['直近の日付',11],['今年の最大NDVI',11],['最大の日付',11],['緯度',11],['経度',11],['地図で開く',12],['区画ID',38]];
     ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'};
     ws.getRow(row).eachCell(c=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EFE6'}}; c.border={bottom:{style:'thin'}}; });
     cols.forEach((c,i)=>{ ws.getColumn(i+1).width=c[1]; });
     const base=location.href.split('#')[0].split('?')[0], r1=v=>v==null?null:Math.round(v*10)/10;
-    for(const o of data.rows){ row++; const k=o.rank, P=k&&k.p.pts;
+    for(const o of data.rows){ row++;
       const v=[o.label,Math.round(o.area*10)/10,
-        ...(R?(k?[k.rk,k.sc,r1(P.area),r1(P.unif),r1(P.eff),r1(P.hama),r1(P.vig),k.mt&&k.mt.ok?-(k.mt.wpen||0):null,k.mt&&k.mt.hp?-k.mt.hp.pen:null,P&&k.p.ef.tw||0,k.text]:['','','','','','','','','','','稲の年が足りない・データ準備中のため評価なし']):[]),
         o.last?Math.round(o.last.ndvi*100)/100:null,o.last?o.last.date:'',o.max?Math.round(o.max.ndvi*100)/100:null,o.max?o.max.date:'',
         Math.round(o.lat*1e6)/1e6,Math.round(o.lon*1e6)/1e6,
         {text:'地図',hyperlink:`${base}#c=${o.lat.toFixed(6)},${o.lon.toFixed(6)}&z=18`},o.pid];
