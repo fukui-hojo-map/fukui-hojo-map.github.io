@@ -1993,8 +1993,8 @@ function arMascotSign(n){   // 看板の面の絵（色・「角1」「角2」�
   x.font='bold 170px "Noto Sans JP","Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo","IPAGothic",system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.lineWidth=20; x.lineJoin='round'; x.strokeStyle='rgba(0,0,0,.75)'; x.strokeText('角'+n,225,156); x.fillStyle='#fff'; x.fillText('角'+n,225,156);
   tx=new AR3.CanvasTexture(c); tx.colorSpace=AR3.SRGBColorSpace; tx.anisotropy=4; ar.tex.set(key,tx); return tx; }
 function arMascot3D(T,n,tex){   // 角の目印: 地面にさした棒の先に、高さ30cm の看板（角1／角2）。原点＝棒をさした所（角の位置）
-  const g=new T.Group(), ink=0x1b1b1b, ol=new T.MeshBasicMaterial({color:ink,side:T.BackSide}), PH=0.6, BH=0.3, BW=0.45;
-  const pg=new T.CylinderGeometry(0.014,0.014,PH,12), pole=new T.Mesh(pg,new T.MeshLambertMaterial({color:0xb08d57,emissive:0x5a4528})), po=new T.Mesh(pg,ol); pole.position.set(0,PH/2,0); po.position.copy(pole.position); po.scale.set(1.5,1.005,1.5); g.add(po,pole);   // 棒（さした所から看板の下まで 60cm）
+  const g=new T.Group(), ink=0x1b1b1b, ol=new T.MeshBasicMaterial({color:ink,side:T.BackSide}), PH=0.7, BH=0.3, BW=0.45;
+  const pg=new T.CylinderGeometry(0.014,0.014,PH,12), pole=new T.Mesh(pg,new T.MeshLambertMaterial({color:0xb08d57,emissive:0x5a4528})), po=new T.Mesh(pg,ol); pole.position.set(0,PH/2,0); po.position.copy(pole.position); po.scale.set(1.5,1.005,1.5); g.add(po,pole);   // 棒（さした所から看板の下まで 70cm）
   const tip=new T.Mesh(new T.ConeGeometry(0.02,0.06,12),new T.MeshLambertMaterial({color:0x8d6e63,emissive:0x44342a})); tip.rotation.x=Math.PI; tip.position.set(0,0.0,0); g.add(tip);   // 地面にささった先
   const bd=new T.BoxGeometry(BW,BH,0.025), bo=new T.Mesh(bd,ol); bo.scale.set(1.04,1.06,1.3); bo.position.set(0,PH+BH/2,0); g.add(bo);
   const board=new T.Mesh(bd,new T.MeshLambertMaterial({color:n===1?0xe8541f:0x1e6fd1,emissive:n===1?0x6a2808:0x0c3566})); board.position.copy(bo.position); g.add(board);
