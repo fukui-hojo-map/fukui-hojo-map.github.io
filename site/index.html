@@ -2124,9 +2124,9 @@ function arShowTick(force){ const T=AR3, M=ar.model, now=performance.now(); if(!
 function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.phase, sh=ph==='show';
   const base=ph==='scan'?'地面を映してください'
     :ph==='c1'?'リングを <b>角1</b> に合わせて、タップ'
-    :ph==='c2'?'リングを <b>角2</b> に合わせて、タップ'
+    :ph==='c2'?`リングを <b>角2</b> に合わせて、タップ（約${Math.round(Math.hypot(M.P[M.c2][0]-M.P[M.c1][0],M.P[M.c2][1]-M.P[M.c1][1]))}m先）`
     :ar.edit!=null?`置き直す所にリングを合わせて、タップ（<b>角${ar.edit+1}</b>）`
-    :ar.fitBad?'角1〜角2 の距離が合いません。角を置き直してください':'';
+    :ar.fitBad?`距離が合いません（地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。角を置き直してください`:'';
   const t=ar.warnTxt||base, m=$('arMsg'); m.hidden=!t; if(t&&m.innerHTML!==t) m.innerHTML=t; m.classList.toggle('warn',!!ar.warnTxt||(sh&&!!ar.fitBad&&ar.edit==null));
   $('arC1').classList.toggle('on',ar.edit===0); $('arC2').classList.toggle('on',ar.edit===1);
   if(sh) arMiniDraw(ar.mmP||null); else arSketch(); }
