@@ -1981,7 +1981,7 @@ function arDom(){ let v=document.getElementById('arView'); if(v) return v; arCss
   $('arHud').addEventListener('beforexrselect',e=>{ if(e.target.closest('button,#arConfirm')) e.preventDefault(); });   // ボタン・案内の欄を押しても AR の「タップ」にしない
   return v; }
 function arText(s,bg){ const T=AR3, key=s+'|'+(bg||''); ar.tex=ar.tex||new Map(); let mt=ar.tex.get(key);
-  if(!mt){ const c=document.createElement('canvas'), x=c.getContext('2d'); c.width=256; c.height=128; x.font='bold 72px system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+  if(!mt){ const c=document.createElement('canvas'), x=c.getContext('2d'); c.width=256; c.height=128; x.lang='ja'; x.font='bold 72px "Noto Sans JP","Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo","IPAGothic",system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
     if(bg){ x.fillStyle=bg; x.beginPath(); x.roundRect?x.roundRect(8,8,240,112,30):x.rect(8,8,240,112); x.fill(); }
     x.lineWidth=12; x.lineJoin='round'; x.strokeStyle='rgba(0,0,0,.8)'; x.strokeText(s,128,68); x.fillStyle='#fff'; x.fillText(s,128,68);
     const tx=new T.CanvasTexture(c); tx.colorSpace=T.SRGBColorSpace; mt=new T.SpriteMaterial({map:tx,transparent:true,depthTest:false,depthWrite:false}); ar.tex.set(key,mt); }
@@ -1993,7 +1993,7 @@ function arMascotCanvas(n){   // 角1・角2 の「ゆるキャラ」: まるい
   x.fillStyle='rgba(0,0,0,.16)'; x.beginPath(); x.ellipse(135,284,112,9,0,0,7); x.fill();   // 地面の影
   x.fillStyle='#b08d57'; x.strokeStyle=ink; x.lineWidth=6; rr(PX-7,100,14,176,5); x.fill(); x.stroke();   // 看板の棒（約30cm）
   rr(110,6,220,98,22); x.fillStyle=col; x.fill(); x.lineWidth=8; x.strokeStyle=ink; x.stroke(); rr(118,14,204,82,16); x.lineWidth=3; x.strokeStyle='rgba(255,255,255,.7)'; x.stroke();   // 看板
-  x.font='bold 70px system-ui,"Hiragino Sans","Noto Sans JP",sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.lineWidth=12; x.strokeStyle='rgba(0,0,0,.75)'; x.strokeText('角'+n,PX,57); x.fillStyle='#fff'; x.fillText('角'+n,PX,57);
+  x.lang='ja'; x.font='bold 70px "Noto Sans JP","Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo","IPAGothic",system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.lineWidth=12; x.strokeStyle='rgba(0,0,0,.75)'; x.strokeText('角'+n,PX,57); x.fillStyle='#fff'; x.fillText('角'+n,PX,57);
   const blob=(cx,cy,rx,ry,rot=0)=>{ x.fillStyle=cream; x.strokeStyle=ink; x.lineWidth=7; x.beginPath(); x.ellipse(cx,cy,rx,ry,rot,0,7); x.fill(); x.stroke(); };
   blob(88,272,24,11); blob(138,272,24,11);   // 足
   x.fillStyle=cream; x.strokeStyle=ink; x.lineWidth=7; x.beginPath(); x.moveTo(113,266); x.bezierCurveTo(10,266,18,124,113,120); x.bezierCurveTo(208,124,216,266,113,266); x.closePath(); x.fill(); x.stroke();   // からだ（たまご形）
