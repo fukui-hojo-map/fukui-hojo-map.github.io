@@ -1992,21 +1992,20 @@ function arMascotSign(n){   // 看板の面の絵（色・「角1」「角2」�
   x.fillStyle=col; x.fillRect(0,0,340,160); x.lineWidth=10; x.strokeStyle='rgba(255,255,255,.75)'; x.strokeRect(10,10,320,140);
   x.font='bold 100px "Noto Sans JP","Noto Sans CJK JP","Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo","IPAGothic",system-ui,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.lineWidth=14; x.lineJoin='round'; x.strokeStyle='rgba(0,0,0,.75)'; x.strokeText('角'+n,170,84); x.fillStyle='#fff'; x.fillText('角'+n,170,84);
   tx=new AR3.CanvasTexture(c); tx.colorSpace=AR3.SRGBColorSpace; tx.anisotropy=4; ar.tex.set(key,tx); return tx; }
-function arMascot3D(T,n,tex){   // 立体のゆるキャラ（まるいふくふくした白いこ＋短い棒の看板）。原点＝棒の足もと（角の位置）。高さ約52cm・からだは約32cm。前は +Z
+function arMascot3D(T,n,tex){   // 立体のゆるキャラ（まるいふくふくした白いこが、頭の真上に看板を掲げる）。原点＝足もと（角の位置）。高さ約75cm・からだは約33cm。前は +Z
   const g=new T.Group(), ink=0x1b1b1b, cream=0xfbf7ef, ol=new T.MeshBasicMaterial({color:ink,side:T.BackSide});
   const part=(geo,color,pos,scl,rot)=>{ const h=new T.Group(); const f=new T.Mesh(geo,new T.MeshLambertMaterial({color,emissive:new T.Color(color).multiplyScalar(0.6)})); const o=new T.Mesh(geo,ol); o.scale.setScalar(1.07); h.add(o,f); h.position.set(...pos); if(scl) h.scale.set(...scl); if(rot) h.rotation.set(...rot); g.add(h); return h; };
-  const CX=-0.32;   // からだは棒の左がわ
-  part(new T.SphereGeometry(0.15,40,28),cream,[CX,0.225,0],[1,1.1,0.95]);   // からだ（たまご形）
-  for(const dx of [-0.065,0.065]) part(new T.SphereGeometry(0.05,24,16),cream,[CX+dx,0.03,0.015],[1.15,0.55,1.35]);   // 足
-  part(new T.CapsuleGeometry(0.032,0.12,6,14),cream,[CX+0.19,0.255,0.02],null,[0,0,-1.25]);   // 腕（棒をにぎる）
-  part(new T.CapsuleGeometry(0.033,0.1,6,14),cream,[CX-0.165,0.19,0.01],null,[0,0,0.28]);   // もう片方の腕（たらす）
+  part(new T.SphereGeometry(0.15,40,28),cream,[0,0.225,0],[1,1.1,0.95]);   // からだ（たまご形）
+  for(const dx of [-0.065,0.065]) part(new T.SphereGeometry(0.05,24,16),cream,[dx,0.03,0.015],[1.15,0.55,1.35]);   // 足
+  for(const s of [-1,1]){ part(new T.CapsuleGeometry(0.03,0.12,6,14),cream,[s*0.09,0.345,0.045],null,[0,0,-s*0.59]);   // 腕（万歳して、看板の棒をにぎる）
+    part(new T.SphereGeometry(0.034,16,12),cream,[s*0.04,0.43,0.06]); }   // 手
   const dark=new T.MeshBasicMaterial({color:ink});
-  for(const dx of [-0.052,0.052]){ const e=new T.Mesh(new T.SphereGeometry(0.014,16,12),dark); e.scale.set(0.85,1.3,0.6); e.position.set(CX+dx,0.265,0.13); g.add(e); }   // 目
-  const m=new T.Mesh(new T.BoxGeometry(0.045,0.009,0.01),dark); m.position.set(CX,0.222,0.144); g.add(m);   // 口
-  const pole=new T.Mesh(new T.CylinderGeometry(0.012,0.012,0.3,12),new T.MeshLambertMaterial({color:0xb08d57,emissive:0x5a4528})); pole.position.set(0,0.15,0); const po=new T.Mesh(pole.geometry,ol); po.scale.set(1.5,1.01,1.5); po.position.copy(pole.position); g.add(po,pole);   // 棒（約30cm）
-  const bd=new T.BoxGeometry(0.34,0.16,0.022), bo=new T.Mesh(bd,ol); bo.scale.set(1.05,1.08,1.2); bo.position.set(0,0.38,0); g.add(bo);
-  const board=new T.Mesh(bd,new T.MeshLambertMaterial({color:n===1?0xe8541f:0x1e6fd1,emissive:n===1?0x6a2808:0x0c3566})); board.position.set(0,0.38,0); g.add(board);
-  const face=new T.MeshBasicMaterial({map:tex,toneMapped:false}); for(const [z,ry] of [[0.0125,0],[-0.0125,Math.PI]]){ const pl=new T.Mesh(new T.PlaneGeometry(0.32,0.15),face); pl.position.set(0,0.38,z); pl.rotation.y=ry; g.add(pl); }   // 看板の表と裏
+  for(const dx of [-0.052,0.052]){ const e=new T.Mesh(new T.SphereGeometry(0.014,16,12),dark); e.scale.set(0.85,1.3,0.6); e.position.set(dx,0.265,0.13); g.add(e); }   // 目
+  const m=new T.Mesh(new T.BoxGeometry(0.045,0.009,0.01),dark); m.position.set(0,0.222,0.144); g.add(m);   // 口
+  const stick=new T.Mesh(new T.CylinderGeometry(0.012,0.012,0.2,12),new T.MeshLambertMaterial({color:0xb08d57,emissive:0x5a4528})); stick.position.set(0,0.46,0.055); const so=new T.Mesh(stick.geometry,ol); so.scale.set(1.5,1.01,1.5); so.position.copy(stick.position); g.add(so,stick);   // 看板の棒（頭の上）
+  const bd=new T.BoxGeometry(0.44,0.2,0.022), bo=new T.Mesh(bd,ol); bo.scale.set(1.05,1.08,1.2); bo.position.set(0,0.64,0.055); g.add(bo);
+  const board=new T.Mesh(bd,new T.MeshLambertMaterial({color:n===1?0xe8541f:0x1e6fd1,emissive:n===1?0x6a2808:0x0c3566})); board.position.set(0,0.64,0.055); g.add(board);
+  const face=new T.MeshBasicMaterial({map:tex,toneMapped:false}); for(const [z,ry] of [[0.0125,0],[-0.0125,Math.PI]]){ const pl=new T.Mesh(new T.PlaneGeometry(0.42,0.19),face); pl.position.set(0,0.64,0.055+z); pl.rotation.y=ry; g.add(pl); }   // 看板の表と裏
   g.userData.mascot=true; return g; }
 function arMascot(n){ const T=AR3; if(!ar.lit){ ar.lit=true; ar.scene.add(new T.HemisphereLight(0xffffff,0x9a9a9a,1.6)); const d=new T.DirectionalLight(0xffffff,1.4); d.position.set(1,2,1.5); ar.scene.add(d); }
   const g=arMascot3D(T,n,arMascotSign(n)); ar.mascots=ar.mascots||[]; ar.mascots.push(g); return g; }
