@@ -1870,7 +1870,8 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 #arHud{position:absolute;inset:0;font:16px/1.45 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff;pointer-events:none;-webkit-user-select:none;user-select:none}
 #arHud button{pointer-events:auto;font:inherit;font-weight:700;font-size:15px;line-height:1.2;min-height:52px;min-width:48px;padding:4px 12px;border:0;border-radius:12px;background:rgba(255,255,255,.94);color:#17372a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 #arSk{position:absolute;left:8px;top:calc(8px + env(safe-area-inset-top));width:128px;height:128px;pointer-events:none}
-#arMsg{position:absolute;left:146px;right:8px;top:calc(8px + env(safe-area-inset-top));padding:8px 12px;background:rgba(0,0,0,.62);border-radius:12px;font-size:16px;font-weight:700;pointer-events:none} #arMsg.warn{background:rgba(198,40,40,.92)} #arMsg b{color:#ffcc80}
+#arMenu{position:absolute;right:8px;top:calc(8px + env(safe-area-inset-top));pointer-events:auto;min-width:112px;min-height:52px;font-size:16px} #arMenu.go{background:#1b7a3a;color:#fff}
+#arMsg{position:absolute;left:146px;right:128px;top:calc(8px + env(safe-area-inset-top));padding:8px 12px;background:rgba(0,0,0,.62);border-radius:12px;font-size:16px;font-weight:700;pointer-events:none} #arMsg.warn{background:rgba(198,40,40,.92)} #arMsg b{color:#ffcc80}
 /* 下のボタンは画面のいちばん下から少し上げる（AR を始めたとき、Chrome の「全画面表示を終了するには…」の知らせが下に出て、ボタンが押せなくなるため） */
 #arBtns{position:absolute;left:8px;right:8px;bottom:calc(90px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:flex-end;gap:8px;pointer-events:none} #arBtns .l{display:flex;gap:6px} #arBtns button.on{background:#ffd54a;color:#3a2e00} #arBtns button.end{background:rgba(255,255,255,.94);color:#b71c1c}
 #arTouch{position:absolute;inset:0;touch-action:none;pointer-events:none}
@@ -1976,13 +1977,15 @@ function arDom(){ let v=document.getElementById('arView'); if(v) return v; arCss
   v=document.createElement('div'); v.id='arView'; v.hidden=true;
   v.innerHTML=`<div id="arHud"><div id="arTouch"></div><canvas id="arSk" width="192" height="192"></canvas><div id="arMsg" hidden></div>
 <div id="arPad" hidden><button data-m="rl" aria-label="左に回す">⟲</button><button data-m="f" aria-label="奥へ">↑</button><button data-m="rr" aria-label="右に回す">⟳</button><button data-m="l" aria-label="左へ">←</button><span></span><button data-m="r" aria-label="右へ">→</button><span></span><button data-m="b" aria-label="手前へ">↓</button><span></span></div>
-<div id="arBtns"><div class="l"><button id="arC1">角1 やり直し</button><button id="arC2">角2 やり直し</button></div><button id="arEnd" class="end">ARを終了する</button></div>
+<button id="arMenu" hidden></button>
+<div id="arBtns"><div class="l" id="arL"><button id="arC1">角1 やり直し</button><button id="arC2">角2 やり直し</button></div><button id="arEnd" class="end">ARを終了する</button></div>
 <div id="arConfirm" hidden><div>ARを終了しますか？<div class="r"><button id="arKeep">続ける</button><button id="arSure" class="go">終了する</button></div></div></div></div>`;
   document.body.appendChild(v); const $=id=>document.getElementById(id);
   $('arEnd').onclick=()=>{ $('arConfirm').hidden=false; }; $('arKeep').onclick=()=>{ $('arConfirm').hidden=true; }; $('arSure').onclick=()=>{ $('arConfirm').hidden=true; arEnd(); };   // 押しまちがいを避けるため、終わる前に確かめる
   $('arC1').onclick=()=>arCorner(0); $('arC2').onclick=()=>arCorner(1);
+  $('arMenu').onclick=()=>{ if(ar.setup!==false){ ar.setup=false; ar.edit=null; } else ar.setup=true; arHud(); };   // 「追肥開始」で細かい設定のボタンをしまう・「メニュー」で呼び戻す
   { const pad=$('arPad'); let tm=null, iv=null; const stop=()=>{ clearTimeout(tm); clearInterval(iv); tm=iv=null; };   // 押しつづけると、くり返しずれる
-    const act=m=>{ if(m==='rl') arAdjRot(-Math.PI/180); else if(m==='rr') arAdjRot(Math.PI/180); else arAdjMove(m==='f'?1:m==='b'?-1:0,m==='r'?1:m==='l'?-1:0); };
+    const act=m=>{ if(m==='rl') arAdjRot(-Math.PI/540); else if(m==='rr') arAdjRot(Math.PI/540); else arAdjMove(m==='f'?1:m==='b'?-1:0,m==='r'?1:m==='l'?-1:0); };
     pad.addEventListener('pointerdown',e=>{ const b=e.target.closest('button[data-m]'); if(!b) return; e.preventDefault(); stop(); act(b.dataset.m); tm=setTimeout(()=>{ iv=setInterval(()=>act(b.dataset.m),90); },350); });
     for(const t of ['pointerup','pointercancel','pointerleave']) pad.addEventListener(t,stop);
     // 2本の指をひねると、重ねた絵の向きを直す（リングの所を中心に）
@@ -2023,7 +2026,7 @@ async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document
   $('arView').hidden=false;   // dom-overlay の親は見えている必要がある（隠れたままだと全画面にできない）
   let s; try{ s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],optionalFeatures:['anchors'],domOverlay:{root:hud}}); }   // 押した直後に呼ぶ（待つと「押した」扱いが切れる）
   catch(e){ console.error(e); $('arView').hidden=true; $('arPrepMsg').textContent='AR を始められませんでした（'+(e.message||e.name)+'）。この端末ではAR表示に対応していない可能性があります（Play ストアの「Google Play 開発者サービス for AR」を入れる・更新すると使えることがあります）'; return; }
-  Object.assign(ar,{on:true,session:s,model:M,adj:null,gestT:0,phase:'scan',p1:null,p2:null,anc:[],pins:[],hit:null,hitSrc:null,tap:false,lift:null,liftAuto:true,fy:[],fit:null,fitBad:false,warnT:0,paint:null});
+  Object.assign(ar,{on:true,session:s,model:M,adj:null,gestT:0,setup:true,phase:'scan',p1:null,p2:null,anc:[],pins:[],hit:null,hitSrc:null,tap:false,lift:null,liftAuto:true,fy:[],fit:null,fitBad:false,warnT:0,paint:null});
   history.pushState({ar:1},''); ar.pushed=true; arHud();
   s.addEventListener('end',()=>{ if(ar.on&&ar.session===s) arEnd('session'); }); s.addEventListener('select',()=>{ if(ar.session===s) ar.tap=true; });   // タップは次の絵のときに、その時のリングの所で受ける
   const gone=()=>!ar.on||ar.session!==s;   // 用意の途中で終わった（戻る・終わる）
@@ -2086,10 +2089,10 @@ function arApplyAdj(){   // 手で直したずれ（前後左右・向き）を�
 function arAdjRot(d){   // 向きを d ラジアン回す（リングの所、なければ2点の真ん中を中心に）
   if(!ar.on||ar.phase!=='show'||!ar.p1||!ar.p2) return; const a=ar.adj||(ar.adj={th:0,tx:0,tz:0}), pv=ar.hit?[ar.hit[0],ar.hit[2]]:[(ar.p1[0]+ar.p2[0])/2,(ar.p1[2]+ar.p2[2])/2], c=Math.cos(d), s=Math.sin(d), x=a.tx-pv[0], z=a.tz-pv[1];
   a.tx=pv[0]+c*x+s*z; a.tz=pv[1]-s*x+c*z; a.th+=d; arAlign(); }
-function arAdjMove(fwd,right){   // 見ている向きの 前後(fwd)・左右(right) に 10cm ずらす
+function arAdjMove(fwd,right){   // 見ている向きの 前後(fwd)・左右(right) に 3.3cm ずらす
   if(!ar.on||ar.phase!=='show'||!ar.cam||!ar.p1||!ar.p2) return; const m=ar.cam.matrixWorld.elements; let fx=-m[8], fz=-m[10], L=Math.hypot(fx,fz);
   if(L<0.35){ fx=m[4]; fz=m[6]; L=Math.hypot(fx,fz); } if(L<1e-3) return; fx/=L; fz/=L;
-  const a=ar.adj||(ar.adj={th:0,tx:0,tz:0}), st=0.1; a.tx+=st*(fx*fwd-fz*right); a.tz+=st*(fz*fwd+fx*right); arAlign(); }
+  const a=ar.adj||(ar.adj={th:0,tx:0,tz:0}), st=0.1/3; a.tx+=st*(fx*fwd-fz*right); a.tz+=st*(fz*fwd+fx*right); arAlign(); }
 function arAlign(){   // 2点で合わせる: 回転 = 地図の方位 − AR の向き、位置 = 2点の真ん中どうし、高さ = 2点の平均
   const T=AR3, M=ar.model, g2=M.P[M.c2], p1=ar.p1, p2=ar.p2, dM=Math.hypot(g2[0],g2[1]), dA=Math.hypot(p2[0]-p1[0],p2[2]-p1[2]);
   const th=Math.atan2(g2[0],g2[1])-Math.atan2(p2[0]-p1[0],-(p2[2]-p1[2]));   // 方位: 北から東まわり（three.js の −Z から +X まわり）
@@ -2160,7 +2163,7 @@ function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.pha
     :ar.fitBad?`距離が合いません（地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。角を置き直してください`:'';
   const t=ar.warnTxt||base, m=$('arMsg'); m.hidden=!t; if(t&&m.innerHTML!==t) m.innerHTML=t; m.classList.toggle('warn',!!ar.warnTxt||(sh&&!!ar.fitBad&&ar.edit==null));
   $('arC1').classList.toggle('on',ar.edit===0); $('arC2').classList.toggle('on',ar.edit===1);
-  $('arPad').hidden=!sh; $('arTouch').style.pointerEvents=sh&&ar.edit==null?'auto':'none';   // ずらしボタンと 2本指の向き直しは、合わせたあとだけ（角を置き直すあいだは、タップを AR に渡す）
+  const su=ar.setup!==false; $('arL').style.display=su?'':'none'; $('arPad').hidden=!(sh&&su); $('arTouch').style.pointerEvents=sh&&su&&ar.edit==null?'auto':'none'; const mn=$('arMenu'); mn.hidden=!sh; mn.textContent=su?'追肥開始':'メニュー'; mn.className=su?'go':'';   // ずらしボタンと 2本指の向き直しは、合わせたあとだけ（角を置き直すあいだは、タップを AR に渡す）
   if(sh) arMiniDraw(ar.mmP||null); else arSketch(); }
 function arCorner(k){   // 角を置き直す。合わせたあと: 次のタップでその角を置き直す（もう一度押すと取り消し）。合わせる前: 角1 は最初から、角2 はなにもしない
   if(!ar.on) return; if(ar.phase==='show'){ ar.edit=ar.edit===k?null:k; arHud(); return; }
@@ -2186,7 +2189,7 @@ function arMiniDraw(pt){   // pt: リングの所（筆の中の座標 [x,y]。�
     x.lineWidth=4; x.strokeStyle='#fff'; x.beginPath(); x.arc(t[0],t[1],15,0,7); x.stroke(); x.beginPath(); x.arc(t[0],t[1],3,0,7); x.fillStyle='#fff'; x.fill(); } }
 function arWarn(t,ms){ clearTimeout(ar.warnT); ar.warnTxt=t||''; if(t&&ms) ar.warnT=setTimeout(()=>{ ar.warnTxt=''; if(ar.on) arHud(); },ms); if(ar.on&&document.getElementById('arMsg')) arHud(); }
 const arDispose=o=>o&&o.traverse(x=>{ if(x.isSprite) return; if(x.geometry) x.geometry.dispose(); if(x.material) x.material.dispose(); });   // 文字の板の絵（ar.tex）は使い回すので消さない
-function arRedo(){ if(!ar.on) return; for(const p of ar.pins){ ar.scene.remove(p); arDispose(p); } ar.pins=[]; ar.p1=ar.p2=null; ar.fit=null; ar.adj=null; for(const x of ar.anc||[]) if(x&&x.a.delete) x.a.delete(); ar.anc=[];
+function arRedo(){ if(!ar.on) return; for(const p of ar.pins){ ar.scene.remove(p); arDispose(p); } ar.pins=[]; ar.p1=ar.p2=null; ar.fit=null; ar.adj=null; ar.setup=true; for(const x of ar.anc||[]) if(x&&x.a.delete) x.a.delete(); ar.anc=[];
   if(ar.paint){ ar.geo.remove(ar.paint); arDispose(ar.paint); ar.paint=null; } ar.edit=null; ar.lift=null; ar.liftAuto=true; ar.fy=[]; ar.fitBad=false; arWarn(''); ar.phase=ar.hit?'c1':'scan'; arHud(); }
 async function arNextSrc(){   // 色の出どころを切り替える（位置合わせはそのまま）
   const i=AR_SRC.findIndex(s=>s.k===ar.model.k); for(let j=1;j<=AR_SRC.length;j++){ const s=AR_SRC[(i+j)%AR_SRC.length], key=ar.model.pid+'|'+s.k+'|'+document.getElementById('colorDate').value;
