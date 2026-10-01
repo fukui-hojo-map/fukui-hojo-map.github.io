@@ -1651,30 +1651,27 @@ document.getElementById('btnXlsx').onclick=async()=>{
     ws.getCell('A1').value=`ふくい圃場マップ　選んだ圃場の一覧（${ds}）`; ws.getCell('A1').font={bold:true,size:14};
     // 地図は基本は表の上（同じシート）。枚数が多いときは表が長くなるので、地図を別のシートに分ける
     const MAP_SAME=data.rows.length<=12;
-    ws.getCell('A2').value=MAP_SAME?'地図の番号と、下の表の「番号」が同じ圃場です。':'「地図」のシートの番号と、下の表の「番号」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}};
+    ws.getCell('A2').value=MAP_SAME?'地図の番号と、下の表の「圃場」が同じ圃場です。':'「地図」のシートの番号と、下の表の「圃場」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}};
     let row=4;
     if(map_){ const id=wb.addImage({base64:map_.url,extension:'png'});
       if(MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(id,{tl:{col:0,row:2},ext:{width:w,height:h}}); row=3+Math.ceil(h/20)+2; }   // 行の高さは 20px
-      else { const wm=wb.addWorksheet('地図'); wm.getCell('A1').value='選んだ圃場の地図（番号は「一覧」のシートの番号）'; wm.getCell('A1').font={bold:true};
+      else { const wm=wb.addWorksheet('地図'); wm.getCell('A1').value='選んだ圃場の地図（番号は「一覧」のシートの「圃場」）'; wm.getCell('A1').font={bold:true};
         const w=Math.min(1400,map_.W), h=Math.round(map_.H*w/map_.W); wm.addImage(id,{tl:{col:0,row:1},ext:{width:w,height:h}}); } }
-    const R=data.rows.some(o=>o.rank), cols=[['番号',6],['圃場',15],['面積(a)',9],['例年の育ち（近くの同じ作期の田との差・NDVI）',14],['目安',12],['年ごとの差',34],
+    const R=data.rows.some(o=>o.rank), cols=[['圃場',15],['面積(a)',9],
       ...(R?[['ランク',7],['点数',7],['広さ/35',8],['生育のそろい/15',10],['作業効率性/15',10],['深いところの少なさ/10',12],['例年の旺盛さ/25',10],['獣害(減点)/20',10],['住宅地(減点)/15',10],['田の中の鉄塔',8],['説明',60]]:[]),
-      ['直近のNDVI',10],['直近の日付',11],['今年の最大NDVI',11],['最大の日付',11],...data.years.map(yy=>[`${yy}年の作物`,10]),['緯度',11],['経度',11],['地図で開く',12],['区画ID',38]];
+      ['直近のNDVI',10],['直近の日付',11],['今年の最大NDVI',11],['最大の日付',11],['緯度',11],['経度',11],['地図で開く',12],['区画ID',38]];
     ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'};
     ws.getRow(row).eachCell(c=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EFE6'}}; c.border={bottom:{style:'thin'}}; });
     cols.forEach((c,i)=>{ ws.getColumn(i+1).width=c[1]; });
     const base=location.href.split('#')[0].split('?')[0], r1=v=>v==null?null:Math.round(v*10)/10;
     for(const o of data.rows){ row++; const k=o.rank, P=k&&k.p.pts;
-      const V=o.vig, vs=V&&V.s!=null?V.s:null;
-      const v=[o.no,o.label,Math.round(o.area*10)/10,vs!=null?Math.round(vs*1000)/1000:'出せません',vs!=null?vigLevel(vs):'',
-        V?V.yrs.filter(q=>q.d!=null).map(q=>`${q.y} ${vigTxt(q.d)}`).join('、'):'',
+      const v=[o.label,Math.round(o.area*10)/10,
         ...(R?(k?[k.rk,k.sc,r1(P.area),r1(P.unif),r1(P.eff),r1(P.hama),r1(P.vig),k.mt&&k.mt.ok?-(k.mt.wpen||0):null,k.mt&&k.mt.hp?-k.mt.hp.pen:null,P&&k.p.ef.tw||0,k.text]:['','','','','','','','','','','稲の年が足りない・データ準備中のため評価なし']):[]),
         o.last?Math.round(o.last.ndvi*100)/100:null,o.last?o.last.date:'',o.max?Math.round(o.max.ndvi*100)/100:null,o.max?o.max.date:'',
-        ...data.years.map(yy=>o.crops&&o.crops[yy]||''),Math.round(o.lat*1e6)/1e6,Math.round(o.lon*1e6)/1e6,
+        Math.round(o.lat*1e6)/1e6,Math.round(o.lon*1e6)/1e6,
         {text:'地図',hyperlink:`${base}#c=${o.lat.toFixed(6)},${o.lon.toFixed(6)}&z=18`},o.pid];
       ws.getRow(row).values=v; ws.getRow(row).alignment={vertical:'top',wrapText:true};
-      const c1=ws.getRow(row).getCell(1); c1.font={bold:true,size:14,color:{argb:'FF'+o.color.slice(1).toUpperCase()}}; c1.alignment={horizontal:'center',vertical:'top'};
-      ws.getRow(row).getCell(2).font={bold:true,color:{argb:'FF'+o.color.slice(1).toUpperCase()}};
+      ws.getRow(row).getCell(1).font={bold:true,color:{argb:'FF'+o.color.slice(1).toUpperCase()}};
       const lk=ws.getRow(row).getCell(cols.findIndex(c=>c[0]==='地図で開く')+1); lk.font={color:{argb:'FF1A73E8'},underline:true}; }
     // NDVI の推移（日付 × 田）
     const ws2=wb.addWorksheet('NDVIの推移'), S=selected.filter(s=>parcels[s.pid]).map(s=>({s,m:new Map(seriesOf(s.pid).filter(q=>!q.rad).map(q=>[q.date,q]))})), dd=[...new Set(S.flatMap(x=>[...x.m.keys()]))].sort();
