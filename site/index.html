@@ -1869,7 +1869,7 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 @media (max-width:860px){ body.arPrepOn .layout{grid-template-rows:80vh auto} body.arPrepOn #map{height:80vh} }
 #arHud{position:absolute;inset:0;font:16px/1.45 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff;pointer-events:none;-webkit-user-select:none;user-select:none}
 #arHud button{pointer-events:auto;font:inherit;font-weight:700;font-size:15px;line-height:1.2;min-height:52px;min-width:48px;padding:4px 12px;border:0;border-radius:12px;background:rgba(255,255,255,.94);color:#17372a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
-#arSk{position:absolute;left:8px;top:calc(8px + env(safe-area-inset-top));width:128px;height:128px;background:rgba(255,255,255,.9);border-radius:10px;pointer-events:none}
+#arSk{position:absolute;left:8px;top:calc(8px + env(safe-area-inset-top));width:128px;height:128px;pointer-events:none}
 #arMsg{position:absolute;left:146px;right:8px;top:calc(8px + env(safe-area-inset-top));padding:8px 12px;background:rgba(0,0,0,.62);border-radius:12px;font-size:16px;font-weight:700;pointer-events:none} #arMsg.warn{background:rgba(198,40,40,.92)} #arMsg b{color:#ffcc80}
 /* 下のボタンは画面のいちばん下から少し上げる（AR を始めたとき、Chrome の「全画面表示を終了するには…」の知らせが下に出て、ボタンが押せなくなるため） */
 #arBtns{position:absolute;left:8px;right:8px;bottom:calc(90px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:flex-end;gap:8px;pointer-events:none} #arBtns .l{display:flex;gap:6px} #arBtns button.on{background:#ffd54a;color:#3a2e00} #arBtns button.end{background:rgba(255,255,255,.94);color:#b71c1c}
@@ -2122,12 +2122,12 @@ function arSketch(){ const cv=document.getElementById('arSk'), x=cv.getContext('
   for(const [i,c,l,on] of [[M.c1,'#ff5a1f','1',ar.phase!=='c2'],[M.c2,'#1e88e5','2',ar.phase==='c2']]){ const s=S(P[i]); x.fillStyle=c; x.beginPath(); x.arc(s[0],s[1],on?20:14,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=on?4:2; x.stroke(); x.fillStyle='#fff'; x.font=`bold ${on?24:17}px sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.fillText(l,s[0],s[1]+1); }
   x.fillStyle='#fff'; x.font='bold 18px sans-serif'; x.textAlign='center'; x.fillText('北↑',W/2,14); }
 function arMiniBase(){   // ミニマップの土台（北が上。マスの色・輪郭・角1・角2）。arPaint のたびに作り直す
-  const M=ar.model, W=192, P=M.P, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2, sc=(W-20)/Math.max(10,Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  const M=ar.model, W=192, P=M.P, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2, sc=(W-48)/Math.max(10,Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
   const S=p=>[W/2+(p[0]-cx)*sc,W/2-(p[1]-cy)*sc], b=document.createElement('canvas'); b.width=b.height=W; const x=b.getContext('2d');
-  for(const c of M.cells){ x.fillStyle=`rgb(${c.rgb.join(',')})`; for(const q of c.pieces){ x.beginPath(); q.forEach((v,i)=>{ const t=S(v); x[i?'lineTo':'moveTo'](t[0],t[1]); }); x.closePath(); x.fill(); } }
-  x.lineWidth=2.5; x.strokeStyle='#5d4037'; for(const p of M.parts.concat(...(M.holes||[]))){ x.beginPath(); p.forEach((v,i)=>{ const t=S(v); x[i?'lineTo':'moveTo'](t[0],t[1]); }); x.closePath(); x.stroke(); }
+  for(const c of M.cells){ x.fillStyle=`rgba(${c.rgb.join(',')},.55)`; for(const q of c.pieces){ x.beginPath(); q.forEach((v,i)=>{ const t=S(v); x[i?'lineTo':'moveTo'](t[0],t[1]); }); x.closePath(); x.fill(); } }
+  for(const [lw,col] of [[7,'rgba(0,0,0,.8)'],[3.5,'#ffffff']]){ x.lineWidth=lw; x.strokeStyle=col; x.lineJoin='round'; for(const p of M.parts.concat(...(M.holes||[]))){ x.beginPath(); p.forEach((v,i)=>{ const t=S(v); x[i?'lineTo':'moveTo'](t[0],t[1]); }); x.closePath(); x.stroke(); } }   // 枠は白＋黒ぶち（どんな背景でも目立つ）
   for(const [i,c,l] of [[M.c1,'#ff5a1f','1'],[M.c2,'#1e88e5','2']]){ const t=S(P[i]); x.fillStyle=c; x.beginPath(); x.arc(t[0],t[1],10,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=2; x.stroke(); x.fillStyle='#fff'; x.font='bold 13px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(l,t[0],t[1]+1); }
-  x.fillStyle='#37474f'; x.font='bold 15px sans-serif'; x.textAlign='center'; x.textBaseline='alphabetic'; x.fillText('北↑',W/2,15);
+  x.font='bold 16px sans-serif'; x.textAlign='center'; x.textBaseline='alphabetic'; x.lineWidth=4; x.strokeStyle='rgba(0,0,0,.8)'; x.strokeText('北↑',W/2,15); x.fillStyle='#fff'; x.fillText('北↑',W/2,15);
   ar.mm={b,S}; }
 function arMiniDraw(pt){   // pt: リングの所（筆の中の座標 [x,y]。なければ null）。地面の白いリングと同じ所に ◎ を出す
   const cv=document.getElementById('arSk'); if(!cv||!ar.model) return; if(!ar.mm) arMiniBase(); const x=cv.getContext('2d'); x.clearRect(0,0,192,192); x.drawImage(ar.mm.b,0,0);
