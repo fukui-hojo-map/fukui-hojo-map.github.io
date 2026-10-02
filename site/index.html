@@ -686,6 +686,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .sl-n{color:#b8442c;font-size:12px}
 .soilleg .sl-b{border:0;background:none;font:inherit;font-weight:700;padding:2px 0;cursor:pointer;color:#222}
 .soilleg .sl-b::after{content:' ▾'}
+  .nodat{ font:600 9px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; }
 </style>
 <style>
   :root{--ink:#1e3a2f;--ink2:#4c5a52;--line:#cfd6cc;--panel:#f3f6f1;--accent:#2f7d4f;--warn:#b8442c;--grid:#e6eae3;
@@ -1100,18 +1101,25 @@ function paintMap(){
   if(geoLayer&&!map.hasLayer(geoLayer)){ syncHalos(false); if(SHOW_PLAN) syncPlanLabels(false); pxGen++; pxLayer.clearLayers(); return; }   // 圃場の中の絵も消す   // 引いているときは区画を出さない
   syncHalos(!pm); if(SHOW_PLAN) syncPlanLabels(pm);
   const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null;   // 生育予測: 田ごとの予測日で塗る
+  const nd=[];   // この日の画像がない田（稲の田で、ほかの日の画像はある）→「該当日写真なし」を小さく出す
   for(const pid of (shownPids||Object.keys(parcels))){ const s=pm?null:selected.find(s=>s.pid===pid); const l=parcels[pid].layer, inP=PS&&PS.has(pid);
     let fc,fo;
     if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); }
     else if(gm){ const t=GM.get(pid); fc=t!=null&&gpRange?gpFill(t):'#888'; fo=t!=null?(soilOn?.45:.8):(soilOn?0:.12); }
     else { const v=!on?null:tr?(vb.intersects(l.getBounds())?trendFill(pid):null):val(pid,d); fc=!on?'#888':tr?(v==null?'#888':`rgb(${vigColor(v).join(',')})`):ndviColor(v);
-      fo=soilOn?(on&&v!=null?.35:0):on?(v==null?.15:.65):.3; }   // 土壌図のときは薄く塗る（土壌の色が透けて見えるように）
+      fo=soilOn?(on&&v!=null?.35:0):on?(v==null?.15:.65):.3; if(on&&!tr&&v==null&&!s&&pkg.series&&pkg.series[pid]) nd.push(pid); }   // 土壌図のときは薄く塗る（土壌の色が透けて見えるように）
     const man=pm&&inP&&planManual(PI.get(pid));   // 手で入力した田はオレンジの太い枠
     const ti=TP?TP.idx.get(pid):undefined, due=ti!=null&&TP.pB[ti]>=0.5;   // 転作の番（見込み50%以上）は茶色の点線
     const st={color:s?s.color:man?'#ff6d00':inP?'#ffd400':due?'#6d4c41':'#fff',weight:s?5:man?4:inP?2.5:due?2:1,opacity:s||inP||due?1:.8,dashArray:due?'5 4':null,fillColor:fc,fillOpacity:fo}, k=Object.values(st).join('|');
     if(l._stk!==k){ l.setStyle(st); l._stk=k; } if(s) l.bringToFront(); }
+  syncNoData(nd);
   renderPx();
 }
+const noDataLbl=L.layerGroup().addTo(map); let noDataLast=[];
+function syncNoData(list){ noDataLast=list; noDataLbl.clearLayers(); if(!list.length||map.getZoom()<17) return; const b=map.getBounds().pad(0.05); let n=0;   // 拡大したときだけ・見えている田の近く 150枚まで
+  for(const pid of list){ const c=parcels[pid]&&parcels[pid].centroid; if(!c||!b.contains([c[1],c[0]])) continue; if(++n>150) break;
+    noDataLbl.addLayer(L.marker([c[1],c[0]],{interactive:false,keyboard:false,icon:L.divIcon({className:'nodat',html:'該当日<br>写真<br>なし',iconSize:[40,36],iconAnchor:[20,18]})})); } }
+map.on('moveend',()=>syncNoData(noDataLast));
 document.getElementById('colorDate').onchange=paintMap; document.getElementById('colorOn').onchange=paintMap;
 
 // ---------- 圃場内マップ（10m画素） ----------
