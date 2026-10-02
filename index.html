@@ -1107,7 +1107,8 @@ function paintMap(){
     if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); }
     else if(gm){ const t=GM.get(pid); fc=t!=null&&gpRange?gpFill(t):'#888'; fo=t!=null?(soilOn?.45:.8):(soilOn?0:.12); }
     else { const v=!on?null:tr?(vb.intersects(l.getBounds())?trendFill(pid):null):val(pid,d); fc=!on?'#888':tr?(v==null?'#888':`rgb(${vigColor(v).join(',')})`):ndviColor(v);
-      fo=soilOn?(on&&v!=null?.35:0):on?(v==null?.15:.65):.3; if(on&&!tr&&v==null&&!s&&pkg.series&&pkg.series[pid]) nd.push(pid); }   // 土壌図のときは薄く塗る（土壌の色が透けて見えるように）
+      fo=soilOn?(on&&v!=null?.35:0):on?(v==null?.15:.65):.3; if(on&&!tr&&mode==='top'&&v==null&&!s&&pkg.series&&pkg.series[pid]) nd.push(pid); }   // 追肥モード: 田の色は区画の値で塗るので、値がない田＝その日の画像がない
+   // 土壌図のときは薄く塗る（土壌の色が透けて見えるように）
     const man=pm&&inP&&planManual(PI.get(pid));   // 手で入力した田はオレンジの太い枠
     const ti=TP?TP.idx.get(pid):undefined, due=ti!=null&&TP.pB[ti]>=0.5;   // 転作の番（見込み50%以上）は茶色の点線
     const st={color:s?s.color:man?'#ff6d00':inP?'#ffd400':due?'#6d4c41':'#fff',weight:s?5:man?4:inP?2.5:due?2:1,opacity:s||inP||due?1:.8,dashArray:due?'5 4':null,fillColor:fc,fillOpacity:fo}, k=Object.values(st).join('|');
@@ -1436,16 +1437,17 @@ async function renderBulk(gen,mode,note){   // 選んでいない、見えてい
   const pids=Object.keys(parcels).filter(pid=>!sel.has(pid)&&parcels[pid].cell&&b.intersects(parcels[pid].layer.getBounds()));
   const dist=pid=>{ const q=parcels[pid].centroid; return (q[1]-c.lat)**2+(q[0]-c.lng)**2; };
   if(pids.length>BULK_MAX) pids.sort((x,y)=>dist(x)-dist(y));
-  let t0=performance.now();
+  let t0=performance.now(); const noPhoto=[];
   for(const pid of pids.slice(0,BULK_MAX)){ const P=parcels[pid], key=px?`${pid}|${mode}|${d}`:pid+'|v';
     let o;
     if(ovCache.has(key)) o=ovDraw(key,null);
     else { const r=px?await pxLoad(P.cell,d.slice(0,4)):await trLoad(P.cell); if(gen!==pxGen) return;
       if(px){ const k=r&&r.g?r.m.dates.indexOf(d):-1; o=k>=0?ovDraw(key,()=>drawPx(pid,r,k,mode)):null; }
       else o=r?ovDraw(key,()=>drawVig(pid,r)):null; }
-    if(o&&!o.none){ P.layer.setStyle({fillOpacity:0}); P.layer._stk=''; }
+    if(o&&!o.none){ P.layer.setStyle({fillOpacity:0}); P.layer._stk=''; } else if(px&&pkg.series&&pkg.series[pid]) noPhoto.push(pid);   // 絵が出なかった稲の田＝この日の画像がない
     if(performance.now()-t0>40){ await new Promise(r=>setTimeout(r)); if(gen!==pxGen) return; t0=performance.now(); } }
   if(pids.length>BULK_MAX&&!note.textContent) note.textContent=`見えている圃場のうち中心に近い${BULK_MAX}枚を色分けしています`;
+  if(px&&gen===pxGen) syncNoData(noPhoto);
 }
 let toLatest=false;   // 追肥マップに切りかえたときは最新の日にする
 async function buildPxDates(){   // 圃場内モードでは、選んだ圃場の画素がある日だけを並べる
