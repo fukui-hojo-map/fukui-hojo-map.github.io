@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js"}}</script>
 <title>ふくい圃場マップ</title>
 <link rel="manifest" href="manifest.webmanifest">
 <script>if('serviceWorker' in navigator&&location.protocol==='https:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });</script>
@@ -686,7 +687,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .sl-n{color:#b8442c;font-size:12px}
 .soilleg .sl-b{border:0;background:none;font:inherit;font-weight:700;padding:2px 0;cursor:pointer;color:#222}
 .soilleg .sl-b::after{content:' ▾'}
-  .nodat{ font:600 9px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; }
+  .nodat{ white-space:nowrap; font:600 10px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; }
 </style>
 <style>
   :root{--ink:#1e3a2f;--ink2:#4c5a52;--line:#cfd6cc;--panel:#f3f6f1;--accent:#2f7d4f;--warn:#b8442c;--grid:#e6eae3;
@@ -1101,7 +1102,7 @@ function paintMap(){
   if(geoLayer&&!map.hasLayer(geoLayer)){ syncHalos(false); if(SHOW_PLAN) syncPlanLabels(false); pxGen++; pxLayer.clearLayers(); return; }   // 圃場の中の絵も消す   // 引いているときは区画を出さない
   syncHalos(!pm); if(SHOW_PLAN) syncPlanLabels(pm);
   const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null;   // 生育予測: 田ごとの予測日で塗る
-  const nd=[];   // この日の画像がない田（稲の田で、ほかの日の画像はある）→「該当日写真なし」を小さく出す
+  const nd=[];   // この日の画像がない田（稲の田で、ほかの日の画像はある）→「この日は写真なし」を小さく出す
   for(const pid of (shownPids||Object.keys(parcels))){ const s=pm?null:selected.find(s=>s.pid===pid); const l=parcels[pid].layer, inP=PS&&PS.has(pid);
     let fc,fo;
     if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); }
@@ -1118,8 +1119,12 @@ function paintMap(){
 }
 const noDataLbl=L.layerGroup().addTo(map); let noDataLast=[];
 function syncNoData(list){ noDataLast=list; noDataLbl.clearLayers(); if(!list.length||map.getZoom()<17) return; const b=map.getBounds().pad(0.05); let n=0;   // 拡大したときだけ・見えている田の近く 150枚まで
-  for(const pid of list){ const c=parcels[pid]&&parcels[pid].centroid; if(!c||!b.contains([c[1],c[0]])) continue; if(++n>150) break;
-    noDataLbl.addLayer(L.marker([c[1],c[0]],{interactive:false,keyboard:false,icon:L.divIcon({className:'nodat',html:'該当日<br>写真<br>なし',iconSize:[40,36],iconAnchor:[20,18]})})); } }
+  for(const pid of list){ const c=parcels[pid]&&parcels[pid].centroid; if(!c||!b.contains([c[1],c[0]])) continue;
+    const g=parcels[pid].feature&&parcels[pid].feature.geometry, ring=g&&(g.type==='Polygon'?g.coordinates[0]:g.coordinates&&g.coordinates[0]&&g.coordinates[0][0]); if(!ring) continue;
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const q of ring){ const t=map.latLngToContainerPoint([q[1],q[0]]); x0=Math.min(x0,t.x); x1=Math.max(x1,t.x); y0=Math.min(y0,t.y); y1=Math.max(y1,t.y); }
+    if(x1-x0<95||y1-y0<24) continue;   // 田が画面で小さいときは出さない（字が重なって読めなくなる）
+    if(++n>150) break;
+    noDataLbl.addLayer(L.marker([c[1],c[0]],{interactive:false,keyboard:false,icon:L.divIcon({className:'nodat',html:'この日は写真なし',iconSize:[90,14],iconAnchor:[45,7]})})); } }
 map.on('moveend',()=>syncNoData(noDataLast));
 document.getElementById('colorDate').onchange=paintMap; document.getElementById('colorOn').onchange=paintMap;
 
@@ -1888,7 +1893,7 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 #arHud button{pointer-events:auto;font:inherit;font-weight:700;font-size:15px;line-height:1.2;min-height:52px;min-width:48px;padding:4px 12px;border:0;border-radius:12px;background:rgba(255,255,255,.94);color:#17372a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 #arSk{position:absolute;left:8px;top:calc(8px + env(safe-area-inset-top));width:128px;height:128px;pointer-events:none}
 #arMenu{position:absolute;right:8px;top:calc(8px + env(safe-area-inset-top));pointer-events:auto;min-width:112px;min-height:52px;font-size:16px} #arMenu.go{background:#1b7a3a;color:#fff}
-#arMsg{position:absolute;left:146px;right:128px;top:calc(8px + env(safe-area-inset-top));padding:8px 12px;background:rgba(0,0,0,.62);border-radius:12px;font-size:16px;font-weight:700;pointer-events:none} #arMsg.warn{background:rgba(198,40,40,.92)} #arMsg b{color:#ffcc80}
+#arMsg{position:absolute;left:146px;right:128px;top:calc(8px + env(safe-area-inset-top));padding:8px 12px;background:rgba(0,0,0,.62);border-radius:12px;font-size:16px;font-weight:700;pointer-events:none} #arMsg.warn{background:rgba(198,40,40,.92)} #arHud:has(#arObjBtn) #arMsg{right:172px} #arObjBtn{position:absolute;right:8px;top:calc(68px + env(safe-area-inset-top));min-width:112px;font-size:15px} #arObjMenu{position:absolute;right:8px;top:calc(128px + env(safe-area-inset-top));width:min(72vw,270px);max-height:46vh;overflow:auto;background:rgba(255,255,255,.97);border-radius:12px;padding:6px;box-shadow:0 2px 10px rgba(0,0,0,.4);pointer-events:auto;display:flex;flex-direction:column;gap:6px} #arObjMenu button{box-shadow:none;border:1.5px solid #cfd8d2;text-align:left;font-size:16px} #arObjMenu .h{font-size:12px;color:#5b6b63;padding:2px 6px} #arObjMenu button.del{color:#b23c17} #arCredit{position:absolute;left:8px;bottom:calc(64px + env(safe-area-inset-bottom));max-width:72%;font-size:10px;line-height:1.3;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none} #arMsg b{color:#ffcc80}
 /* 下のボタンは画面のいちばん下から少し上げる（AR を始めたとき、Chrome の「全画面表示を終了するには…」の知らせが下に出て、ボタンが押せなくなるため） */
 #arBtns{position:absolute;left:8px;right:8px;bottom:calc(90px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:flex-end;gap:8px;pointer-events:none} #arBtns .l{display:flex;gap:6px} #arBtns button.on{background:#ffd54a;color:#3a2e00} #arBtns button.end{background:rgba(255,255,255,.94);color:#b71c1c}
 #arTouch{position:absolute;inset:0;touch-action:none;pointer-events:none}
@@ -1985,21 +1990,22 @@ function arModel(pid,k,S,V,c1,c2){   // 角1を原点にした m の座標にし
   const cells=[]; for(const c of S.cells){ let sq=c.sq.map(q=>E.fw(q[0],q[1])); if(arArea(sq)<0) sq.reverse(); const xs=sq.map(q=>q[0]), ys=sq.map(q=>q[1]), b=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
     const pieces=[]; let ar2=0; for(const t of tris){ if(t.bb[2]<b[0]||t.bb[0]>b[2]||t.bb[3]<b[1]||t.bb[1]>b[3]) continue; const q=arClip(t.tr,sq); const a=q.length>=3?arArea(q):0; if(a>1e-4){ pieces.push(q); ar2+=a; } }   // 三角形もマスも凸なので、切った形も凸
     if(ar2<0.3) continue; const px=pieces.flat();
-    cells.push({pieces,sq,rgb:c.rgb,txt:c.txt,lab:c.lab,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
+    cells.push({pieces,sq,rgb:c.rgb,txt:c.txt,lab:c.lab,labN:c.labN,bb:[Math.min(...px.map(q=>q[0])),Math.min(...px.map(q=>q[1])),Math.max(...px.map(q=>q[0])),Math.max(...px.map(q=>q[1]))]}); }
   const P=V.map(q=>E.fw(q[0],q[1]));
   return {pid,k,name:selLabel(pid),src:(AR_SRC.find(s=>s.k===k)||{}).name,E,V,P,parts,holes,c1,c2,cells,legend:S.legend,note:S.note||''}; }
 
 // ---- AR の画面 ----
 function arDom(){ let v=document.getElementById('arView'); if(v) return v; arCss();
   v=document.createElement('div'); v.id='arView'; v.hidden=true;
-  v.innerHTML=`<div id="arHud"><div id="arTouch"></div><canvas id="arSk" width="192" height="192"></canvas><div id="arMsg" hidden></div>
+  v.innerHTML=`<div id="arHud"><div id="arTouch"></div><canvas id="arSk" width="192" height="192"></canvas><div id="arMsg" hidden></div><div id="arCredit" hidden></div>
 <div id="arPad" hidden><button data-m="rl" aria-label="左に回す">⟲</button><button data-m="f" aria-label="奥へ">↑</button><button data-m="rr" aria-label="右に回す">⟳</button><button data-m="l" aria-label="左へ">←</button><span></span><button data-m="r" aria-label="右へ">→</button><span></span><button data-m="b" aria-label="手前へ">↓</button><span></span></div>
 <button id="arMenu" hidden></button>
+${DEV?'<button id="arObjBtn">🧱 モノを配置する</button><div id="arObjMenu" hidden></div>':''}
 <div id="arBtns"><div class="l" id="arL"><button id="arC1">角1 やり直し</button><button id="arC2">角2 やり直し</button></div><button id="arEnd" class="end">ARを終了する</button></div>
 <div id="arConfirm" hidden><div>ARを終了しますか？<div class="r"><button id="arKeep">続ける</button><button id="arSure" class="go">終了する</button></div></div></div></div>`;
   document.body.appendChild(v); const $=id=>document.getElementById(id);
   $('arEnd').onclick=()=>{ $('arConfirm').hidden=false; }; $('arKeep').onclick=()=>{ $('arConfirm').hidden=true; }; $('arSure').onclick=()=>{ $('arConfirm').hidden=true; arEnd(); };   // 押しまちがいを避けるため、終わる前に確かめる
-  $('arC1').onclick=()=>arCorner(0); $('arC2').onclick=()=>arCorner(1);
+  $('arC1').onclick=()=>arCorner(0); $('arC2').onclick=()=>arCorner(1); if($('arObjBtn')) $('arObjBtn').onclick=()=>arObjMenuToggle();
   $('arMenu').onclick=()=>{ if(ar.setup!==false){ ar.setup=false; ar.edit=null; } else ar.setup=true; arHud(); };   // 「追肥開始」で細かい設定のボタンをしまう・「メニュー」で呼び戻す
   { const pad=$('arPad'); let tm=null, iv=null; const stop=()=>{ clearTimeout(tm); clearInterval(iv); tm=iv=null; };   // 押しつづけると、くり返しずれる
     const act=m=>{ if(m==='rl') arAdjRot(-Math.PI/540); else if(m==='rr') arAdjRot(Math.PI/540); else arAdjMove(m==='f'?1:m==='b'?-1:0,m==='r'?1:m==='l'?-1:0); };
@@ -2117,12 +2123,14 @@ function arAlign(){   // 2点で合わせる: 回転 = 地図の方位 − AR �
   ar.gy=(p1[1]+p2[1])/2; ar.geo.rotation.set(0,th,0); ar.geo.position.set((p1[0]+p2[0])/2-mid.x,ar.gy,(p1[2]+p2[2])/2-mid.z); ar.geo.updateMatrixWorld(true);
   ar.fit={th,dM,dA}; ar.fitBad=Math.abs(dM-dA)>=1; arApplyAdj(); }   // 距離の確かめも、いま描いている2点で
 const arLabT=new Map();   // 数字の札の絵（数字と色ごとに1枚。使い回す）
-function arLabTex(t,rgb){ const k=t+'|'+rgb.join(','); if(arLabT.has(k)) return arLabT.get(k); if(arLabT.size>400){ for(const v of arLabT.values()) v.dispose(); arLabT.clear(); }
+function arLabTex(t,rgb,n){ const k=t+'|'+(n||'')+'|'+rgb.join(','); if(arLabT.has(k)) return arLabT.get(k); if(arLabT.size>400){ for(const v of arLabT.values()) v.dispose(); arLabT.clear(); }
   const cv=document.createElement('canvas'); cv.width=256; cv.height=128; const x=cv.getContext('2d'), c=`rgb(${rgb.join(',')})`;
   const rr=(a,b,w,h,r)=>{ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); };
   x.shadowColor='rgba(0,0,0,.55)'; x.shadowBlur=14; x.shadowOffsetY=5; rr(14,12,228,96,34); const gr=x.createLinearGradient(0,12,0,108); gr.addColorStop(0,'rgba(40,40,44,.92)'); gr.addColorStop(1,'rgba(10,10,12,.92)'); x.fillStyle=gr; x.fill();
   x.shadowColor='transparent'; x.lineWidth=9; x.strokeStyle=c; rr(14,12,228,96,34); x.stroke();
-  x.font='bold 70px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,63); x.shadowBlur=0; x.fillText(t,128,63);
+  if(n!=null&&n!==''){ x.font='bold 56px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,48); x.shadowBlur=0; x.fillText(t,128,48);   // 尿素の量（大）の下に、窒素の量（小）
+    x.font='bold 30px sans-serif'; x.fillStyle='rgba(255,255,255,.88)'; x.fillText('N'+n,128,88); }
+  else{ x.font='bold 70px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,63); x.shadowBlur=0; x.fillText(t,128,63); }
   const tx=new AR3.CanvasTexture(cv); tx.colorSpace=AR3.SRGBColorSpace; arLabT.set(k,tx); return tx; }
 function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭・頂点の番号
   const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); }
@@ -2212,6 +2220,38 @@ async function arNextSrc(){   // 色の出どころを切り替える（位置�
   const i=AR_SRC.findIndex(s=>s.k===ar.model.k); for(let j=1;j<=AR_SRC.length;j++){ const s=AR_SRC[(i+j)%AR_SRC.length], key=ar.model.pid+'|'+s.k+'|'+document.getElementById('colorDate').value;
     const r=await (arP.data[key]||(arP.data[key]=s.get(ar.model.pid).catch(e=>({err:e.message})))); if(r.err) continue;
     const M=ar.model; ar.model=arModel(M.pid,s.k,r,M.V,M.c1,M.c2); arPaint(); arHud(); return; } }
+// ---- 開発者用: 「モノを配置する」。3D モデルを、リング（白い輪）の所に、実物の大きさで置く ----
+//   モノを増やすには: ① site/models/ にファイル（.glb）を入れる ② 下の AR_OBJECTS に 1行足す（README は site/models/README.txt）
+//   id: 内部の名前 / name: ボタンの名前 / url: ファイル / fit: [モデルのどの軸（'x'|'y'|'z'）, 実物の長さ m]（その軸の長さが、この長さになる大きさにする）
+//   yaw0: 前の向き（ふつうは、モデルの −Z が前。ちがうなら、前を −Z に向けるための回転 rad） / credit: 作者の表示（ライセンスで必要なら）
+const AR_OBJECTS=[
+  {id:'lambo',name:'ランボルギーニ（カウンタック）',url:'models/lamborghini.glb',fit:['z',4.87],credit:'3Dモデル「2021 Lamborghini Countach LPI 800-4」 Lexyc16 (Sketchfab) CC BY-NC 4.0'},
+];
+const AR_THREE_BASE='https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/', arObjBuf=new Map();
+function arObjCredit(){ const c=document.getElementById('arCredit'); if(!c) return; const t=[...new Set((ar.objs||[]).map(o=>o.userData.credit).filter(Boolean))].join('\n'); c.textContent=t; c.style.whiteSpace='pre-line'; c.hidden=!t; }
+function arObjClear(n){ const L=ar.objs||[]; for(let k=0;k<(n||L.length);k++){ const o=L.pop(); if(!o) break; if(ar.scene) ar.scene.remove(o); arDispose(o); } arObjCredit(); }
+function arObjMenuToggle(){ const m=document.getElementById('arObjMenu'); if(!m||!ar.on||!DEV) return; if(!m.hidden){ m.hidden=true; return; }
+  const n=(ar.objs||[]).length;
+  m.innerHTML='<div class="h">置くものを選ぶと、白い輪（リング）の所に置きます</div>'+AR_OBJECTS.map(o=>`<button type="button" data-id="${o.id}">${o.name}</button>`).join('')
+    +(n?`<button type="button" class="del" data-id="_undo">最後に置いたものを消す</button><button type="button" class="del" data-id="_clear">ぜんぶ消す（${n}個）</button>`:'')+'<button type="button" data-id="_close">とじる</button>';
+  m.hidden=false; m.onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; const id=b.dataset.id; m.hidden=true;
+    if(id==='_undo') arObjClear(1); else if(id==='_clear') arObjClear(); else if(id!=='_close') arObjPlace(AR_OBJECTS.find(o=>o.id===id)); }; }
+async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
+  if(!ar.hit){ arWarn('地面が見つかっていません。リング（白い輪）が出ている所で押してください',2500); return; }
+  const p=ar.hit.slice(), T=AR3; if(!T) return;
+  const cam=ar.renderer.xr.getCamera(), dir=new T.Vector3(); cam.getWorldDirection(dir); const th=Math.atan2(-dir.x,-dir.z);   // いまカメラが向いている方（横まわりだけ）に、前を向ける
+  arWarn(def.name+' を読み込み中…',20000);
+  try{
+    const {GLTFLoader}=await import(AR_THREE_BASE+'loaders/GLTFLoader.js');
+    if(!arObjBuf.has(def.url)) arObjBuf.set(def.url,await (await fetch(def.url)).arrayBuffer());
+    const gltf=await new Promise((ok,ng)=>new GLTFLoader().parse(arObjBuf.get(def.url).slice(0),'',ok,ng));
+    if(!ar.on||!ar.scene) return;
+    if(!ar.lit){ ar.lit=true; ar.scene.add(new T.HemisphereLight(0xffffff,0x9a9a9a,1.6)); const d=new T.DirectionalLight(0xffffff,1.4); d.position.set(1,2,1.5); ar.scene.add(d); }
+    if(!ar.scene.environment) try{ const {RoomEnvironment}=await import(AR_THREE_BASE+'environments/RoomEnvironment.js'), pm=new T.PMREMGenerator(ar.renderer); ar.scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; pm.dispose(); }catch(e){ console.warn('環境の反射を作れませんでした',e); }   // ぬりの照り返し
+    const m=gltf.scene, bb=new T.Box3().setFromObject(m), sz=bb.getSize(new T.Vector3()), c=bb.getCenter(new T.Vector3()), inner=new T.Group(), root=new T.Group(), ax=(def.fit&&def.fit[0])||'z';
+    m.position.set(-c.x,-bb.min.y,-c.z); inner.add(m); inner.rotation.y=def.yaw0||0; inner.scale.setScalar((def.fit?def.fit[1]:1)/sz[ax]);   // 底を地面に・中心を置いた所に・実物の大きさに
+    root.add(inner); root.position.set(p[0],p[1],p[2]); root.rotation.y=th; root.userData.credit=def.credit||''; ar.scene.add(root); (ar.objs=ar.objs||[]).push(root); arObjCredit(); arWarn('');
+  }catch(e){ console.error(e); arWarn(def.name+' を読み込めませんでした（'+(e.message||e)+'）',4000); } }
 async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう戻った）・'session'（AR が外から終わった）・なし（終わるボタンなど）
   if(!ar.on) return; ar.on=false; const R=ar.renderer;
   if(ar.hitSrc){ try{ ar.hitSrc.cancel(); }catch(e){} ar.hitSrc=null; }
@@ -2219,7 +2259,7 @@ async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう�
   if(R) R.setAnimationLoop(null);
   if(ar.session){ const s=ar.session; ar.session=null; try{ await s.end(); }catch(e){} }
   if(R){ R.setAnimationLoop(null); R.xr.enabled=false; }
-  if(ar.scene) arDispose(ar.scene); ar.scene=null; ar.pins=[]; ar.paint=null; ar.mascots=[]; ar.lit=false;
+  if(ar.scene) arDispose(ar.scene); ar.scene=null; ar.pins=[]; ar.paint=null; ar.mascots=[]; ar.lit=false; ar.objs=[]; { const c=document.getElementById('arCredit'), m=document.getElementById('arObjMenu'); if(c) c.hidden=true; if(m) m.hidden=true; }
   document.getElementById('arView').hidden=true; arWarn('');
   if(ar.pushed&&why!=='nav') history.back(); ar.pushed=false; }
 let AR_HELP=null, AR_TITLE='ARで見る', AR_FIX=()=>null, AR_WIZ=null;   // AR_FIX: 色を決めてしまう（選ぶ欄を出さない）。AR_WIZ: 角を選ぶ画面を、決めることを順に出す画面にする {on(), html(P,pid), bind(el), ready(), sync()}
