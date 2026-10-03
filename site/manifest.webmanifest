@@ -1,6 +1,6 @@
 {
   "name": "ふくい圃場マップ",
-  "short_name": "圃場マップ",
+  "short_name": "ふくい圃場マップ",
   "description": "福井県の圃場を、衛星の画像（NDVI）で見る地図",
   "start_url": "./",
   "scope": "./",
