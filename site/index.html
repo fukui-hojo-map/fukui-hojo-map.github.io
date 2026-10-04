@@ -2230,14 +2230,16 @@ const AR_OBJECTS=[
   {id:'liberty',name:'自由の女神（高さ20m）',url:'models/liberty.glb',fit:['y',20],yaw0:Math.PI/2,credit:'3Dモデル「Statue Of Liberty」 Gravity Jack (Sketchfab) CC BY 4.0'},
   {id:'bowl',name:'巨大お茶碗（直径10m）',url:'models/ricebowl.glb',fit:['x',10],credit:'3Dモデル「Rice bowl」 1-3D.com (Sketchfab) CC BY-SA 4.0（容量を小さくして使用）'},
 ];
-// ---- 効果音（開発者用）: 音のファイルは使わず、ブラウザで作る（権利の心配がない・容量が増えない）。タップした時に鳴らし始める（スマホは、タップのあとでないと音が出せない）
+// ---- 効果音（開発者用）: ファミコン風（ピコピコ）。音のファイルは使わず、ブラウザで作る（権利の心配がない・容量が増えない）。タップした時に鳴らし始める（スマホは、タップのあとでないと音が出せない）
 let arAud=null; const arSndOn=()=>{ try{ return localStorage.getItem('fhmSnd')!=='0'; }catch(e){ return true; } };
-function arSnd(kind){ try{ if(!arSndOn()) return; const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; arAud=arAud||new AC(); if(arAud.state==='suspended') arAud.resume(); const c=arAud, t=c.currentTime, out=c.createGain(); out.gain.value=0.5; out.connect(c.destination);
-  const tone=(type,f0,f1,t0,d,v)=>{ const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f0,t+t0); if(f1!==f0) o.frequency.exponentialRampToValueAtTime(f1,t+t0+d); g.gain.setValueAtTime(0.0001,t+t0); g.gain.exponentialRampToValueAtTime(v,t+t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+t0+d); o.connect(g); g.connect(out); o.start(t+t0); o.stop(t+t0+d+0.05); };
-  if(kind==='place'){ tone('sine',140,45,0,0.3,0.9); tone('triangle',520,520,0.12,0.12,0.35); tone('triangle',780,780,0.2,0.12,0.35); tone('triangle',1040,1040,0.28,0.2,0.3); }   // ドスン + ぴろりん（置いた）
-  else if(kind==='clear'){ tone('triangle',700,180,0,0.28,0.5); }   // ひゅー（消した）
-  else if(kind==='err'){ tone('square',200,160,0,0.18,0.25); tone('square',160,130,0.2,0.2,0.25); }   // ぶー（置けなかった）
-  else tone('sine',900,900,0,0.06,0.3); }catch(e){ console.warn('効果音',e); } }   // ぽ（タップ）
+function arSnd(kind){ try{ if(!arSndOn()) return; const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; arAud=arAud||new AC(); if(arAud.state==='suspended') arAud.resume(); const c=arAud, t=c.currentTime, out=c.createGain(); out.gain.value=0.35; out.connect(c.destination);
+  // ファミコン風（ピコピコ）の音。四角い波を、音程をぱっと切りかえて鳴らす
+  const note=(f,t0,d,v,type)=>{ const o=c.createOscillator(), g=c.createGain(); o.type=type||'square'; o.frequency.value=f; g.gain.setValueAtTime(v,t+t0); g.gain.setValueAtTime(v,t+t0+d*0.7); g.gain.linearRampToValueAtTime(0.0001,t+t0+d); o.connect(g); g.connect(out); o.start(t+t0); o.stop(t+t0+d+0.02); };
+  const noise=(t0,d,v)=>{ const n=Math.floor(c.sampleRate*d), b=c.createBuffer(1,n,c.sampleRate), a=b.getChannelData(0); for(let k=0;k<n;k++) a[k]=(Math.random()*2-1)*(1-k/n); const s=c.createBufferSource(), g=c.createGain(); s.buffer=b; g.gain.value=v; s.connect(g); g.connect(out); s.start(t+t0); };
+  if(kind==='place'){ noise(0,0.09,0.5); note(110,0,0.1,0.5,'triangle'); [523,659,784,1047,1319].forEach((f,k)=>note(f,0.1+k*0.055,0.09,0.4)); note(1568,0.4,0.22,0.3); }   // ドン + きらきらきら（置いた。セーブのような音）
+  else if(kind==='clear'){ [988,784,659,523,392,294].forEach((f,k)=>note(f,k*0.045,0.06,0.4)); }   // ぴぽぽぽぽ…（消した）
+  else if(kind==='err'){ note(150,0,0.13,0.5); note(110,0.16,0.2,0.5); }   // ぶっ ぶー（置けなかった）
+  else note(660,0,0.045,0.35); }catch(e){ console.warn('効果音',e); } }   // ぽ（タップ。しゃべるときの音のように短く）
 const AR_THREE_BASE='https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/', arObjBuf=new Map();
 function arObjCredit(){ const c=document.getElementById('arCredit'); if(!c) return; const t=[...new Set((ar.objs||[]).map(o=>o.userData.credit).filter(Boolean))].join('\n'); c.textContent=t; c.style.whiteSpace='pre-line'; c.hidden=!t; }
 function arObjClear(n){ const L=ar.objs||[]; let d=0; for(let k=0;k<(n||L.length);k++){ const o=L.pop(); if(!o) break; if(ar.scene) ar.scene.remove(o); arDispose(o); d++; } arObjCredit(); if(d) arSnd('clear'); }
