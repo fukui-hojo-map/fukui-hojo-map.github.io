@@ -2230,14 +2230,22 @@ const AR_OBJECTS=[
   {id:'liberty',name:'自由の女神（高さ20m）',url:'models/liberty.glb',fit:['y',20],yaw0:Math.PI/2,credit:'3Dモデル「Statue Of Liberty」 Gravity Jack (Sketchfab) CC BY 4.0'},
   {id:'bowl',name:'巨大お茶碗（直径10m）',url:'models/ricebowl.glb',fit:['x',10],credit:'3Dモデル「Rice bowl」 1-3D.com (Sketchfab) CC BY-SA 4.0（容量を小さくして使用）'},
 ];
+// ---- 効果音（開発者用）: 音のファイルは使わず、ブラウザで作る（権利の心配がない・容量が増えない）。タップした時に鳴らし始める（スマホは、タップのあとでないと音が出せない）
+let arAud=null; const arSndOn=()=>{ try{ return localStorage.getItem('fhmSnd')!=='0'; }catch(e){ return true; } };
+function arSnd(kind){ try{ if(!arSndOn()) return; const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; arAud=arAud||new AC(); if(arAud.state==='suspended') arAud.resume(); const c=arAud, t=c.currentTime, out=c.createGain(); out.gain.value=0.5; out.connect(c.destination);
+  const tone=(type,f0,f1,t0,d,v)=>{ const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f0,t+t0); if(f1!==f0) o.frequency.exponentialRampToValueAtTime(f1,t+t0+d); g.gain.setValueAtTime(0.0001,t+t0); g.gain.exponentialRampToValueAtTime(v,t+t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+t0+d); o.connect(g); g.connect(out); o.start(t+t0); o.stop(t+t0+d+0.05); };
+  if(kind==='place'){ tone('sine',140,45,0,0.3,0.9); tone('triangle',520,520,0.12,0.12,0.35); tone('triangle',780,780,0.2,0.12,0.35); tone('triangle',1040,1040,0.28,0.2,0.3); }   // ドスン + ぴろりん（置いた）
+  else if(kind==='clear'){ tone('triangle',700,180,0,0.28,0.5); }   // ひゅー（消した）
+  else if(kind==='err'){ tone('square',200,160,0,0.18,0.25); tone('square',160,130,0.2,0.2,0.25); }   // ぶー（置けなかった）
+  else tone('sine',900,900,0,0.06,0.3); }catch(e){ console.warn('効果音',e); } }   // ぽ（タップ）
 const AR_THREE_BASE='https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/', arObjBuf=new Map();
 function arObjCredit(){ const c=document.getElementById('arCredit'); if(!c) return; const t=[...new Set((ar.objs||[]).map(o=>o.userData.credit).filter(Boolean))].join('\n'); c.textContent=t; c.style.whiteSpace='pre-line'; c.hidden=!t; }
-function arObjClear(n){ const L=ar.objs||[]; for(let k=0;k<(n||L.length);k++){ const o=L.pop(); if(!o) break; if(ar.scene) ar.scene.remove(o); arDispose(o); } arObjCredit(); }
+function arObjClear(n){ const L=ar.objs||[]; let d=0; for(let k=0;k<(n||L.length);k++){ const o=L.pop(); if(!o) break; if(ar.scene) ar.scene.remove(o); arDispose(o); d++; } arObjCredit(); if(d) arSnd('clear'); }
 function arObjMenuToggle(){ const m=document.getElementById('arObjMenu'); if(!m||!ar.on||!DEV) return; if(!m.hidden){ m.hidden=true; return; }
   const n=(ar.objs||[]).length;
   m.innerHTML='<div class="h">置くものを選ぶと、白い輪（リング）の所に置きます</div>'+AR_OBJECTS.map(o=>`<button type="button" data-id="${o.id}">${o.name}</button>`).join('')
-    +(n?`<button type="button" class="del" data-id="_undo">最後に置いたものを消す</button><button type="button" class="del" data-id="_clear">ぜんぶ消す（${n}個）</button>`:'')+'<button type="button" data-id="_close">とじる</button>';
-  m.hidden=false; m.onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; const id=b.dataset.id; m.hidden=true;
+    +(n?`<button type="button" class="del" data-id="_undo">最後に置いたものを消す</button><button type="button" class="del" data-id="_clear">ぜんぶ消す（${n}個）</button>`:'')+'<button type="button" data-id="_snd">'+(arSndOn()?'効果音: ON（押すと切る）':'効果音: OFF（押すと入れる）')+'</button><button type="button" data-id="_close">とじる</button>';
+  m.hidden=false; m.onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; const id=b.dataset.id; if(id==='_snd'){ try{ localStorage.setItem('fhmSnd',arSndOn()?'0':'1'); }catch(er){} b.textContent=arSndOn()?'効果音: ON（押すと切る）':'効果音: OFF（押すと入れる）'; arSnd('tap'); return; } m.hidden=true; if(id!=='_undo'&&id!=='_clear') arSnd('tap');
     if(id==='_undo') arObjClear(1); else if(id==='_clear') arObjClear(); else if(id!=='_close') arObjPlace(AR_OBJECTS.find(o=>o.id===id)); }; }
 async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
   if(!ar.hit){ arWarn('地面が見つかっていません。リング（白い輪）が出ている所で押してください',2500); return; }
@@ -2253,8 +2261,8 @@ async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
     if(!ar.scene.environment) try{ const {RoomEnvironment}=await import(AR_THREE_BASE+'environments/RoomEnvironment.js'), pm=new T.PMREMGenerator(ar.renderer); ar.scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; pm.dispose(); }catch(e){ console.warn('環境の反射を作れませんでした',e); }   // ぬりの照り返し
     const m=gltf.scene, bb=new T.Box3().setFromObject(m), sz=bb.getSize(new T.Vector3()), c=bb.getCenter(new T.Vector3()), inner=new T.Group(), root=new T.Group(), ax=(def.fit&&def.fit[0])||'z';
     m.position.set(-c.x,-bb.min.y,-c.z); inner.add(m); inner.rotation.y=def.yaw0||0; inner.scale.setScalar((def.fit?def.fit[1]:1)/sz[ax]);   // 底を地面に・中心を置いた所に・実物の大きさに
-    root.add(inner); root.position.set(p[0],p[1],p[2]); root.rotation.y=th+Math.PI; root.userData.credit=def.credit||''; ar.scene.add(root); (ar.objs=ar.objs||[]).push(root); arObjCredit(); arWarn('');
-  }catch(e){ console.error(e); arWarn(def.name+' を読み込めませんでした。通信を確かめて、もう一度ためしてください',4500); } }
+    root.add(inner); root.position.set(p[0],p[1],p[2]); root.rotation.y=th+Math.PI; root.userData.credit=def.credit||''; ar.scene.add(root); (ar.objs=ar.objs||[]).push(root); arObjCredit(); arWarn(''); arSnd('place');
+  }catch(e){ console.error(e); arSnd('err'); arWarn(def.name+' を読み込めませんでした。通信を確かめて、もう一度ためしてください',4500); } }
 async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう戻った）・'session'（AR が外から終わった）・なし（終わるボタンなど）
   if(!ar.on) return; ar.on=false; const R=ar.renderer;
   if(ar.hitSrc){ try{ ar.hitSrc.cancel(); }catch(e){} ar.hitSrc=null; }
