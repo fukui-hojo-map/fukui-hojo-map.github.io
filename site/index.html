@@ -2226,6 +2226,9 @@ async function arNextSrc(){   // 色の出どころを切り替える（位置�
 //   yaw0: 前の向き（ふつうは、モデルの −Z が前。ちがうなら、前を −Z に向けるための回転 rad） / credit: 作者の表示（ライセンスで必要なら）
 const AR_OBJECTS=[
   {id:'lambo',name:'ランボルギーニ（カウンタック）',url:'models/lamborghini.glb',fit:['z',4.87],credit:'3Dモデル「2021 Lamborghini Countach LPI 800-4」 Lexyc16 (Sketchfab) CC BY-NC 4.0'},
+  {id:'trex',name:'ティラノサウルス（全長12m）',url:'models/trex.glb',fit:['z',12],yaw0:Math.PI,credit:'3Dモデル「Tyrant King - Tyrannosaurus」 Marcel Schanz (Sketchfab) CC BY 4.0'},
+  {id:'liberty',name:'自由の女神（高さ20m）',url:'models/liberty.glb',fit:['y',20],yaw0:Math.PI/2,credit:'3Dモデル「Statue Of Liberty」 Gravity Jack (Sketchfab) CC BY 4.0'},
+  {id:'bowl',name:'巨大お茶碗（直径10m）',url:'models/ricebowl.glb',fit:['x',10],credit:'3Dモデル「Rice bowl」 1-3D.com (Sketchfab) CC BY-SA 4.0（容量を小さくして使用）'},
 ];
 const AR_THREE_BASE='https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/', arObjBuf=new Map();
 function arObjCredit(){ const c=document.getElementById('arCredit'); if(!c) return; const t=[...new Set((ar.objs||[]).map(o=>o.userData.credit).filter(Boolean))].join('\n'); c.textContent=t; c.style.whiteSpace='pre-line'; c.hidden=!t; }
