@@ -2239,7 +2239,7 @@ function arObjMenuToggle(){ const m=document.getElementById('arObjMenu'); if(!m|
 async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
   if(!ar.hit){ arWarn('地面が見つかっていません。リング（白い輪）が出ている所で押してください',2500); return; }
   const p=ar.hit.slice(), T=AR3; if(!T) return;
-  const cam=ar.renderer.xr.getCamera(), dir=new T.Vector3(); cam.getWorldDirection(dir); const th=Math.atan2(-dir.x,-dir.z);   // いまカメラが向いている方（横まわりだけ）に、前を向ける
+  const cam=ar.renderer.xr.getCamera(), dir=new T.Vector3(); cam.getWorldDirection(dir); const th=Math.atan2(-dir.x,-dir.z);   // 置いた人のほうに、前（モデルの −Z）を向ける（th はカメラが向いている方。そこに π を足して、こちらを向かせる）
   arWarn(def.name+' を読み込み中…',20000);
   try{
     const {GLTFLoader}=await import(AR_THREE_BASE+'loaders/GLTFLoader.js');
@@ -2250,7 +2250,7 @@ async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
     if(!ar.scene.environment) try{ const {RoomEnvironment}=await import(AR_THREE_BASE+'environments/RoomEnvironment.js'), pm=new T.PMREMGenerator(ar.renderer); ar.scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; pm.dispose(); }catch(e){ console.warn('環境の反射を作れませんでした',e); }   // ぬりの照り返し
     const m=gltf.scene, bb=new T.Box3().setFromObject(m), sz=bb.getSize(new T.Vector3()), c=bb.getCenter(new T.Vector3()), inner=new T.Group(), root=new T.Group(), ax=(def.fit&&def.fit[0])||'z';
     m.position.set(-c.x,-bb.min.y,-c.z); inner.add(m); inner.rotation.y=def.yaw0||0; inner.scale.setScalar((def.fit?def.fit[1]:1)/sz[ax]);   // 底を地面に・中心を置いた所に・実物の大きさに
-    root.add(inner); root.position.set(p[0],p[1],p[2]); root.rotation.y=th; root.userData.credit=def.credit||''; ar.scene.add(root); (ar.objs=ar.objs||[]).push(root); arObjCredit(); arWarn('');
+    root.add(inner); root.position.set(p[0],p[1],p[2]); root.rotation.y=th+Math.PI; root.userData.credit=def.credit||''; ar.scene.add(root); (ar.objs=ar.objs||[]).push(root); arObjCredit(); arWarn('');
   }catch(e){ console.error(e); arWarn(def.name+' を読み込めませんでした。通信を確かめて、もう一度ためしてください',4500); } }
 async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう戻った）・'session'（AR が外から終わった）・なし（終わるボタンなど）
   if(!ar.on) return; ar.on=false; const R=ar.renderer;
