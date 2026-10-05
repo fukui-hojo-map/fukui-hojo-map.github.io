@@ -1140,12 +1140,13 @@ function paintMap(){
   const d=document.getElementById('colorDate').value, mode=fillMode(), tr=isTrend(mode), pm=mode==='plan', on=document.getElementById('colorOn').checked&&mode!=='rel'&&!pm, vb=tr?map.getBounds().pad(0.2):null, PS=SHOW_PLAN?planSet():null, PI=pm?new Map(plan.items.map(x=>[x.pid,x])):null;
   if(geoLayer&&!map.hasLayer(geoLayer)){ syncHalos(false); if(SHOW_PLAN) syncPlanLabels(false); pxGen++; pxLayer.clearLayers(); return; }   // 圃場の中の絵も消す   // 引いているときは区画を出さない
   syncHalos(!pm); if(SHOW_PLAN) syncPlanLabels(pm);
-  const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null;   // 生育予測: 田ごとの予測日で塗る
+  const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null, prm=mode==='pr'&&typeof proPrep==='function', PRM=prm?proPrep():null;   // 生育予測: 田ごとの予測日で塗る
   const nd=[];   // この日の画像がない田（稲の田で、ほかの日の画像はある）→「この日は写真なし」を小さく出す
   for(const pid of (shownPids||Object.keys(parcels))){ const s=pm?null:selected.find(s=>s.pid===pid); const l=parcels[pid].layer, inP=PS&&PS.has(pid);
     let fc,fo;
     if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); }
     else if(gm){ const t=GM.get(pid); fc=t!=null&&gpRange?gpFill(t):'#888'; fo=t!=null?(soilOn?.45:.8):(soilOn?0:.12); }
+    else if(prm){ const e=PRM.get(pid); fc=e?proColor(e.p):'#888'; fo=e?(soilOn?.45:.7):(soilOn?0:.12); }
     else { const v=!on?null:tr?(vb.intersects(l.getBounds())?trendFill(pid):null):val(pid,d); fc=!on?'#888':tr?(v==null?'#888':`rgb(${vigColor(v).join(',')})`):ndviColor(v);
       fo=soilOn?(on&&v!=null?.35:0):on?(v==null?.15:.65):.3; if(on&&!tr&&mode==='top'&&v==null&&!s&&pkg.series&&pkg.series[pid]) nd.push(pid); }   // 追肥モード: 田の色は区画の値で塗るので、値がない田＝その日の画像がない
    // 土壌図のときは薄く塗る（土壌の色が透けて見えるように）
@@ -1459,6 +1460,7 @@ async function renderPx(){ relRange='';
   bar.style.background=bandOn()&&(selected.length||map.getZoom()>=BULK_ZOOM)&&document.getElementById('colorOn').checked?bandBar(mode==='abs'?'abs':isTrend(mode)?'vig':'rel'):isTrend(mode)?VIG_GRAD:'';
   lbl.innerHTML=mode==='rel'?'<span>その田の平均より低い</span><span>田の中の差</span><span>高い</span>':isTrend(mode)?VIG_LBL:'<span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span>';
   if(fm==='top'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderTop(gen,note,bar,lbl); }
+  if(fm==='pr'&&typeof renderPro==='function'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderPro(note,bar,lbl); }
   if(fm==='gp'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderGp(note,bar,lbl); }
   if(mode==='plan'){ pxLayer.clearLayers(); bar.style.background='#fff'; lbl.innerHTML='<span>黄色の枠＝計画用リスト、オレンジ＝手で入力した圃場（番号は右の表）</span>'; note.textContent=''; const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return; }
   pxLayer.clearLayers(); if(!isTrend(mode)||!selected.length||!on){ const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; }
@@ -1496,7 +1498,7 @@ async function renderBulk(gen,mode,note){   // 選んでいない、見えてい
 let toLatest=false;   // 追肥マップに切りかえたときは最新の日にする
 async function buildPxDates(){   // 圃場内モードでは、選んだ圃場の画素がある日だけを並べる
   const sel=document.getElementById('colorDate'), keep=toLatest?'':sel.value; toLatest=false;
-  const noDate=isTrend(fillMode())||fillMode()==='plan'||fillMode()==='gp';   // 生育予測は日付によらない
+  const noDate=isTrend(fillMode())||fillMode()==='plan'||fillMode()==='gp'||fillMode()==='pr';   // 生育予測・タンパク推定は日付によらない
   document.getElementById('dateCtl').style.display=noDate?'none':'inline-flex';
   if(noDate){ paintMap(); return; }
   if(!selected.length){ buildColorDates(); if([...sel.options].some(o=>o.value===keep)) sel.value=keep; paintMap(); return; }
