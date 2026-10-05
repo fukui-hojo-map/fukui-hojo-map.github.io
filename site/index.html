@@ -1086,7 +1086,8 @@ function buildColorDates(){
   for(const p of ids) for(const d of cleanOf(p).by.keys()) cnt[d]=(cnt[d]||0)+1;
   const cov=allDates.map(d=>({d,c:cnt[d]||0})).filter(x=>x.c>0);
   // 読み込んでいる圃場の半分以上に値がある日だけ並べる（ほとんど雲の日は出さない）。そういう日が1つもなければ全部
-  const good=cov.filter(x=>x.c/n>=0.5), list=good.length?good:cov;
+  const inSeason=x=>{ const md=x.d.slice(5); return md>='05-10'&&md<='09-30'; };   // 圃場の中のマスの色は、5/10〜9/30の分だけ作っている。ほかの日は選べないようにする（10月以降の「写真なし」を出さない）
+  const cv=cov.filter(inSeason).length?cov.filter(inSeason):cov, good=cv.filter(x=>x.c/n>=0.5), list=good.length?good:cv;
   for(const x of list.slice().reverse()){ const o=document.createElement('option'); o.value=x.d; o.textContent=x.d; sel.appendChild(o); }
   sel.value=list.length?list[list.length-1].d:'';
 }
