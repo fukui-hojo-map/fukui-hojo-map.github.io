@@ -694,6 +694,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .hz-x .hz-n{font-size:12px;color:#5b6b63;margin-bottom:6px} .hz-x .hz-o{display:flex;align-items:center;gap:6px;min-height:36px;margin:0} .hz-x .hz-o input{flex:1;min-width:0}
   .hz-x .hz-lg img{max-width:100%;height:auto;display:block;margin-top:4px}
   .leaflet-control-layers-selector{width:20px;height:20px} .leaflet-control-layers label{margin:3px 0}
+  .bzbox{margin:8px 0 4px} .bzbox h2{margin:0 0 6px} .bzbox .bz-b{display:flex;align-items:center;min-height:46px;margin:0 0 6px;text-decoration:none;color:var(--ink);box-sizing:border-box;line-height:1.35}
+  .bz-n{margin-top:2px}
+  .bz-x{margin-top:6px;padding-top:6px;border-top:1px solid #ddd;max-width:240px;font-size:13px} .bz-x summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-weight:700;color:#1e3a2f}
+  .bz-p{display:block;padding:7px 4px;border-bottom:1px solid #eee;color:#0b57a4;text-decoration:none;line-height:1.35} .bz-p small{display:block;color:#5b6b63;font-size:11.5px}
   .nodat{ white-space:nowrap; font:600 10px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; }
 </style>
 <style>
@@ -885,6 +889,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
+    <div class="bzbox" id="bzBox" hidden></div>
     <div class="rankbox" id="rankBox"></div>
     <h2>推移</h2>
     <div class="ctl chartctl"><span id="modeCtl">
@@ -993,6 +998,8 @@ const HZ=(function(){
       lc._section.appendChild(box); refresh(); }};
 })();
 photo.addTo(map); const lcLayers=L.control.layers({'航空写真':photo,'淡色地図':std,'土壌図':soilBase},HZ.ov,{position:'topright'}).addTo(map); HZ.setBox(lcLayers);
+{ const sec=document.createElement('details'); sec.className='bz-x'; sec.innerHTML='<summary>防災・気象リンク（公式ページ集）</summary><div class="bz-l"></div>'; lcLayers._section.appendChild(sec);
+  sec.addEventListener('toggle',()=>{ if(!sec.open) return; BZ.load().then(cfg=>{ sec.querySelector('.bz-l').innerHTML=cfg.pages.map(p=>`<a class="bz-p" href="${BZ.esc(p.url)}" target="_blank" rel="noopener noreferrer"><b>${BZ.esc(p.name)}</b>${p.desc?'<small>'+BZ.esc(p.desc)+'</small>':''}</a>`).join('')+'<div class="hz-n">'+BZ.esc(cfg.note||'')+'</div>'; }); }); }
 let geoLayer=null;
 
 function ndviColor(v){ if(v==null||isNaN(v)) return '#9aa'; const t=Math.max(0,Math.min(1,(v-0.2)/0.7));
@@ -1515,6 +1522,24 @@ function renderChips(){
     c.innerHTML=`<i style="background:${s.color}"></i><span style="color:${s.color};font-weight:700">${selLabel(s.pid)}</span>${parcels[s.pid].crop?' <span class="hint">'+parcels[s.pid].crop+'</span>':''}<button title="外す">×</button>`;
     c.querySelector('button').onclick=()=>toggleSelect(s.pid); box.appendChild(c); }
 }
+
+// ---------- 防災・気象リンク（公式サイトへ案内するだけ。川の防災情報・気象庁・県のデータは、自動では取得しない） ----------
+const BZ={cfg:null,loading:null,
+  def:{field_links:[
+    {name:'気象庁 キキクル（洪水・浸水・土砂）',url:'https://www.jma.go.jp/bosai/risk/#zoom:12/lat:{lat}/lon:{lon}/colordepth:normal/elements:land+inund+flood',with_position:true},
+    {name:'気象庁 雨雲の動き',url:'https://www.jma.go.jp/bosai/nowc/#zoom:10/lat:{lat}/lon:{lon}/colordepth:normal/elements:hrpns',with_position:true},
+    {name:'川の防災情報（水位・雨量・ダム）（位置は反映されません）',url:'https://www.river.go.jp/',with_position:false}],
+    pages:[],note:'水位・雨量・ダムの最新の数値は、各公式サイトで確認してください。このツールの表示は目安であり、避難などの判断は公式の防災情報に従ってください。'},
+  load(){ if(!this.loading) this.loading=fetch('links.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).catch(()=>null).then(j=>{ this.cfg=(j&&Array.isArray(j.field_links))?j:this.def; if(!Array.isArray(this.cfg.pages)) this.cfg.pages=[]; return this.cfg; }); return this.loading; },
+  href(u,lat,lon){ return u.replace(/\{lat\}/g,lat.toFixed(5)).replace(/\{lon\}/g,lon.toFixed(5)); },
+  esc:t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))};
+function bosaiUpdate(){ const box=document.getElementById('bzBox'); if(!box) return;
+  if(!selected.length||!parcels[selected[0].pid]){ box.hidden=true; box.innerHTML=''; return; }
+  BZ.load().then(cfg=>{ if(!selected.length||!parcels[selected[0].pid]) return; const pid=selected[0].pid, c=parcels[pid].centroid, lon=c[0], lat=c[1];
+    box.innerHTML='<h2>この圃場の防災・気象を見る <span class="hint">（'+BZ.esc(selLabel(pid))+'。公式サイトが新しいタブで開きます）</span></h2>'
+      +cfg.field_links.map(l=>`<a class="btn bz-b" href="${BZ.esc(BZ.href(l.url,lat,lon))}" target="_blank" rel="noopener noreferrer">${BZ.esc(l.name)}</a>`).join('')
+      +'<div class="hint bz-n">'+BZ.esc(cfg.note||'')+'</div>'; box.hidden=false; }); }
+{ const _rc=renderChips; renderChips=function(){ _rc(); bosaiUpdate(); }; }
 
 // ---------- chart ----------
 const W=560,H=340,ML=40,MR=10,MT=14,MB=40; let hoverPts=[];

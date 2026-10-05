@@ -1,0 +1,32 @@
+{
+  "_説明": "ふくい圃場マップの「防災・気象リンク」の設定ファイルです。名称・URL・説明を書き換えると、画面に反映されます。{lat} と {lon} は、圃場の位置（緯度・経度）に置きかわります。",
+  "field_links": [
+    {
+      "name": "気象庁 キキクル（洪水・浸水・土砂）",
+      "url": "https://www.jma.go.jp/bosai/risk/#zoom:12/lat:{lat}/lon:{lon}/colordepth:normal/elements:land+inund+flood",
+      "with_position": true
+    },
+    {
+      "name": "気象庁 雨雲の動き",
+      "url": "https://www.jma.go.jp/bosai/nowc/#zoom:10/lat:{lat}/lon:{lon}/colordepth:normal/elements:hrpns",
+      "with_position": true
+    },
+    {
+      "name": "川の防災情報（水位・雨量・ダム）（位置は反映されません）",
+      "url": "https://www.river.go.jp/",
+      "with_position": false,
+      "_候補": "位置を反映できる形式かもしれません（未確認）: https://www.river.go.jp/kawabou/pcfull/tm?zm=11&clat={lat}&clon={lon} 。確認できたら、上の url をこれに書きかえ、name から「（位置は反映されません）」を消し、with_position を true にしてください。"
+    }
+  ],
+  "pages": [
+    { "name": "川の防災情報（国土交通省）", "url": "https://www.river.go.jp/", "desc": "全国の川の水位・雨量・ダムなど" },
+    { "name": "気象庁 キキクル（危険度分布）", "url": "https://www.jma.go.jp/bosai/risk/", "desc": "大雨の土砂・浸水・洪水の危険度" },
+    { "name": "気象庁 雨雲の動き", "url": "https://www.jma.go.jp/bosai/nowc/", "desc": "雨雲の今と、1時間先までの予想" },
+    { "name": "福井県 河川・砂防総合情報", "url": "http://sabo.pref.fukui.lg.jp/", "desc": "県内の雨量・水位・ダム・河川カメラ" },
+    { "name": "福井県 河川・砂防総合情報システムの案内", "url": "https://www.pref.fukui.lg.jp/doc/sabo/kasensabourenkei.html", "desc": "上のシステムの説明（福井県 砂防防災課）" },
+    { "name": "福井県防災ネット", "url": "https://www.bousai.pref.fukui.lg.jp/dis_portal/index.html", "desc": "気象・雨量・水位・ダム・土砂災害危険度など" },
+    { "name": "福井県 ダムの貯水状況等の情報発信", "url": "https://www.pref.fukui.lg.jp/doc/kasen/damu/zyouhouhassin.html", "desc": "県のダムの貯水状況の案内" },
+    { "name": "福井河川国道事務所 防災情報", "url": "https://www.kkr.mlit.go.jp/fukui/bousai/index.html", "desc": "足羽川・九頭竜川などの国管理の川" }
+  ],
+  "note": "水位・雨量・ダムの最新の数値は、各公式サイトで確認してください。このツールの表示は目安であり、避難などの判断は公式の防災情報に従ってください。"
+}
