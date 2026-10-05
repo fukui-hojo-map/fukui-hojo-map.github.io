@@ -690,6 +690,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .sl-n{color:#b8442c;font-size:12px}
 .soilleg .sl-b{border:0;background:none;font:inherit;font-weight:700;padding:2px 0;cursor:pointer;color:#222}
 .soilleg .sl-b::after{content:' ▾'}
+  .hzc{background:#fff;border:2px solid rgba(0,0,0,.25);border-radius:6px;box-shadow:0 1px 5px rgba(0,0,0,.4);max-width:min(260px,calc(100vw - 80px))}
+  .hzc .hz-b{display:block;width:100%;min-height:44px;padding:6px 12px;font:inherit;font-size:15px;font-weight:700;color:#1e3a2f;background:#fff;border:0;border-radius:6px;cursor:pointer;text-align:left}
+  .hzc .hz-p{padding:2px 12px 10px;font-size:14.5px;line-height:1.4;max-height:52vh;overflow:auto}
+  .hzc .hz-r{display:flex;align-items:center;gap:8px;min-height:40px;margin:0;cursor:pointer} .hzc .hz-r input{width:20px;height:20px;flex:none}
+  .hzc .hz-sub{margin:0 0 2px 22px;border-left:3px solid #d5ddd6;padding-left:8px}
+  .hzc .hz-o{display:flex;align-items:center;gap:8px;margin-top:6px;min-height:40px} .hzc .hz-o input{flex:1;min-width:0}
+  .hzc .hz-lg img{max-width:100%;height:auto;display:block;margin-top:4px} .hzc .hz-n{margin:2px 0 6px;font-size:12.5px;color:#5b6b63;line-height:1.5}
   .nodat{ white-space:nowrap; font:600 10px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; }
 </style>
 <style>
@@ -961,6 +968,44 @@ map.on('baselayerchange',e=>{ soilOn=e.layer===soilBase; map.getPane('pxPane').s
   } else soilLeg.remove();
   paintMap(); });
 photo.addTo(map); L.control.layers({'航空写真':photo,'淡色地図':std,'土壌図':soilBase},null,{position:'topright'}).addTo(map);
+// ---------- ハザードマップ（国土交通省 ハザードマップポータルサイトのタイルを重ねて見る。表示だけ） ----------
+// 重なり: 背景(200) < 土壌図(350) < NDVIのマス(390) < 筆の塗りと線(400) < ハザード(450) < マーカー(600)。ハザードの層はクリックを受け取らない（筆のタップは今までどおり）
+map.createPane('hazardPane').style.zIndex=450; map.getPane('hazardPane').style.pointerEvents='none';
+(function(){
+  const HB='https://disaportaldata.gsi.go.jp/raster/', BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  const mk=u=>{ const l=L.tileLayer(HB+u+'/{z}/{x}/{y}.png',{pane:'hazardPane',minNativeZoom:2,maxNativeZoom:17,maxZoom:18,opacity:.6,errorTileUrl:BLANK,keepBuffer:1,crossOrigin:false});
+    l.on('tileerror',e=>{ if(e.tile) e.tile.style.visibility='hidden'; }); return l; };   // 配信元にないタイル（404）は、何も出さない
+  const LEG='https://disaportal.gsi.go.jp/hazardmap/copyright/img/';
+  const FL=[['l1','計画規模',mk('01_flood_l1_shinsuishin_newlegend_data'),LEG+'shinsui_legend3.png'],
+            ['l2','想定最大規模',mk('01_flood_l2_shinsuishin_data'),LEG+'shinsui_legend3.png'],
+            ['kz','浸水継続時間（想定最大規模）',mk('01_flood_l2_keizoku_data'),LEG+'shinsui_legend_l2_keizoku.png']];
+  const SD=[mk('05_dosekiryukeikaikuiki_data/18'),mk('05_kyukeishakeikaikuiki_data/18'),mk('05_jisuberikeikaikuiki_data/18')];
+  const TS=mk('04_tsunami_newlegend_data');
+  const st={flood:false,fl:'l1',sd:false,ts:false,op:.6}, SRC='<a href="https://disaportal.gsi.go.jp/" target="_blank" rel="noopener">出典：ハザードマップポータルサイト（国土交通省・国土地理院）</a>';
+  const all=()=>[...FL.map(f=>f[2]),...SD,TS];
+  const ctl=L.control({position:'topright'});
+  ctl.onAdd=()=>{ const d=L.DomUtil.create('div','hzc'); L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+    d.innerHTML='<button type="button" class="hz-b">ハザードマップ</button><div class="hz-p" hidden>'
+      +'<div class="hz-n">河川の氾濫などの想定であり、実際の浸水と異なる場合があります。田んぼの排水不良は含まれません。『想定最大規模』は極めてまれな豪雨を想定したものです。</div>'
+      +'<label class="hz-r"><input type="checkbox" data-h="flood"> 洪水</label>'
+      +'<div class="hz-sub">'+FL.map(f=>`<label class="hz-r"><input type="radio" name="hzfl" value="${f[0]}"${f[0]===st.fl?' checked':''} disabled> ${f[1]}</label>`).join('')+'</div>'
+      +'<label class="hz-r"><input type="checkbox" data-h="sd"> 土砂災害警戒区域</label>'
+      +'<label class="hz-r"><input type="checkbox" data-h="ts"> 津波浸水想定</label>'
+      +'<label class="hz-o">透け具合 <input type="range" min="0.2" max="1" step="0.05" value="'+st.op+'" data-h="op"><span class="hz-ov">'+Math.round(st.op*100)+'%</span></label>'
+      +'<div class="hz-lg"></div>'
+      +'</div>';
+    const q=s=>d.querySelector(s), on=(l,v)=>{ if(v&&!map.hasLayer(l)) l.addTo(map); else if(!v&&map.hasLayer(l)) map.removeLayer(l); };
+    const sync=()=>{ FL.forEach(f=>on(f[2],st.flood&&st.fl===f[0])); SD.forEach(l=>on(l,st.sd)); on(TS,st.ts);
+      all().forEach(l=>l.setOpacity(st.op)); d.querySelectorAll('input[name=hzfl]').forEach(r=>r.disabled=!st.flood);
+      const f=FL.find(x=>x[0]===st.fl), lg=q('.hz-lg'); lg.innerHTML=st.flood?`<img src="${f[3]}" alt="${f[1]}の凡例" loading="lazy" onerror="this.style.display='none'">`:'';
+      const any=st.flood||st.sd||st.ts; if(any&&!ctl._src){ map.attributionControl.addAttribution(SRC); ctl._src=true; } else if(!any&&ctl._src){ map.attributionControl.removeAttribution(SRC); ctl._src=false; } };
+    q('.hz-b').onclick=()=>{ const p=q('.hz-p'); p.hidden=!p.hidden; };
+    d.querySelectorAll('input[data-h]').forEach(i=>i[i.type==='range'?'oninput':'onchange']=()=>{ const k=i.dataset.h; if(k==='op'){ st.op=+i.value; q('.hz-ov').textContent=Math.round(st.op*100)+'%'; } else { st[k]=i.checked; if(k==='flood'&&i.checked) st.fl='l1'; }   // 洪水を入れたら、まず計画規模
+      if(k==='flood'&&i.checked){ const r=d.querySelector('input[name=hzfl][value=l1]'); if(r) r.checked=true; } sync(); });
+    d.querySelectorAll('input[name=hzfl]').forEach(r=>r.onchange=()=>{ st.fl=r.value; sync(); });
+    return d; };
+  ctl.addTo(map);
+})();
 let geoLayer=null;
 
 function ndviColor(v){ if(v==null||isNaN(v)) return '#9aa'; const t=Math.max(0,Math.min(1,(v-0.2)/0.7));
