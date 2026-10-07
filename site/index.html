@@ -1742,14 +1742,28 @@ document.getElementById('btnXlsx').onclick=async()=>{
     // NDVI の推移（日付 × 田）
     const ws2=wb.addWorksheet('NDVIの推移'), S=selected.filter(s=>parcels[s.pid]).map(s=>({s,m:new Map(seriesOf(s.pid).filter(q=>!q.rad).map(q=>[q.date,q]))})), dd=[...new Set(S.flatMap(x=>[...x.m.keys()]))].sort();
     const dOf=d=>new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))), d1=dd.filter(d=>!excluded.has(d)), d2=dd.filter(d=>excluded.has(d));   // 日付は Excel の日付（グラフの横軸にそのまま使える）。除外している日は表の下に分ける（グラフに入れない）
-    ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考']; ws2.getRow(1).font={bold:true}; ws2.getColumn(1).width=12;
+    const col=i=>String.fromCharCode(65+i), HC=S.length+2, ser2=d=>Math.round(Date.UTC(2000,+d.slice(5,7)-1,+d.slice(8,10))/864e5)+25569;   // HC: 「月日（比較用）」の列（0始まり）。年をそろえた日付（2000年）で、2つの年を重ねるグラフの横軸にする
+    ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考','月日（比較用）']; ws2.getRow(1).font={bold:true}; ws2.getColumn(1).width=12; ws2.getColumn(HC+1).width=14;
     S.forEach((x,i)=>{ ws2.getColumn(i+2).width=13; ws2.getRow(1).getCell(i+2).font={bold:true,color:{argb:'FF'+x.s.color.slice(1).toUpperCase()}}; });
-    const put=(d,r)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(r).values=[dOf(d),...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; ws2.getRow(r).getCell(1).numFmt='yyyy-mm-dd'; };
+    const put=(d,r)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(r).values=[dOf(d),...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; ws2.getRow(r).getCell(1).numFmt='yyyy-mm-dd';
+      const c=ws2.getRow(r).getCell(HC+1); c.value={formula:`DATE(2000,MONTH(A${r}),DAY(A${r}))`,result:ser2(d)}; c.numFmt='m/d'; };
     d1.forEach((d,i)=>put(d,i+2)); let nr=d1.length+2;
     if(d2.length){ nr++; ws2.getRow(nr).values=['雲・かすみの疑いで除外している日（グラフには入れていません）']; ws2.getRow(nr).font={italic:true,color:{argb:'FF777777'}}; d2.forEach(d=>put(d,++nr)); }
-    ws2.getRow(nr+2).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。右のグラフは、表のデータから作った Excel のグラフです（クリックして、色・軸・題名を直せます）。'];
+    ws2.getRow(nr+2).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。グラフは、次のシートにあります（稲の期間 5/10〜9/30 だけ）。'];
+    // グラフ3種類（稲の期間 5/10〜9/30）: 今年・前の年・2つの年の比較。1枚ずつ別のシートに置く
+    const Y=d1.length?+d1[d1.length-1].slice(0,4):0, inS=d=>{ const md=d.slice(5); return md>='05-10'&&md<='09-30'; }, rowsOf=y=>{ const ix=d1.map((d,i)=>+d.slice(0,4)===y&&inS(d)?i:-1).filter(i=>i>=0); return ix.length>=2?[ix[0]+2,ix[ix.length-1]+2]:null; };
+    const sSer=(y,r)=>S.map((x,i)=>({x,i})).filter(({x})=>d1.some((d,j)=>+d.slice(0,4)===y&&inS(d)&&x.m.has(d))), sn="'NDVIの推移'!", sr=(c,r)=>`${sn}$${c}$${r[0]}:$${c}$${r[1]}`;
+    const plan=[], R1=rowsOf(Y), R0=rowsOf(Y-1), sx=y=>Math.round(Date.UTC(y,4,10)/864e5)+25569, ex=y=>Math.round(Date.UTC(y,8,30)/864e5)+25569;
+    const mk=(y,r)=>({title:`${y}年 稲の期間（5/10〜9/30）のNDVI`,xmin:sx(y),xmax:ex(y)+1,major:14,xfmt:'m/d',ymin:0,ymax:1,ser:sSer(y,r).map(({x,i})=>({ref:`${sn}$${col(i+1)}$1`,color:x.s.color.slice(1).toUpperCase(),x:sr('A',r),y:sr(col(i+1),r)}))});
+    const cap=(w,t)=>{ w.getCell('A1').value=t; w.getCell('A1').font={bold:true}; };
+    if(R1){ const w=wb.addWorksheet(`${Y}年の稲の期間`); cap(w,'表のデータ（「NDVIの推移」シート）から作ったグラフです。クリックして、色・題名・軸を直せます。'); plan.push({sheet:w.name,...mk(Y,R1)}); }
+    if(R0){ const w=wb.addWorksheet(`${Y-1}年の稲の期間`); cap(w,'表のデータ（「NDVIの推移」シート）から作ったグラフです。クリックして、色・題名・軸を直せます。'); plan.push({sheet:w.name,...mk(Y-1,R0)}); }
+    if(R1&&R0){ const w=wb.addWorksheet(`${Y}と${Y-1}の比較`); cap(w,`${Y}年（実線）と${Y-1}年（点線）を、月日をそろえて重ねたグラフです。同じ色が同じ圃場です。`);
+      plan.push({sheet:w.name,title:`NDVIの比較（実線＝${Y}年、点線＝${Y-1}年。5/10〜9/30）`,xmin:Math.round(Date.UTC(2000,4,10)/864e5)+25569,xmax:Math.round(Date.UTC(2000,8,30)/864e5)+25569+1,major:14,xfmt:'m/d',xtitle:'月日',ymin:0,ymax:1,
+        ser:[...sSer(Y,R1).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y}年`,color:x.s.color.slice(1).toUpperCase(),w:28575,x:sr(col(HC),R1),y:sr(col(i+1),R1)})),
+             ...sSer(Y-1,R0).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y-1}年`,color:x.s.color.slice(1).toUpperCase(),w:15875,dash:1,x:sr(col(HC),R0),y:sr(col(i+1),R0)}))]}); }
     let buf=await wb.xlsx.writeBuffer(), chartNote='';
-    if(d1.length>=2&&S.length){ try{ buf=await addNdviChart(buf,{sheet:'NDVIの推移',rows:d1.length,ser:S.map(x=>({color:x.s.color.slice(1)})),x0:d1[0],x1:d1[d1.length-1],col:S.length+3}); }catch(e){ chartNote='（グラフを付けられませんでした: '+e.message+'）'; } }
+    if(plan.length){ try{ buf=await addXlsxCharts(buf,plan); }catch(e){ chartNote='（グラフを付けられませんでした: '+e.message+'）'; } } else chartNote='（稲の期間のデータが少ないため、グラフは付けませんでした）';
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`fukui_hojo_${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),10000); setStatus(chartNote);
@@ -1762,35 +1776,36 @@ document.getElementById('btnXlsx').onclick=async()=>{
 let jszipP=null;
 function loadJsZip(){ return jszipP||(jszipP=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
   sc.onload=()=>ok(window.JSZip); sc.onerror=()=>{ jszipP=null; ng(new Error('JSZip を読み込めませんでした')); }; document.head.appendChild(sc); })); }
-async function addNdviChart(buf,o){   // o={sheet: シート名, rows: データの行数（2行目から）, ser:[{color:'RRGGBB'}], x0,x1: 最初と最後の日付 'YYYY-MM-DD', col: グラフを置く列（0始まり）}
+async function addXlsxCharts(buf,charts){   // charts=[{sheet: グラフを置くシート名, title, xmin,xmax,major,xfmt, ymin,ymax, ser:[{ref|text: 系列の名前, color, dash, w, x, y: セルの範囲}]}]。グラフは1枚ずつ別のシートの左上に置く（行の高さ・列の幅に左右されない）
   const JZ=await loadJsZip(), z=await JZ.loadAsync(buf), PR=new DOMParser(), RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships', RT=RNS+'/drawing';
-  const rd=async f=>{ const e=z.file(f); return e?await e.async('string'):null; };
-  const wbx=PR.parseFromString(await rd('xl/workbook.xml'),'application/xml'), sh=[...wbx.getElementsByTagName('sheet')].find(e=>e.getAttribute('name')===o.sheet); if(!sh) throw new Error('シートが見つかりません');
-  const rid=sh.getAttributeNS(RNS,'id')||sh.getAttribute('r:id'), wr=PR.parseFromString(await rd('xl/_rels/workbook.xml.rels'),'application/xml'),
-    tg=[...wr.getElementsByTagName('Relationship')].find(e=>e.getAttribute('Id')===rid).getAttribute('Target'), sp=tg[0]==='/'?tg.slice(1):'xl/'+tg,
-    rp=sp.replace(/[^/]+$/,'')+'_rels/'+sp.split('/').pop()+'.rels';
-  const q="'"+o.sheet.replace(/'/g,"''")+"'!", n=o.rows+1, ser=o.ser.map((x,i)=>{ const c=String.fromCharCode(66+i), col=x.color;
-    return `<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:strRef><c:f>${q}$${c}$1</c:f></c:strRef></c:tx><c:spPr><a:ln w="22225" cap="rnd"><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:round/></a:ln></c:spPr>`+
-      `<c:marker><c:symbol val="circle"/><c:size val="5"/><c:spPr><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:marker>`+
-      `<c:xVal><c:numRef><c:f>${q}$A$2:$A$${n}</c:f></c:numRef></c:xVal><c:yVal><c:numRef><c:f>${q}$${c}$2:$${c}$${n}</c:f></c:numRef></c:yVal><c:smooth val="0"/></c:ser>`; }).join('');
-  const serial=d=>Math.round(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5)+25569, a0=serial(o.x0)-3, a1=serial(o.x1)+3, span=a1-a0, mj=span>200?30:span>90?14:7;
-  const tx=(t,sz,b)=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${sz}" b="${b}"/></a:pPr><a:r><a:rPr lang="ja-JP" sz="${sz}" b="${b}"/><a:t>${t}</a:t></a:r></a:p></c:rich></c:tx>`;
-  const chart=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${RNS}"><c:roundedCorners val="0"/>`+
-    `<c:chart><c:title>${tx('NDVIの推移',1400,1)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>`+
-    `<c:scatterChart><c:scatterStyle val="lineMarker"/><c:varyColors val="0"/>${ser}<c:axId val="50010"/><c:axId val="50020"/></c:scatterChart>`+
-    `<c:valAx><c:axId val="50010"/><c:scaling><c:orientation val="minMax"/><c:max val="${a1}"/><c:min val="${a0}"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:title>${tx('日付',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="yy/m/d" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/><c:crossAx val="50020"/><c:crosses val="autoZero"/><c:crossBetween val="midCat"/><c:majorUnit val="${mj}"/></c:valAx>`+
-    `<c:valAx><c:axId val="50020"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D9D9D9"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:title>${tx('NDVI',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="0.0" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="50010"/><c:crosses val="min"/><c:crossBetween val="midCat"/></c:valAx>`+
-    `</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>`;
-  const drawing=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>${o.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${660*9525}" cy="${400*9525}"/>`+
-    `<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="NDVIの推移"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${RNS}" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>`;
-  const REL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
-  z.file('xl/charts/chart99.xml',chart); z.file('xl/drawings/drawing99.xml',drawing);
-  z.file('xl/drawings/_rels/drawing99.xml.rels',REL+'<Relationship Id="rId1" Type="'+RNS+'/chart" Target="../charts/chart99.xml"/></Relationships>');
-  const dr=`<Relationship Id="rIdNdvi" Type="${RT}" Target="../drawings/drawing99.xml"/>`, old=await rd(rp);
-  z.file(rp,old?old.replace('</Relationships>',dr+'</Relationships>'):REL+dr+'</Relationships>');
-  let sx=await rd(sp); if(!/xmlns:r=/.test(sx)) sx=sx.replace(/<worksheet /,'<worksheet xmlns:r="'+RNS+'" ');
-  const tag='<drawing r:id="rIdNdvi"/>', at=sx.search(/<legacyDrawing|<tableParts|<extLst/); sx=at>=0?sx.slice(0,at)+tag+sx.slice(at):sx.replace('</worksheet>',tag+'</worksheet>'); z.file(sp,sx);
-  let ct=await rd('[Content_Types].xml'); ct=ct.replace('</Types>','<Override PartName="/xl/charts/chart99.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/drawings/drawing99.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>'); z.file('[Content_Types].xml',ct);
+  const rd=async f=>{ const e=z.file(f); return e?await e.async('string'):null; }, esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const wbx=PR.parseFromString(await rd('xl/workbook.xml'),'application/xml'), wr=PR.parseFromString(await rd('xl/_rels/workbook.xml.rels'),'application/xml'), REL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  let ct=await rd('[Content_Types].xml');
+  const tx=(t,sz,b)=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${sz}" b="${b}"/></a:pPr><a:r><a:rPr lang="ja-JP" sz="${sz}" b="${b}"/><a:t>${esc(t)}</a:t></a:r></a:p></c:rich></c:tx>`;
+  for(let k=0;k<charts.length;k++){ const o=charts[k], id=90+k;
+    const sh=[...wbx.getElementsByTagName('sheet')].find(e=>e.getAttribute('name')===o.sheet); if(!sh) throw new Error('シートが見つかりません: '+o.sheet);
+    const rid=sh.getAttributeNS(RNS,'id')||sh.getAttribute('r:id'), tg=[...wr.getElementsByTagName('Relationship')].find(e=>e.getAttribute('Id')===rid).getAttribute('Target'), sp=tg[0]==='/'?tg.slice(1):'xl/'+tg,
+      rp=sp.replace(/[^/]+$/,'')+'_rels/'+sp.split('/').pop()+'.rels';
+    const ser=o.ser.map((x,i)=>`<c:ser><c:idx val="${i}"/><c:order val="${i}"/>${x.ref?`<c:tx><c:strRef><c:f>${x.ref}</c:f></c:strRef></c:tx>`:`<c:tx><c:v>${esc(x.text)}</c:v></c:tx>`}`+
+      `<c:spPr><a:ln w="${x.w||22225}" cap="rnd"><a:solidFill><a:srgbClr val="${x.color}"/></a:solidFill>${x.dash?'<a:prstDash val="dash"/>':''}<a:round/></a:ln></c:spPr>`+
+      `<c:marker><c:symbol val="circle"/><c:size val="${x.dash?4:5}"/><c:spPr><a:solidFill><a:srgbClr val="${x.color}"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:marker>`+
+      `<c:xVal><c:numRef><c:f>${x.x}</c:f></c:numRef></c:xVal><c:yVal><c:numRef><c:f>${x.y}</c:f></c:numRef></c:yVal><c:smooth val="0"/></c:ser>`).join('');
+    const chart=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${RNS}"><c:roundedCorners val="0"/>`+
+      `<c:chart><c:title>${tx(o.title,1400,1)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>`+
+      `<c:scatterChart><c:scatterStyle val="lineMarker"/><c:varyColors val="0"/>${ser}<c:axId val="50010"/><c:axId val="50020"/></c:scatterChart>`+
+      `<c:valAx><c:axId val="50010"/><c:scaling><c:orientation val="minMax"/><c:max val="${o.xmax}"/><c:min val="${o.xmin}"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:title>${tx(o.xtitle||'日付',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="${o.xfmt||'m/d'}" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/><c:crossAx val="50020"/><c:crosses val="autoZero"/><c:crossBetween val="midCat"/><c:majorUnit val="${o.major||14}"/></c:valAx>`+
+      `<c:valAx><c:axId val="50020"/><c:scaling><c:orientation val="minMax"/><c:max val="${o.ymax}"/><c:min val="${o.ymin}"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D9D9D9"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:title>${tx('NDVI',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="0.0" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="50010"/><c:crosses val="min"/><c:crossBetween val="midCat"/><c:majorUnit val="0.1"/></c:valAx>`+
+      `</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>`;
+    const drawing=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${900*9525}" cy="${540*9525}"/>`+
+      `<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="${esc(o.title)}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${RNS}" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>`;
+    z.file(`xl/charts/chart${id}.xml`,chart); z.file(`xl/drawings/drawing${id}.xml`,drawing);
+    z.file(`xl/drawings/_rels/drawing${id}.xml.rels`,REL+`<Relationship Id="rId1" Type="${RNS}/chart" Target="../charts/chart${id}.xml"/></Relationships>`);
+    const dr=`<Relationship Id="rIdNdvi" Type="${RT}" Target="../drawings/drawing${id}.xml"/>`, old=await rd(rp);
+    z.file(rp,old?old.replace('</Relationships>',dr+'</Relationships>'):REL+dr+'</Relationships>');
+    let sx=await rd(sp); if(!/xmlns:r=/.test(sx)) sx=sx.replace(/<worksheet /,'<worksheet xmlns:r="'+RNS+'" ');
+    const tag='<drawing r:id="rIdNdvi"/>', at=sx.search(/<legacyDrawing|<tableParts|<extLst/); sx=at>=0?sx.slice(0,at)+tag+sx.slice(at):sx.replace('</worksheet>',tag+'</worksheet>'); z.file(sp,sx);
+    ct=ct.replace('</Types>',`<Override PartName="/xl/charts/chart${id}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/drawings/drawing${id}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`); }
+  z.file('[Content_Types].xml',ct);
   return await z.generateAsync({type:'arraybuffer',compression:'DEFLATE'}); }
 
 // ---------- 日付を選んで、地図を複数出力（NDVI の経過を地図で見る） ----------
