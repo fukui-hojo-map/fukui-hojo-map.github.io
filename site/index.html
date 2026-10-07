@@ -715,7 +715,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .sx>div{background:#fff;border-radius:10px;max-width:540px;width:100%;max-height:92vh;overflow:auto;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
   .sx h3{margin:0 0 6px;font-size:16px;color:var(--ink)} .sx p{margin:4px 0;font-size:13.5px;color:var(--ink2);line-height:1.5}
   .sx .sxd{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px 8px;margin:8px 0;max-height:36vh;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:6px}
-  .sx .sxd label{font-size:14px;white-space:nowrap;cursor:pointer} .sx .sxb{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .sx .sxm{font-size:13px;color:var(--ink2);min-height:1.5em}
+  .sx .sxd label{font-size:14px;white-space:nowrap;cursor:pointer;padding:3px 6px;border-radius:5px} .sx .sxd label.now{background:#e8f3e8} .sx .sxd label.old{background:#f0f0ee;color:#555}
+  .sx .sxy{grid-column:1/-1;font-weight:700;font-size:14px;padding:4px 6px;border-radius:5px;margin-top:2px} .sx .sxy.now{background:#2f7d4f;color:#fff} .sx .sxy.old{background:#777;color:#fff} .sx .sxy:not(:first-child){margin-top:8px} .sx .sxb{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .sx .sxm{font-size:13px;color:var(--ink2);min-height:1.5em}
   .btn:hover{background:var(--panel)} .btn.primary{background:var(--ink);color:#fff} .btn.small{padding:3px 9px;min-height:28px;font-size:14px}
   .btn:disabled{opacity:.45;cursor:default}
   input[type=file]{display:none}
@@ -1831,18 +1832,21 @@ document.getElementById('btnSeries').onclick=()=>{
   setStatus(''); const MAX=24, ov=document.createElement('div'); ov.className='sx';
   ov.innerHTML=`<div role="dialog" aria-label="日付を選んで地図を出力"><h3>日付を選んで、地図を出力</h3>
     <p>選んだ圃場（${selected.length}枚）の、NDVI の色分け（${fm==='rel'?'相対表示':'絶対表示'}）を、選んだ日付ぶん、同じ範囲・同じ番号の地図にします。日付は、衛星の画像がある日です。</p>
-    <div class="sxb"><button class="btn small" data-q="all">全部</button><button class="btn small" data-q="year">今年だけ</button><button class="btn small" data-q="two">約2週間おき（今年）</button><button class="btn small" data-q="none">解除</button></div>
-    <div class="sxd">${dates.map(d=>`<label><input type="checkbox" value="${d}" ${d===cd.value?'checked':''}> ${d}</label>`).join('')}</div>
+    <div class="sxb"><button class="btn small" data-q="all">全部</button><button class="btn small" data-q="year">今年だけ</button><button class="btn small" data-q="none">解除</button></div>
+    <div class="sxd">${(()=>{ const ly=+dates[dates.length-1].slice(0,4); let h='', y0=''; for(const d of dates.slice().reverse()){ const y=d.slice(0,4);   // 新しい日から。年ごとに見出しと色を分ける
+        if(y!==y0){ y0=y; h+=`<div class="sxy ${+y===ly?'now':'old'}">${y}年${+y===ly?'（今年）':+y===ly-1?'（昨年）':''}</div>`; }
+        h+=`<label class="${+y===ly?'now':'old'}"><input type="checkbox" value="${d}" ${d===cd.value?'checked':''}> ${d}</label>`; } return h; })()}</div>
     <div class="sxm" id="sxm"></div>
     <div class="sxb"><button class="btn primary" data-o="sheet">1枚にまとめて保存（PNG）</button><button class="btn" data-o="zip">日付ごとに保存（ZIP）</button><button class="btn" data-o="close">閉じる</button></div></div>`;
   document.body.appendChild(ov);
-  const ck=()=>[...ov.querySelectorAll('.sxd input')], pick=()=>ck().filter(i=>i.checked).map(i=>i.value), $m=ov.querySelector('#sxm'); let busy=false;
+  const ck=()=>[...ov.querySelectorAll('.sxd input')], pick=()=>ck().filter(i=>i.checked).map(i=>i.value).sort(),   // 出力は古い日から新しい日の順（経過が左から右へ）
+     $m=ov.querySelector('#sxm'); let busy=false;
   const upd=()=>{ if(busy) return; const n=pick().length; $m.textContent=n?`${n}日を選んでいます${n>MAX?`（多すぎます。${MAX}日までにしてください）`:''}`:'日付を選んでください'; };
   ov.addEventListener('change',upd); upd();
   const yr=cd.options.length?String(allDates[allDates.length-1]||dates[dates.length-1]).slice(0,4):'';
   ov.onclick=async e=>{ if(e.target===ov&&!busy){ ov.remove(); return; } const b=e.target.closest('button'); if(!b||busy) return;
-    if(b.dataset.q){ const q=b.dataset.q; let last=-1e9; ck().forEach(i=>{ const d=i.value, y=d.slice(0,4)===dates[dates.length-1].slice(0,4); let v=false;
-        if(q==='all') v=true; else if(q==='year') v=y; else if(q==='two'&&y){ const t=Date.parse(d)/864e5; if(t-last>=13){ v=true; last=t; } } i.checked=v; }); upd(); return; }
+    if(b.dataset.q){ const q=b.dataset.q; ck().forEach(i=>{ const d=i.value, y=d.slice(0,4)===dates[dates.length-1].slice(0,4); let v=false;
+        if(q==='all') v=true; else if(q==='year') v=y; i.checked=v; }); upd(); return; }
     if(b.dataset.o==='close'){ ov.remove(); return; }
     const sel=pick(); if(!sel.length||sel.length>MAX){ upd(); return; }
     busy=true; ov.querySelectorAll('button').forEach(x=>x.disabled=true);
