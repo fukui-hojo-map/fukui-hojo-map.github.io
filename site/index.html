@@ -911,7 +911,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
-      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より0.1以上低いV字の点（雲・かすみの疑い）を灰色にして線から外す</label></div>
+      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より低いV字の点（雲・かすみの疑い。前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上）を、灰色の白抜きの点にして、線・計算から外す</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
       <div class="excl" id="excl"></div>
@@ -1043,11 +1043,13 @@ function lsFits(s2,t,v){ // 前後3日以内に Sentinel-2 がない、かつ前
   return Math.abs(v-(pv[1]+(nx[1]-pv[1])*(t-pv[0])/(nx[0]-pv[0])))<0.08;
 }
 const dayMs=new Map(), tOf=d=>{ let v=dayMs.get(d); if(v===undefined){ v=Date.parse(d); dayMs.set(d,v); } return v; };   // 日付の文字 → ms（毎回 Date.parse しない）
-const DIP=0.10;   // 前後の両方より、これ以上低い点を「雲・かすみの疑い」にする（片側だけ低い段差＝田植え・収穫などは対象外）
+const DIP=0.10, DIP_HI=0.07, DIP_HI_AT=0.7;   // 前後の両方が NDVI 0.7 以上のときは、0.07 以上低い点も対象にする（葉が詰まった時期は、NDVI の変化が小さく、0.03〜0.05 の揺れが目立つため）
+//   // 前後の両方より、これ以上低い点を「雲・かすみの疑い」にする（片側だけ低い段差＝田植え・収穫などは対象外）
 function isDip(s,i){ // one parcel only: lower than both neighbours (each within 15 days) by DIP or more
   if(i<=0||i>=s.length-1) return false; const pv=s[i-1],nx=s[i+1],tD=tOf(s[i][0]);
   if(tD-tOf(pv[0])>15*864e5||tOf(nx[0])-tD>15*864e5) return false;
-  return pv[1]-s[i][1]>=DIP-1e-9&&nx[1]-s[i][1]>=DIP-1e-9;
+  const th=pv[1]>=DIP_HI_AT&&nx[1]>=DIP_HI_AT?DIP_HI:DIP;
+  return pv[1]-s[i][1]>=th-1e-9&&nx[1]-s[i][1]>=th-1e-9;
 }
 // filtered rows per parcel, cached; rebuilt when threshold / excluded days / dip or Landsat filter / data change
 let clean=new Map(), cleanKey='', dataVer=0;
@@ -1055,11 +1057,11 @@ function syncClean(){ const k=`${thr()}|${dipOn()}|${lsCheckOn()}|${radarOn()}|$
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
   const t=thr()-1e-9, dip=dipOn(); let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0]));
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
-  const opt=s.filter((r,i)=>!(dip&&isDip(s,i))), by=new Map(opt.map(r=>[r[0],r[1]]));
+  const isD=s.map((r,i)=>dip&&isDip(s,i)), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
   if(radarOn()&&rad&&rad.length){ // レーダーの推定値は光の観測がない日だけ足す。前後のレーダーより急に上下した点（ノイズ）は除く
     const od=new Set(s.map(r=>r[0])), rs=rad.filter(r=>r[2]>=t&&!od.has(r[0])); rows=rows.concat(rs.filter((r,i)=>!radarSpike(rs,i))).sort((a,b)=>a[0]<b[0]?-1:1); }
-  c={rows,by}; clean.set(pid,c); return c; }   // by（地図の色・近隣平均に使う値）は光の観測だけ
+  c={rows,by,dips}; clean.set(pid,c); return c; }   // by（地図の色・近隣平均に使う値）は光の観測だけ
 function radarOn(){ return document.getElementById('radarOn').checked; }
 function radarSpike(s,i){ if(i<=0||i>=s.length-1) return false; const pv=s[i-1],nx=s[i+1],tD=Date.parse(s[i][0]);
   if(tD-Date.parse(pv[0])>15*864e5||Date.parse(nx[0])-tD>15*864e5) return false; const a=s[i][1]-pv[1], b=s[i][1]-nx[1];
@@ -1076,6 +1078,7 @@ function radarFit(n){ // 範囲ごとに、晴れた日の NDVI（有効画素�
 function seriesOf(pid){ const cell=parcels[pid]?.cell;
   return cleanOf(pid).rows.map(r=>{ const prov=!!provFrom&&r[0]>=provFrom&&r[3]!=='R';
     return {date:r[0],t:Date.parse(r[0]+'T00:00:00Z'),ndvi:r[1],ls:r[3]==='L',rad:r[3]==='R',prov,haze:prov&&provHaze.has(cell+'|'+r[0])}; }); }
+function dipsOf(pid){ return cleanOf(pid).dips.map(r=>({date:r[0],t:Date.parse(r[0]+'T00:00:00Z'),ndvi:r[1],ls:r[3]==='L',dip:true})); }   // V字の疑いで除いた点（グラフに白抜きの灰色で残す・Excel にも残す）
 function val(pid,d){ const v=cleanOf(pid).by.get(d); return v===undefined?null:v; }
 let olAcc={t:null,done:new Set(),byDate:{}};   // 雲・かすみの日の判定の材料（読み足した区画の分だけ足す）
 function detectOutliers(){
@@ -1539,15 +1542,15 @@ function drawChart(){
   let xmin,xmax; const series=[]; const tmode=isTrend(fillMode());
   document.getElementById('modeCtl').style.display=tmode?'none':''; document.getElementById('trendHint').style.display=tmode?'':'none';
   if(tmode){ setStatus(selected.length?'':'圃場を選ぶとグラフが出ます。'); drawVigChart(svg); return; }
-  const src=tmode?[]:selected.map(s=>({label:selLabel(s.pid),color:s.color,dash:'',pts:seriesOf(s.pid)}));
+  const src=tmode?[]:selected.map(s=>({label:selLabel(s.pid),color:s.color,dash:'',pts:seriesOf(s.pid),dips:dipsOf(s.pid)}));
   if(document.getElementById('nbOn').checked&&selected.length){ const nb=neighborSeries(); if(nb.n) src.push({label:`近隣の田の平均（${nb.n}枚）`,color:'#8a8f8c',dash:'6 4',pts:nb.pts}); }
   // 期間は 5/10〜9/30（今年＝最新の観測がある年）。前年と重ねるときは各年の 5/10 からの日数で並べる
   const y0=new Date(now).getUTCFullYear(), SEAS=[[4,10],[8,30]], sStart=y=>Date.UTC(y,SEAS[0][0],SEAS[0][1]), sEnd=y=>Date.UTC(y,SEAS[1][0],SEAS[1][1]);
   const seasonTicks=(off)=>[[sStart(y0),'5/10']].concat([5,6,7,8].map(m=>[Date.UTC(y0,m,1),`${m+1}月`]),[[sEnd(y0),'9/30']]).map(([t,l])=>[off(t),l]);
   if(mode==='date'){ xmin=sStart(y0); xmax=sEnd(y0);
-    for(const s of src) series.push({...s,pts:fromFlood(s.pts.filter(p=>p.t>=xmin&&p.t<=xmax),y0).map(p=>({x:p.t,...p}))}); }
+    for(const s of src) series.push({...s,pts:fromFlood(s.pts.filter(p=>p.t>=xmin&&p.t<=xmax),y0).map(p=>({x:p.t,...p})),dpts:(s.dips||[]).filter(p=>p.t>=xmin&&p.t<=xmax).map(p=>({x:p.t,...p}))}); }
   else if(mode==='doy'){ xmin=0; xmax=(sEnd(y0)-sStart(y0))/864e5;
-    for(const s of src) for(const [k,y] of [[0,y0],[1,y0-1]]){ const pts=fromFlood(s.pts.filter(p=>p.t>=sStart(y)&&p.t<=sEnd(y)),y).map(p=>({x:(p.t-sStart(y))/864e5,...p})); if(pts.length) series.push({...s,label:`${s.label} ${y}`,dash:k?(s.dash||'6 4'):s.dash,pts}); } }
+    for(const s of src) for(const [k,y] of [[0,y0],[1,y0-1]]){ const pts=fromFlood(s.pts.filter(p=>p.t>=sStart(y)&&p.t<=sEnd(y)),y).map(p=>({x:(p.t-sStart(y))/864e5,...p})); if(pts.length) series.push({...s,label:`${s.label} ${y}`,dash:k?(s.dash||'6 4'):s.dash,pts,dpts:(s.dips||[]).filter(p=>p.t>=sStart(y)&&p.t<=sEnd(y)).map(p=>({x:(p.t-sStart(y))/864e5,...p}))}); } }
   const xfC=mode==='date'?t=>t:t=>(t-sStart(y0))/864e5, TC=tmode?null:fillMode()==='top'?topChart(xfC):fillMode()==='gp'?gpChart(xfC):null; if(TC) series.push(...TC.series);   // 追肥マップ: 目標曲線・基肥の溶け方・生育の目印
   const X=v=>ML+(v-xmin)/(xmax-xmin)*(W-ML-MR), Y=v=>MT+(1-Math.max(-0.05,Math.min(1,v)))/1.05*(H-MT-MB);
   let g='';
@@ -1560,12 +1563,14 @@ function drawChart(){
     if(s.ideal) continue;
     for(const p of s.pts){ const cx=X(p.x).toFixed(1), cy=Y(p.ndvi).toFixed(1);
       if(p.prov) g+=`<circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="${p.haze?'#d93025':'#1e3a2f'}" stroke-width="1.2" stroke-dasharray="2 2"/>`;   // 速報
-      g+=p.rad?`<path d="M${cx},${cy-3.8}l3.8,3.8l-3.8,3.8l-3.8,-3.8z" fill="#fff" stroke="${s.color}" stroke-width="1.4"/>`:p.ls?`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="3" fill="#fff" stroke="${s.color}" stroke-width="1.6"/>`:`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="${p.avg?1.6:2.8}" fill="${s.color}"/>`; hoverPts.push({px:X(p.x),x:p.x,s,p}); } }
+      g+=p.rad?`<path d="M${cx},${cy-3.8}l3.8,3.8l-3.8,3.8l-3.8,-3.8z" fill="#fff" stroke="${s.color}" stroke-width="1.4"/>`:p.ls?`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="3" fill="#fff" stroke="${s.color}" stroke-width="1.6"/>`:`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="${p.avg?1.6:2.8}" fill="${s.color}"/>`; hoverPts.push({px:X(p.x),x:p.x,s,p}); }
+    for(const p of s.dpts||[]){ g+=`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="3.2" fill="#fff" stroke="#8b9390" stroke-width="1.5"/>`; hoverPts.push({px:X(p.x),x:p.x,s,p}); } }   // V字の疑いで除いた点: 灰色の白抜き（線にはつながない）
   g+=`<line id="hl" x1="0" x2="0" y1="${MT}" y2="${H-MB}" stroke="#1e3a2f" stroke-dasharray="3 3" visibility="hidden"/>`;
   // legend inside svg (so PNG includes it)
   let lx=ML, ly=H-MB+40; for(const s of series){ const w=s.label.length*16+40; if(lx+w>W-MR){lx=ML;ly+=23;} g+=`<line x1="${lx}" x2="${lx+18}" y1="${ly-5}" y2="${ly-5}" stroke="${s.color}" stroke-width="2.5" stroke-dasharray="${s.dash}"/><text x="${lx+22}" y="${ly}" font-size="16.5" font-weight="700" fill="${s.color}">${s.label}</text>`; lx+=w; }
   if(series.some(s=>s.pts.some(p=>p.rad))){ ly+=23; g+=`<path d="M${ML+9},${ly-9}l4,4l-4,4l-4,-4z" fill="#fff" stroke="#4c5a52" stroke-width="1.4"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">ひし形はレーダー（Sentinel-1）からの推定</text>`; }
   if(series.some(s=>s.pts.some(p=>p.prov))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="6" fill="none" stroke="#1e3a2f" stroke-width="1.2" stroke-dasharray="2 2"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">点線の輪は速報（あとで変わることがあります。赤はもやの疑い）</text>`; }
+  if(series.some(s=>(s.dpts||[]).length)){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="3.5" fill="#fff" stroke="#8b9390" stroke-width="1.5"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">灰色の白抜きの点は、V字の疑いで除いた点（線・計算には使いません）</text>`; }
   if(series.some(s=>s.pts.some(p=>p.ls))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="3.5" fill="#fff" stroke="#4c5a52" stroke-width="1.6"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">白抜きの点は Landsat（30m画素。Sentinel-2 相当に換算）</text>`; }
   svg.setAttribute('viewBox',`0 0 ${W} ${ly+8}`); svg.innerHTML=g;
 
@@ -1605,7 +1610,7 @@ let lastPick=null;
     if(!best||best.d>25){lastPick=null;tip.style.display='none';svg.querySelector('#hl')?.setAttribute('visibility','hidden');return;}
     lastPick=best.h.p.date;
     const rows=hoverPts.filter(h=>Math.abs(h.x-best.h.x)<1e-6).sort((a,b)=>b.p.ndvi-a.p.ndvi); const mode=document.getElementById('mode').value;
-    tip.innerHTML=`<b>${best.h.p.date}</b>`+rows.map(h=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}</span><span>${h.p.ndvi.toFixed(2)}</span></div>`).join('');
+    tip.innerHTML=`<b>${best.h.p.date}</b>`+rows.map(h=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.dip?'（V字の疑い・除外）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}</span><span>${h.p.ndvi.toFixed(2)}</span></div>`).join('');
     tip.style.display='block'; const hl=svg.querySelector('#hl'); hl.setAttribute('x1',best.h.px); hl.setAttribute('x2',best.h.px); hl.setAttribute('visibility','visible');
     const px=best.h.px*r.width/W; tip.style.left=(px+14+tip.offsetWidth>r.width?px-tip.offsetWidth-14:px+14)+'px'; tip.style.top=Math.max(0,(pt.clientY-r.top)-20)+'px'; };
   svg.addEventListener('mousemove',onMove); svg.addEventListener('touchstart',onMove,{passive:false}); svg.addEventListener('touchmove',onMove,{passive:false});
@@ -1715,10 +1720,10 @@ document.getElementById('btnXlsx').onclick=async()=>{
   try{
     const [EJ,map_,data]=await Promise.all([loadExcelJs(),exportMap(null,{max:1600}),exportRows()]);
     const wb=new EJ.Workbook(), ws=wb.addWorksheet('一覧'), today=new Date(), ds=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    ws.getCell('A1').value=`ふくい圃場マップ　選んだ圃場の一覧（${ds}）`; ws.getCell('A1').font={bold:true,size:14};
+    ws.getCell('A1').value=`ふくい圃場マップ　選んだ圃場の一覧（${ds}）`; ws.getCell('A1').font={bold:true,size:14}; ws.getRow(1).height=38;
     // 地図は表の下（同じシート）。表の上に置くと、Excel の行の高さの違いで表と重なることがあった。枚数が多いときは表が長くなるので、地図を別のシートに分ける
     const MAP_SAME=data.rows.length<=12;
-    ws.getCell('A2').value=MAP_SAME?'表の「圃場」の番号と、表の下の地図の番号が同じ圃場です。':'「地図」のシートの番号と、下の表の「圃場」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}};
+    ws.getCell('A2').value=MAP_SAME?'表の「圃場」の番号と、表の下の地図の番号が同じ圃場です。':'「地図」のシートの番号と、下の表の「圃場」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}}; ws.getRow(2).height=26;
     let row=4;
     let mapId=null; if(map_){ const id=mapId=wb.addImage({base64:map_.url,extension:'png'});
       if(MAP_SAME){ /* 表の下に置く（下の行の表を書いたあと） */ }
@@ -1726,7 +1731,7 @@ document.getElementById('btnXlsx').onclick=async()=>{
         const w=Math.min(1400,map_.W), h=Math.round(map_.H*w/map_.W); wm.addImage(id,{tl:{col:0,row:1},ext:{width:w,height:h}}); } }
     const cols=[['圃場',15],['面積(a)',9],
       ['直近のNDVI',10],['直近の日付',11],['今年の最大NDVI',11],['最大の日付',11],['緯度',11],['経度',11],['地図で開く',12],['区画ID',38]];
-    ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'};
+    ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true,name:'Calibri',size:11}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'}; ws.getRow(row).height=52;
     ws.getRow(row).eachCell(c=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EFE6'}}; c.border={bottom:{style:'thin'}}; });
     cols.forEach((c,i)=>{ ws.getColumn(i+1).width=c[1]; });
     const base=location.href.split('#')[0].split('?')[0], r1=v=>v==null?null:Math.round(v*10)/10;
@@ -1735,20 +1740,21 @@ document.getElementById('btnXlsx').onclick=async()=>{
         o.last?Math.round(o.last.ndvi*100)/100:null,o.last?o.last.date:'',o.max?Math.round(o.max.ndvi*100)/100:null,o.max?o.max.date:'',
         Math.round(o.lat*1e6)/1e6,Math.round(o.lon*1e6)/1e6,
         {text:'地図',hyperlink:`${base}#c=${o.lat.toFixed(6)},${o.lon.toFixed(6)}&z=18`},o.pid];
-      ws.getRow(row).values=v; ws.getRow(row).alignment={vertical:'top',wrapText:true};
+      ws.getRow(row).values=v; ws.getRow(row).alignment={vertical:'middle'}; ws.getRow(row).height=30;   // 行の高さを決める。Excel の環境によっては、決めた高さより低く表示され（0.7倍ほど）、文字が切れるので、余裕をもたせる
       ws.getRow(row).getCell(1).font={bold:true,color:{argb:'FF'+o.color.slice(1).toUpperCase()}};
       const lk=ws.getRow(row).getCell(cols.findIndex(c=>c[0]==='地図で開く')+1); lk.font={color:{argb:'FF1A73E8'},underline:true}; }
     if(map_&&MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(mapId,{tl:{col:0,row:row+1},ext:{width:w,height:h}}); }   // 表の最後の行の、1行あけた下
     // NDVI の推移（日付 × 田）
-    const ws2=wb.addWorksheet('NDVIの推移'), S=selected.filter(s=>parcels[s.pid]).map(s=>({s,m:new Map(seriesOf(s.pid).filter(q=>!q.rad).map(q=>[q.date,q]))})), dd=[...new Set(S.flatMap(x=>[...x.m.keys()]))].sort();
+    const ws2=wb.addWorksheet('NDVIの推移'), S=selected.filter(s=>parcels[s.pid]).map(s=>({s,m:new Map(seriesOf(s.pid).filter(q=>!q.rad).map(q=>[q.date,q])),dm:new Map(dipsOf(s.pid).map(q=>[q.date,q]))})), dd=[...new Set(S.flatMap(x=>[...x.m.keys(),...x.dm.keys()]))].sort();
     const dOf=d=>new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))), d1=dd.filter(d=>!excluded.has(d)), d2=dd.filter(d=>excluded.has(d));   // 日付は Excel の日付（グラフの横軸にそのまま使える）。除外している日は表の下に分ける（グラフに入れない）
     const col=i=>String.fromCharCode(65+i), HC=S.length+2, ser2=d=>Math.round(Date.UTC(2000,+d.slice(5,7)-1,+d.slice(8,10))/864e5)+25569;   // HC: 「月日（比較用）」の列（0始まり）。年をそろえた日付（2000年）で、2つの年を重ねるグラフの横軸にする
-    ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考','月日（比較用）']; ws2.getRow(1).font={bold:true}; ws2.getColumn(1).width=12; ws2.getColumn(HC+1).width=14;
-    S.forEach((x,i)=>{ ws2.getColumn(i+2).width=13; ws2.getRow(1).getCell(i+2).font={bold:true,color:{argb:'FF'+x.s.color.slice(1).toUpperCase()}}; });
-    const put=(d,r)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(r).values=[dOf(d),...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; ws2.getRow(r).getCell(1).numFmt='yyyy-mm-dd';
+    ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考','月日（比較用）',...S.map(x=>selLabel(x.s.pid)+'（V字の疑いで除いた値）')]; ws2.getRow(1).font={bold:true,name:'Calibri',size:11}; ws2.getColumn(1).width=12; ws2.getColumn(HC+1).width=14;
+    S.forEach((x,i)=>{ ws2.getColumn(HC+2+i).width=16; ws2.getRow(1).getCell(HC+2+i).font={bold:true,name:'Calibri',size:11,color:{argb:'FF888888'}}; ws2.getColumn(i+2).width=13; ws2.getRow(1).getCell(i+2).font={bold:true,color:{argb:'FF'+x.s.color.slice(1).toUpperCase()}}; });
+    const put=(d,r)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(r).values=[dOf(d),...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')+(S.some(x=>x.dm.has(d))?' V字の疑いの点あり（右の列。グラフには入れていません）':'')]; ws2.getRow(r).getCell(1).numFmt='yyyy-mm-dd';
+      S.forEach((x,i)=>{ const z=x.dm.get(d); if(z){ const c2=ws2.getRow(r).getCell(HC+2+i); c2.value=Math.round(z.ndvi*1000)/1000; c2.font={name:'Calibri',size:11,color:{argb:'FF888888'}}; } });
       const c=ws2.getRow(r).getCell(HC+1); c.value={formula:`DATE(2000,MONTH(A${r}),DAY(A${r}))`,result:ser2(d)}; c.numFmt='m/d'; };
     d1.forEach((d,i)=>put(d,i+2)); let nr=d1.length+2;
-    if(d2.length){ nr++; ws2.getRow(nr).values=['雲・かすみの疑いで除外している日（グラフには入れていません）']; ws2.getRow(nr).font={italic:true,color:{argb:'FF777777'}}; d2.forEach(d=>put(d,++nr)); }
+    if(d2.length){ nr++; ws2.getRow(nr).values=['雲・かすみの疑いで除外している日（グラフには入れていません）']; ws2.getRow(nr).font={italic:true,name:'Calibri',size:11,color:{argb:'FF777777'}}; d2.forEach(d=>put(d,++nr)); }
     ws2.getRow(nr+2).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。グラフは、次のシートにあります（稲の期間 5/10〜9/30 だけ）。'];
     // グラフ3種類（稲の期間 5/10〜9/30）: 今年・前の年・2つの年の比較。1枚ずつ別のシートに置く
     const Y=d1.length?+d1[d1.length-1].slice(0,4):0, inS=d=>{ const md=d.slice(5); return md>='05-10'&&md<='09-30'; }, rowsOf=y=>{ const ix=d1.map((d,i)=>+d.slice(0,4)===y&&inS(d)?i:-1).filter(i=>i>=0); return ix.length>=2?[ix[0]+2,ix[ix.length-1]+2]:null; };
@@ -1762,6 +1768,7 @@ document.getElementById('btnXlsx').onclick=async()=>{
       plan.push({sheet:w.name,title:`NDVIの比較（実線＝${Y}年、点線＝${Y-1}年。5/10〜9/30）`,xmin:Math.round(Date.UTC(2000,4,10)/864e5)+25569,xmax:Math.round(Date.UTC(2000,8,30)/864e5)+25569+1,major:14,xfmt:'m/d',xtitle:'月日',ymin:0,ymax:1,
         ser:[...sSer(Y,R1).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y}年`,color:x.s.color.slice(1).toUpperCase(),w:28575,x:sr(col(HC),R1),y:sr(col(i+1),R1)})),
              ...sSer(Y-1,R0).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y-1}年`,color:x.s.color.slice(1).toUpperCase(),w:15875,dash:1,x:sr(col(HC),R0),y:sr(col(i+1),R0)}))]}); }
+    wb.worksheets.forEach(w=>w.eachRow({includeEmpty:false},r=>r.eachCell({includeEmpty:false},c=>{ const f=c.font||{}; if(!f.name||!f.size) c.font={...f,name:f.name||'Calibri',size:f.size||11}; })));   // 名前・大きさのないフォントは、Excel で行の高さが狂うことがある
     let buf=await wb.xlsx.writeBuffer(), chartNote='';
     if(plan.length){ try{ buf=await addXlsxCharts(buf,plan); }catch(e){ chartNote='（グラフを付けられませんでした: '+e.message+'）'; } } else chartNote='（稲の期間のデータが少ないため、グラフは付けませんでした）';
     const a=document.createElement('a');
