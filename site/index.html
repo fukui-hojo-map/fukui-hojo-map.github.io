@@ -711,6 +711,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   header .meta{color:var(--ink2);font-size:14px}
   header .spacer{flex:1}
   .btn{font:inherit;font-size:15px;padding:7px 12px;border:1px solid var(--ink);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer;min-height:36px}
+  .sx{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px}
+  .sx>div{background:#fff;border-radius:10px;max-width:540px;width:100%;max-height:92vh;overflow:auto;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .sx h3{margin:0 0 6px;font-size:16px;color:var(--ink)} .sx p{margin:4px 0;font-size:13.5px;color:var(--ink2);line-height:1.5}
+  .sx .sxd{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px 8px;margin:8px 0;max-height:36vh;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:6px}
+  .sx .sxd label{font-size:14px;white-space:nowrap;cursor:pointer} .sx .sxb{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .sx .sxm{font-size:13px;color:var(--ink2);min-height:1.5em}
   .btn:hover{background:var(--panel)} .btn.primary{background:var(--ink);color:#fff} .btn.small{padding:3px 9px;min-height:28px;font-size:14px}
   .btn:disabled{opacity:.45;cursor:default}
   input[type=file]{display:none}
@@ -883,7 +888,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
     <div class="ctl">
-      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
+      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button> <button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）">日付を選んで地図を出力</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
@@ -1715,7 +1720,7 @@ document.getElementById('btnXlsx').onclick=async()=>{
     ws.getCell('A2').value=MAP_SAME?'地図の番号と、下の表の「圃場」が同じ圃場です。':'「地図」のシートの番号と、下の表の「圃場」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}};
     let row=4;
     if(map_){ const id=wb.addImage({base64:map_.url,extension:'png'});
-      if(MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(id,{tl:{col:0,row:2},ext:{width:w,height:h}}); row=3+Math.ceil(h/20)+2; }   // 行の高さは 20px
+      if(MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(id,{tl:{col:0,row:2},ext:{width:w,height:h}}); row=3+Math.ceil(h/20)+4; for(let r=3;r<row;r++) ws.getRow(r).height=15; }   // 地図の下の行の高さを 15pt（20px）に決める（Excel の標準の行の高さは環境で違い、表と重なることがあった）。余白は 4行
       else { const wm=wb.addWorksheet('地図'); wm.getCell('A1').value='選んだ圃場の地図（番号は「一覧」のシートの「圃場」）'; wm.getCell('A1').font={bold:true};
         const w=Math.min(1400,map_.W), h=Math.round(map_.H*w/map_.W); wm.addImage(id,{tl:{col:0,row:1},ext:{width:w,height:h}}); } }
     const cols=[['圃場',15],['面積(a)',9],
@@ -1734,15 +1739,119 @@ document.getElementById('btnXlsx').onclick=async()=>{
       const lk=ws.getRow(row).getCell(cols.findIndex(c=>c[0]==='地図で開く')+1); lk.font={color:{argb:'FF1A73E8'},underline:true}; }
     // NDVI の推移（日付 × 田）
     const ws2=wb.addWorksheet('NDVIの推移'), S=selected.filter(s=>parcels[s.pid]).map(s=>({s,m:new Map(seriesOf(s.pid).filter(q=>!q.rad).map(q=>[q.date,q]))})), dd=[...new Set(S.flatMap(x=>[...x.m.keys()]))].sort();
+    const dOf=d=>new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))), d1=dd.filter(d=>!excluded.has(d)), d2=dd.filter(d=>excluded.has(d));   // 日付は Excel の日付（グラフの横軸にそのまま使える）。除外している日は表の下に分ける（グラフに入れない）
     ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考']; ws2.getRow(1).font={bold:true}; ws2.getColumn(1).width=12;
     S.forEach((x,i)=>{ ws2.getColumn(i+2).width=13; ws2.getRow(1).getCell(i+2).font={bold:true,color:{argb:'FF'+x.s.color.slice(1).toUpperCase()}}; });
-    dd.forEach((d,i)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(i+2).values=[d,...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; });
-    ws2.getRow(dd.length+3).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。'];
-    const buf=await wb.xlsx.writeBuffer(), a=document.createElement('a');
+    const put=(d,r)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(r).values=[dOf(d),...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; ws2.getRow(r).getCell(1).numFmt='yyyy-mm-dd'; };
+    d1.forEach((d,i)=>put(d,i+2)); let nr=d1.length+2;
+    if(d2.length){ nr++; ws2.getRow(nr).values=['雲・かすみの疑いで除外している日（グラフには入れていません）']; ws2.getRow(nr).font={italic:true,color:{argb:'FF777777'}}; d2.forEach(d=>put(d,++nr)); }
+    ws2.getRow(nr+2).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。右のグラフは、表のデータから作った Excel のグラフです（クリックして、色・軸・題名を直せます）。'];
+    let buf=await wb.xlsx.writeBuffer(), chartNote='';
+    if(d1.length>=2&&S.length){ try{ buf=await addNdviChart(buf,{sheet:'NDVIの推移',rows:d1.length,ser:S.map(x=>({color:x.s.color.slice(1)})),x0:d1[0],x1:d1[d1.length-1],col:S.length+3}); }catch(e){ chartNote='（グラフを付けられませんでした: '+e.message+'）'; } }
+    const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`fukui_hojo_${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),10000); setStatus('');
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000); setStatus(chartNote);
   }catch(e){ setStatus('Excel を作れませんでした: '+e.message); }
   finally{ btn.disabled=false; }
+};
+
+// ---------- Excel のグラフ（編集できる折れ線）を、書き出した xlsx に足す ----------
+// ExcelJS はグラフを作れないので、できあがった xlsx（zip）に、グラフの部品（chart・drawing）を足す。グラフは表のセルを見ているので、Excel で数値を直すとグラフも変わる
+let jszipP=null;
+function loadJsZip(){ return jszipP||(jszipP=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+  sc.onload=()=>ok(window.JSZip); sc.onerror=()=>{ jszipP=null; ng(new Error('JSZip を読み込めませんでした')); }; document.head.appendChild(sc); })); }
+async function addNdviChart(buf,o){   // o={sheet: シート名, rows: データの行数（2行目から）, ser:[{color:'RRGGBB'}], x0,x1: 最初と最後の日付 'YYYY-MM-DD', col: グラフを置く列（0始まり）}
+  const JZ=await loadJsZip(), z=await JZ.loadAsync(buf), PR=new DOMParser(), RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships', RT=RNS+'/drawing';
+  const rd=async f=>{ const e=z.file(f); return e?await e.async('string'):null; };
+  const wbx=PR.parseFromString(await rd('xl/workbook.xml'),'application/xml'), sh=[...wbx.getElementsByTagName('sheet')].find(e=>e.getAttribute('name')===o.sheet); if(!sh) throw new Error('シートが見つかりません');
+  const rid=sh.getAttributeNS(RNS,'id')||sh.getAttribute('r:id'), wr=PR.parseFromString(await rd('xl/_rels/workbook.xml.rels'),'application/xml'),
+    tg=[...wr.getElementsByTagName('Relationship')].find(e=>e.getAttribute('Id')===rid).getAttribute('Target'), sp=tg[0]==='/'?tg.slice(1):'xl/'+tg,
+    rp=sp.replace(/[^/]+$/,'')+'_rels/'+sp.split('/').pop()+'.rels';
+  const q="'"+o.sheet.replace(/'/g,"''")+"'!", n=o.rows+1, ser=o.ser.map((x,i)=>{ const c=String.fromCharCode(66+i), col=x.color;
+    return `<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:strRef><c:f>${q}$${c}$1</c:f></c:strRef></c:tx><c:spPr><a:ln w="22225" cap="rnd"><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:round/></a:ln></c:spPr>`+
+      `<c:marker><c:symbol val="circle"/><c:size val="5"/><c:spPr><a:solidFill><a:srgbClr val="${col}"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:marker>`+
+      `<c:xVal><c:numRef><c:f>${q}$A$2:$A$${n}</c:f></c:numRef></c:xVal><c:yVal><c:numRef><c:f>${q}$${c}$2:$${c}$${n}</c:f></c:numRef></c:yVal><c:smooth val="0"/></c:ser>`; }).join('');
+  const serial=d=>Math.round(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))/864e5)+25569, a0=serial(o.x0)-3, a1=serial(o.x1)+3, span=a1-a0, mj=span>200?30:span>90?14:7;
+  const tx=(t,sz,b)=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${sz}" b="${b}"/></a:pPr><a:r><a:rPr lang="ja-JP" sz="${sz}" b="${b}"/><a:t>${t}</a:t></a:r></a:p></c:rich></c:tx>`;
+  const chart=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${RNS}"><c:roundedCorners val="0"/>`+
+    `<c:chart><c:title>${tx('NDVIの推移',1400,1)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>`+
+    `<c:scatterChart><c:scatterStyle val="lineMarker"/><c:varyColors val="0"/>${ser}<c:axId val="50010"/><c:axId val="50020"/></c:scatterChart>`+
+    `<c:valAx><c:axId val="50010"/><c:scaling><c:orientation val="minMax"/><c:max val="${a1}"/><c:min val="${a0}"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:title>${tx('日付',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="yy/m/d" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/><c:crossAx val="50020"/><c:crosses val="autoZero"/><c:crossBetween val="midCat"/><c:majorUnit val="${mj}"/></c:valAx>`+
+    `<c:valAx><c:axId val="50020"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D9D9D9"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:title>${tx('NDVI',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="0.0" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="50010"/><c:crosses val="min"/><c:crossBetween val="midCat"/></c:valAx>`+
+    `</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>`;
+  const drawing=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>${o.col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${660*9525}" cy="${400*9525}"/>`+
+    `<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="NDVIの推移"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${RNS}" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>`;
+  const REL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  z.file('xl/charts/chart99.xml',chart); z.file('xl/drawings/drawing99.xml',drawing);
+  z.file('xl/drawings/_rels/drawing99.xml.rels',REL+'<Relationship Id="rId1" Type="'+RNS+'/chart" Target="../charts/chart99.xml"/></Relationships>');
+  const dr=`<Relationship Id="rIdNdvi" Type="${RT}" Target="../drawings/drawing99.xml"/>`, old=await rd(rp);
+  z.file(rp,old?old.replace('</Relationships>',dr+'</Relationships>'):REL+dr+'</Relationships>');
+  let sx=await rd(sp); if(!/xmlns:r=/.test(sx)) sx=sx.replace(/<worksheet /,'<worksheet xmlns:r="'+RNS+'" ');
+  const tag='<drawing r:id="rIdNdvi"/>', at=sx.search(/<legacyDrawing|<tableParts|<extLst/); sx=at>=0?sx.slice(0,at)+tag+sx.slice(at):sx.replace('</worksheet>',tag+'</worksheet>'); z.file(sp,sx);
+  let ct=await rd('[Content_Types].xml'); ct=ct.replace('</Types>','<Override PartName="/xl/charts/chart99.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/drawings/drawing99.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>'); z.file('[Content_Types].xml',ct);
+  return await z.generateAsync({type:'arraybuffer',compression:'DEFLATE'}); }
+
+// ---------- 日付を選んで、地図を複数出力（NDVI の経過を地図で見る） ----------
+// 選んだ圃場の色分け（絶対表示・相対表示）を、選んだ日付ぶん、同じ範囲・同じ番号の地図にして、1枚にまとめた画像（PNG）か、日付ごとの画像（ZIP）で保存する
+const imgOf=src=>new Promise((ok,ng)=>{ const im=new Image(); im.onload=()=>ok(im); im.onerror=()=>ng(new Error('画像を作れませんでした')); im.src=src; });
+const toBlob=cv=>new Promise((ok,ng)=>cv.toBlob(b=>b?ok(b):ng(new Error('画像を作れませんでした')),'image/png'));
+async function sxPanel(d,im,mode){   // 地図の画像に、日付（左上）と凡例をつけた canvas
+  const I=await imgOf(im.url), cv=document.createElement('canvas'); cv.width=im.W; cv.height=im.H; const x=cv.getContext('2d'); x.drawImage(I,0,0);
+  const fs=Math.max(16,Math.round(im.W/30)); x.font=`700 ${fs}px sans-serif`; x.textAlign='left'; x.textBaseline='top'; const tw=x.measureText(d).width;
+  x.fillStyle='rgba(255,255,255,.92)'; x.fillRect(8,8,tw+16,fs+10); x.fillStyle='#1e3a2f'; x.fillText(d,16,13);
+  const kind=mode==='rel'?'rel':'abs', lw=Math.min(240,Math.round(im.W*0.42)), lh=12, lx=8, ly=fs+28;
+  x.fillStyle='rgba(255,255,255,.92)'; x.fillRect(lx,ly-5,lw+16,lh+27);
+  const E=BANDS[kind].edges, pos=kind==='abs'?E.map(e=>(e-0.2)/0.7):E.map(e=>(e+1)/2), st=[0,...pos,1], cols=bandCols(kind);
+  if(bandOn()) for(let i=0;i<cols.length;i++){ x.fillStyle=`rgb(${cols[i].join(',')})`; x.fillRect(lx+8+st[i]*lw,ly,(st[i+1]-st[i])*lw+0.6,lh); }
+  else for(let i=0;i<lw;i++){ const t=i/lw; x.fillStyle=kind==='abs'?ndviColor(0.2+0.7*t):`rgb(${relColor(t*2-1).join(',')})`; x.fillRect(lx+8+i,ly,1.6,lh); }
+  x.font='12px sans-serif'; x.fillStyle='#222'; x.textBaseline='alphabetic'; const yy=ly+lh+13;
+  if(kind==='abs'){ x.textAlign='left'; x.fillText('NDVI 0.2',lx+8,yy); x.textAlign='right'; x.fillText('0.9',lx+8+lw,yy); }
+  else { x.textAlign='left'; x.fillText('低い',lx+8,yy); x.textAlign='center'; x.fillText('その田の平均との差',lx+8+lw/2,yy); x.textAlign='right'; x.fillText('高い',lx+8+lw,yy); }
+  return cv; }
+async function sxRun(dates,kind,msg){   // 日付ごとに、色分けを描いて、地図の画像にする
+  const sel=document.getElementById('colorDate'), keep=sel.value, mode=fillMode(), out=[];
+  try{ for(let i=0;i<dates.length;i++){ msg(`${i+1}/${dates.length} 枚目（${dates[i]}）を作っています…`);
+      sel.value=dates[i]; await renderPx();
+      const im=await exportMap(null,{max:kind==='sheet'?(dates.length>9?560:760):1400}); if(!im) throw new Error('地図を作れませんでした');
+      out.push({d:dates[i],cv:await sxPanel(dates[i],im,mode)}); }
+  }finally{ sel.value=keep; paintMap(); }
+  return out; }
+function sxSheet(P,title){   // 1枚にまとめる（日付の順に、左上から並べる）
+  const n=P.length, cols=n<=2?n:n<=4?2:n<=9?3:4, rows=Math.ceil(n/cols), w=P[0].cv.width, h=P[0].cv.height, gap=10, top=44;
+  const cv=document.createElement('canvas'); cv.width=cols*w+(cols+1)*gap; cv.height=top+rows*(h+gap); const x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height);
+  x.fillStyle='#1e3a2f'; x.font='700 20px sans-serif'; x.textAlign='left'; x.textBaseline='middle'; x.fillText(title,gap,top/2);
+  P.forEach((p,i)=>{ x.drawImage(p.cv,gap+(i%cols)*(w+gap),top+Math.floor(i/cols)*(h+gap)); });
+  return cv; }
+document.getElementById('btnSeries').onclick=()=>{
+  if(!selected.length){ setStatus('圃場を選んでから押してください。'); return; }
+  const fm=fillMode(); if(fm!=='abs'&&fm!=='rel'){ setStatus('地図の「表示モード」を、絶対表示か相対表示にしてから押してください。'); return; }
+  if(!document.getElementById('colorOn').checked){ setStatus('地図の色分けをオンにしてから押してください。'); return; }
+  const cd=document.getElementById('colorDate'), dates=[...cd.options].map(o=>o.value).filter(Boolean).sort();
+  if(!dates.length){ setStatus('選んだ圃場に、使える日付の画像がありません。'); return; }
+  setStatus(''); const MAX=24, ov=document.createElement('div'); ov.className='sx';
+  ov.innerHTML=`<div role="dialog" aria-label="日付を選んで地図を出力"><h3>日付を選んで、地図を出力</h3>
+    <p>選んだ圃場（${selected.length}枚）の、NDVI の色分け（${fm==='rel'?'相対表示':'絶対表示'}）を、選んだ日付ぶん、同じ範囲・同じ番号の地図にします。日付は、衛星の画像がある日です。</p>
+    <div class="sxb"><button class="btn small" data-q="all">全部</button><button class="btn small" data-q="year">今年だけ</button><button class="btn small" data-q="two">約2週間おき（今年）</button><button class="btn small" data-q="none">解除</button></div>
+    <div class="sxd">${dates.map(d=>`<label><input type="checkbox" value="${d}" ${d===cd.value?'checked':''}> ${d}</label>`).join('')}</div>
+    <div class="sxm" id="sxm"></div>
+    <div class="sxb"><button class="btn primary" data-o="sheet">1枚にまとめて保存（PNG）</button><button class="btn" data-o="zip">日付ごとに保存（ZIP）</button><button class="btn" data-o="close">閉じる</button></div></div>`;
+  document.body.appendChild(ov);
+  const ck=()=>[...ov.querySelectorAll('.sxd input')], pick=()=>ck().filter(i=>i.checked).map(i=>i.value), $m=ov.querySelector('#sxm'); let busy=false;
+  const upd=()=>{ if(busy) return; const n=pick().length; $m.textContent=n?`${n}日を選んでいます${n>MAX?`（多すぎます。${MAX}日までにしてください）`:''}`:'日付を選んでください'; };
+  ov.addEventListener('change',upd); upd();
+  const yr=cd.options.length?String(allDates[allDates.length-1]||dates[dates.length-1]).slice(0,4):'';
+  ov.onclick=async e=>{ if(e.target===ov&&!busy){ ov.remove(); return; } const b=e.target.closest('button'); if(!b||busy) return;
+    if(b.dataset.q){ const q=b.dataset.q; let last=-1e9; ck().forEach(i=>{ const d=i.value, y=d.slice(0,4)===dates[dates.length-1].slice(0,4); let v=false;
+        if(q==='all') v=true; else if(q==='year') v=y; else if(q==='two'&&y){ const t=Date.parse(d)/864e5; if(t-last>=13){ v=true; last=t; } } i.checked=v; }); upd(); return; }
+    if(b.dataset.o==='close'){ ov.remove(); return; }
+    const sel=pick(); if(!sel.length||sel.length>MAX){ upd(); return; }
+    busy=true; ov.querySelectorAll('button').forEach(x=>x.disabled=true);
+    try{ const P=await sxRun(sel,b.dataset.o,m=>{ $m.textContent=m; }), td=new Date(), ds=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+      if(b.dataset.o==='sheet'){ $m.textContent='1枚にまとめています…'; dl(await toBlob(sxSheet(P,`ふくい圃場マップ　NDVIの経過（${fm==='rel'?'相対表示':'絶対表示'}・${selected.map(s=>selLabel(s.pid)).join(' ')}）`)),`fukui_hojo_ndvi_series_${ds}.png`); }
+      else { $m.textContent='ZIP にまとめています…'; const JZ=await loadJsZip(), zp=new JZ(); for(const p of P) zp.file(`ndvi_${p.d}.png`,await toBlob(p.cv)); dl(await zp.generateAsync({type:'blob'}),`fukui_hojo_ndvi_maps_${ds}.zip`); }
+      ov.remove(); setStatus(`${P.length}日ぶんの地図を保存しました`);
+    }catch(err){ busy=false; ov.querySelectorAll('button').forEach(x=>x.disabled=false); $m.textContent='作れませんでした: '+err.message; } };
+  document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ if(!busy) ov.remove(); document.removeEventListener('keydown',esc); } if(!ov.isConnected) document.removeEventListener('keydown',esc); });
 };
 
 // ---------- exclusions ----------
