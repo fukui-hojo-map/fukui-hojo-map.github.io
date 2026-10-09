@@ -88,6 +88,18 @@ jobs:
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: python pipeline/update_ndvi.py --max-minutes ${{ inputs.max_minutes || '300' }} --workers 4 ${{ inputs.full && '--full' || '' }}
 
+      # 近くの雲の割合（pipeline/cloudnear.py → data/cloudnear.json）。画面が、6〜9月に「まわり3kmの95%以上が雲」の日の観測を使わないための材料。
+      # 計算済みの日は飛ばす（最初の1回だけ全日で5分ほど）。失敗しても前回のファイルが残るだけで、ほかは止めない
+      - name: 近くの雲の割合を計算する
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        timeout-minutes: 40
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: python pipeline/cloudnear.py --max-minutes 30 --workers 4
+
       - name: 最新の画面を取り込む（この更新の途中で site.yml が画面だけ出していても、古い画面で上書きしない）
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
