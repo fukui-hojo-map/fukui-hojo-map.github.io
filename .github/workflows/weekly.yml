@@ -88,7 +88,7 @@ jobs:
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: python pipeline/update_ndvi.py --max-minutes ${{ inputs.max_minutes || '300' }} --workers 4 ${{ inputs.full && '--full' || '' }}
 
-      # 近くの雲の割合（pipeline/cloudnear.py → data/cloudnear.json）。画面が、6〜9月に「まわり3kmの95%以上が雲」の日の観測を使わないための材料。
+      # 近くの雲の割合（pipeline/cloudnear.py → data/cloudnear.json）。画面が、6〜9月に「まわり3kmの99%以上が雲」の日の観測を使わないための材料。
       # 計算済みの日は飛ばす（最初の1回だけ全日で5分ほど）。失敗しても前回のファイルが残るだけで、ほかは止めない
       - name: 近くの雲の割合を計算する
         if: steps.gate.outputs.run == '1'
