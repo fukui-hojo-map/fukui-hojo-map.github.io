@@ -912,6 +912,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
       <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より低いV字の点（雲・かすみの疑い。前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上）を、グラフと計算から外す</label></div>
+      <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）の95%以上が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
       <div class="excl" id="excl"></div>
@@ -1030,6 +1031,16 @@ function loadPackage(p, label){
 function thr(){ return (+document.getElementById('thr').value||70)/100; }
 function dipOn(){ return document.getElementById('dipOn').checked; }
 function lsCheckOn(){ return document.getElementById('lsOn').checked; }
+// 近くの雲の割合（data/cloudnear.json。pipeline/cloudnear.py）: セルの中心から半径3kmの円の中で、雲・雲の影・巻雲・雲の質が低い画素の割合（%）。
+// 95%以上の日は、晴れて見える区画があっても、うすい雲・巻雲のベールで NDVI がそろって下がりやすい（論文解析 T18）。NDVI の値は見ずに、その日の Sentinel-2 の観測を使わない。ファイルがない・値がない日は使う
+const CN_TH=95, CN_FROM='06-01', CN_TO='09-30';   // 評価した 6〜9月（2025・2026年）の日にだけ使う。5月は NDVI が低い時期で、評価の物差し（NDVI 0.7 以上の田）が使えなかったので対象外
+let cnData=null, cnVer=0;
+function cnOn(){ return !!cnData&&document.getElementById('cnOn').checked; }
+function cnBad(cell,d){ const md=d.slice(5); if(md<CN_FROM||md>CN_TO) return false; const a=cnData.d[d], j=cnData.ci[cell]; if(!a||j===undefined) return false; const v=a[j]; return v!==null&&v!==undefined&&v>=CN_TH; }
+async function loadCloudNear(){
+  try{ const r=await fetch(DATA+'cloudnear.json',{cache:'no-cache'}); if(!r.ok) return; const j=await r.json();
+    if(j.v!==1||!j.cells||!j.d) return; const ci=Object.create(null); j.cells.forEach((c,i)=>ci[c]=i); cnData={ci,d:j.d}; cnVer++; }
+  catch(e){ cnData=null; } }
 // Landsat（HLS L30, 30m画素）は畦・道が画素に混ざり、同じ田の同じ日の Sentinel-2 より、茂った時期は低く（平均 −0.03）、水・土のころは高く（+0.10）出る。
 // 県内の同じ日の組（約36万組）から作った換算表で Sentinel-2 相当に直す。直しても1回ごとのばらつき（±0.07ほど）は残るので、
 // 前後3日以内に Sentinel-2 がある日は使わず（梅雨どきなどの穴埋めだけ）、前後の Sentinel-2 を結んだ線から 0.08 以上ずれる点も除く（lsFits）
@@ -1053,9 +1064,9 @@ function isDip(s,i){ // one parcel only: lower than both neighbours (each within
 }
 // filtered rows per parcel, cached; rebuilt when threshold / excluded days / dip or Landsat filter / data change
 let clean=new Map(), cleanKey='', dataVer=0;
-function syncClean(){ const k=`${thr()}|${dipOn()}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
+function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
-  const t=thr()-1e-9, dip=dipOn(); let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0]));
+  const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0])));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
   const isD=s.map((r,i)=>dip&&isDip(s,i)), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
@@ -1508,8 +1519,8 @@ async function buildPxDates(){   // 圃場内モードでは、選んだ圃場�
   document.getElementById('dateCtl').style.display=noDate?'none':'inline-flex';
   if(noDate){ paintMap(); return; }
   if(!selected.length){ buildColorDates(); if([...sel.options].some(o=>o.value===keep)) sel.value=keep; paintMap(); return; }
-  const Y=allDates.length?+allDates[allDates.length-1].slice(0,4):new Date().getFullYear(), ds=new Set();
-  for(const s of selected){ const c=parcels[s.pid]?.cell; if(!c) continue; for(const y of [Y-1,Y]){ const r=await pxLoad(c,y); if(r) r.m.dates.forEach(x=>{ if(!excluded.has(x)) ds.add(x); }); } }   // もやの日（除外している日）は出さない
+  const Y=allDates.length?+allDates[allDates.length-1].slice(0,4):new Date().getFullYear(), ds=new Set(), cn=cnOn();
+  for(const s of selected){ const c=parcels[s.pid]?.cell; if(!c) continue; for(const y of [Y-1,Y]){ const r=await pxLoad(c,y); if(r) r.m.dates.forEach(x=>{ if(!excluded.has(x)&&!(cn&&cnBad(c,x))) ds.add(x); }); } }   // もやの日（除外している日）・近くがほぼ雲の日は出さない
   const list=[...ds].sort().reverse(); if(!list.length){ buildColorDates(); paintMap(); return; }
   sel.innerHTML=''; for(const x of list){ const o=document.createElement('option'); o.value=x; o.textContent=x; sel.appendChild(o); }
   sel.value=list.includes(keep)?keep:list[0]; paintMap();
@@ -1888,7 +1899,7 @@ function buildExcl(){
 }
 document.getElementById('btnAddExcl').onclick=()=>{const d=document.getElementById('addExcl').value; if(d){excluded.add(d); refresh(); buildPxDates();}};
 document.getElementById('thr').onchange=()=>{detectOutliers(); refresh(); buildPxDates();};   // 圃場内モードでは画素がある日の一覧のまま
-document.getElementById('dipOn').onchange=refresh; document.getElementById('lsOn').onchange=refresh; document.getElementById('radarOn').onchange=refresh;
+document.getElementById('dipOn').onchange=refresh; document.getElementById('cnOn').onchange=()=>{ refresh(); buildPxDates(); }; document.getElementById('lsOn').onchange=refresh; document.getElementById('radarOn').onchange=refresh;
 document.getElementById('nbR').onchange=refresh; document.getElementById('nbOn').onchange=refresh;
 document.getElementById('mode').onchange=refresh;
 
@@ -1931,6 +1942,7 @@ async function boot(){
   if(h.c) map.setView(h.c,h.z||15); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]]);
   let bulkZ=map.getZoom()>=BULK_ZOOM;
   map.on('moveend',()=>{ const ch=cullCells(); loadVisible(); writeHash(); const bz=map.getZoom()>=BULK_ZOOM; if(ch||fillMode()!=='abs'||bz||bulkZ) paintMap(); bulkZ=bz; });   // 絶対表示も、拡大しているときは動かすたびに圃場の中を塗り直す
+  await loadCloudNear();   // 近くの雲の割合（なければ何もしない）。最初の区画を読む前にそろえる
   cullCells(); await loadVisible();
   if(SHOW_PLAN&&plan.items.length) planEnsureCells().then(()=>{ planRender(); paintMap(); });
   if(h.sel){ for(const pid of h.sel.split(',')) if(parcels[pid]&&!selected.some(s=>s.pid===pid)) toggleSelect(pid); }
