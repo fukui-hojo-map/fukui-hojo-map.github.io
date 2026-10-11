@@ -868,7 +868,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <span class="meta" id="meta"></span>
   <span class="spacer"></span>
   <button class="btn" id="btnGeo">現在地へ</button>
-  <button class="btn" id="btnLink">この場所のリンクをコピー</button>
 </header>
 <div class="layout">
   <div class="mapwrap">
@@ -1991,7 +1990,6 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
 }
 function parseHash(){ const o={}; for(const kv of location.hash.replace(/^#/,'').split('&')){ const [k,v]=kv.split('='); if(!k) continue; if(k==='c'){const a=v.split(',').map(Number); if(a.length===2&&a.every(isFinite)) o.c=a;} else if(k==='z') o.z=+v; else if(k==='sel') o.sel=decodeURIComponent(v); } return o; }
 function writeHash(){ const c=map.getCenter(); const parts=[`c=${c.lat.toFixed(5)},${c.lng.toFixed(5)}`,`z=${map.getZoom()}`]; if(selected.length) parts.push('sel='+encodeURIComponent(selected.map(s=>s.pid).join(','))); history.replaceState(history.state,'','#'+parts.join('&')); }
-document.getElementById('btnLink').onclick=async()=>{ writeHash(); try{ await navigator.clipboard.writeText(location.href); setStatus('リンクをコピーしました。'); }catch(e){ prompt('このリンクをコピーしてください', location.href); } };
 document.getElementById('btnGeo').onclick=()=>{ if(!navigator.geolocation){ setStatus('この端末では現在地を取得できません。'); return; } navigator.geolocation.getCurrentPosition(p=>map.setView([p.coords.latitude,p.coords.longitude],16),()=>setStatus('現在地を取得できませんでした。'));};
 // ---------- ARで見る（Android の Chrome。WebXR の immersive-ar と hit-test） ----------
 // 田んぼに立ってスマホをかざすと、選んだ筆の中の色（NDVI など）が地面に塗られて見える。three.js は押したときだけ読み込む（cdn.jsdelivr.net）
