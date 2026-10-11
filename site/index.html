@@ -1422,8 +1422,13 @@ const DEV_KEY=(()=>{ const q=new URLSearchParams(location.search).get('dev');
   if(q&&q!=='off'){ const u=new URL(location.href); u.searchParams.delete('dev'); history.replaceState(null,'',u.pathname+u.search+u.hash); }   // 鍵をアドレス欄に残さない
   return (window.SW&&SW.dev==='off')?'':v; })();
 const DEV=!!DEV_KEY;
+// ホーム画面に追加したアプリは、端末の保存がブラウザと別なので、鍵をもう一度入れる欄を出す（鍵のない端末が、ホーム画面から開いたときだけ。鍵が合わなかったときにも出す）
+function keyBox(msg){ if(document.getElementById('keyBox')) return; const h=document.getElementById('modeHead'); if(!h) return; const b=document.createElement('div'); b.id='keyBox'; b.style.cssText='margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px';
+  b.innerHTML=`<div>${msg||'鍵をお持ちの方は、ここに入れてください（英数字）'}</div><div style="display:flex;gap:6px;margin-top:6px"><input id="keyIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;font-size:16px;padding:7px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn" id="keyGo" type="button">開く</button></div>`;
+  h.parentNode.insertBefore(b,h); document.getElementById('keyGo').onclick=()=>{ const k=document.getElementById('keyIn').value.trim(); if(k.length<12){ alert('鍵は12文字以上です。もう一度確かめてください'); return; } try{ localStorage.setItem('devkey',k); }catch(e){} location.reload(); }; }
+if(!DEV&&(()=>{ try{ return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){ return false; } })()) keyBox();
 function loadPriv(){ return new Promise(res=>{ if(!DEV) return res(false); const sc=document.createElement('script'); sc.src=PRIV_URL+'?k='+encodeURIComponent(DEV_KEY);
-  sc.onload=()=>res(true); sc.onerror=()=>{ setStatus('開発者の機能を読み込めませんでした（鍵を確かめてください）'); res(false); }; document.head.appendChild(sc); }); }
+  sc.onload=()=>res(true); sc.onerror=()=>{ setStatus('開発者の機能を読み込めませんでした（鍵を確かめてください）'); keyBox('鍵が合わないようです。もう一度入れてください'); res(false); }; document.head.appendChild(sc); }); }
 const SHOW_RANK=DEV;
 const cl01=x=>Math.max(0,Math.min(1,x)), SETUP_PCT=8;   // 20a の田で機械の出し入れが作業時間に占める割合（%）
 function polyPerim(g){ let s=0; for(const p of (g.type==='Polygon'?[g.coordinates]:g.coordinates)) for(const r of p){ const k=Math.cos(r[0][1]*Math.PI/180);
