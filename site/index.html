@@ -1421,6 +1421,7 @@ const DEV_KEY=(()=>{ const q=new URLSearchParams(location.search).get('dev');
   if(q&&q!=='off'){ const u=new URL(location.href); u.searchParams.delete('dev'); history.replaceState(null,'',u.pathname+u.search+u.hash); }   // 鍵をアドレス欄に残さない
   return (window.SW&&SW.dev==='off')?'':v; })();
 const DEV=!!DEV_KEY;
+if(DEV) window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); window.__bip=e; });   // 「ホーム画面に追加」ボタン（priv.js のマイ圃場）が使う。鍵のある端末だけ
 // ホーム画面に追加したアプリは、端末の保存がブラウザと別なので、鍵をもう一度入れる欄を出す（鍵のない端末が、ホーム画面から開いたときだけ。鍵が合わなかったときにも出す）
 function keyBox(msg){ if(document.getElementById('keyBox')) return; const h=document.getElementById('modeHead'); if(!h) return; const b=document.createElement('div'); b.id='keyBox'; b.style.cssText='margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px';
   b.innerHTML=`<div>${msg||'鍵をお持ちの方は、ここに入れてください（英数字）'}</div><div style="display:flex;gap:6px;margin-top:6px"><input id="keyIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;font-size:16px;padding:7px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn" id="keyGo" type="button">開く</button></div>`;
