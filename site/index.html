@@ -711,6 +711,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
   header .meta{color:var(--ink2);font-size:14px}
   header .spacer{flex:1}
   .btn{font:inherit;font-size:15px;padding:7px 12px;border:1px solid var(--ink);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer;min-height:36px}
+  .sx{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px}
+  .sx>div{background:#fff;border-radius:10px;max-width:540px;width:100%;max-height:92vh;overflow:auto;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+  .sx h3{margin:0 0 6px;font-size:16px;color:var(--ink)} .sx p{margin:4px 0;font-size:13.5px;color:var(--ink2);line-height:1.5}
+  .sx .sxd{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px 8px;margin:8px 0;max-height:36vh;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:6px}
+  .sx .sxd label{font-size:14px;white-space:nowrap;cursor:pointer;padding:3px 6px;border-radius:5px} .sx .sxd label.now{background:#e8f3e8} .sx .sxd label.old{background:#f0f0ee;color:#555}
+  .sx .sxy{grid-column:1/-1;font-weight:700;font-size:14px;padding:4px 6px;border-radius:5px;margin-top:2px} .sx .sxy.now{background:#2f7d4f;color:#fff} .sx .sxy.old{background:#777;color:#fff} .sx .sxy:not(:first-child){margin-top:8px} .sx .sxb{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .sx .sxm{font-size:13px;color:var(--ink2);min-height:1.5em}
   .btn:hover{background:var(--panel)} .btn.primary{background:var(--ink);color:#fff} .btn.small{padding:3px 9px;min-height:28px;font-size:14px}
   .btn:disabled{opacity:.45;cursor:default}
   input[type=file]{display:none}
@@ -854,9 +860,49 @@ svg.leaflet-image-layer.leaflet-interactive path {
     #map{height:56vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
     header{padding:8px 12px} .side{padding:10px 12px 30px}
   }
+  /* 起動の画面（ホーム画面のアプリで開いたとき）: アプリのアイコンと同じ地の色・ロゴ・字体で、読み込みの進みを 0→100% と数え上げる。ロゴの9枚のタイルが、進みに合わせて黄→緑の順に色づく。100% で地図を出す */
+  #boot{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:#f4f7f2;color:#0F3D2E;font-family:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;transition:opacity .5s ease,visibility .5s}
+  #boot.on{display:flex} #boot.out{opacity:0;visibility:hidden;pointer-events:none}
+  #boot .bt-in{display:flex;flex-direction:column;align-items:center;width:min(76vw,300px);margin-top:-6vh}
+  #boot .bt-logo{width:124px;height:124px;display:block;transition:transform .55s cubic-bezier(.2,1.5,.4,1)}
+  #boot .bt-logo rect{fill:#e1e8dc;transform-box:fill-box;transform-origin:center;transition:fill .4s ease}
+  #boot .bt-logo rect.on{fill:var(--c);animation:btPop .5s cubic-bezier(.2,1.7,.4,1)}
+  @keyframes btPop{0%{transform:scale(.55)}100%{transform:scale(1)}}
+  #boot .bt-name{margin-top:20px;font-size:25px;font-weight:700;line-height:1.15;letter-spacing:.04em;white-space:nowrap}
+  #boot .bt-num{margin-top:30px;font-size:58px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:.01em}
+  #boot .bt-num small{font-size:24px;margin-left:5px;color:#3fa45a}
+  #boot .bt-bar{position:relative;margin-top:16px;width:100%;height:8px;border-radius:4px;background:#e1e8dc;overflow:hidden}
+  #boot .bt-bar i{position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,#f5c542,#d7d65a 25%,#6cc24a 50%,#3fa45a 75%,#1f8a53);clip-path:inset(0 100% 0 0)}
+  #boot .bt-sub{margin-top:14px;min-height:1.5em;font-family:'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;font-weight:400;font-size:13px;color:#4c5a52;text-align:center;white-space:nowrap}
+  #boot .bt-sub b{font-weight:400;margin-left:6px;font-variant-numeric:tabular-nums;color:#2f7d4f}
+  #boot.done .bt-logo{transform:scale(1.08)}
+  @media (prefers-reduced-motion:reduce){ #boot *{animation:none!important;transition:none!important} }
 </style>
 </head>
 <body>
+<div id="boot" aria-hidden="true"><div class="bt-in"><svg class="bt-logo" id="btLogo" viewBox="8 8 84 84" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="12" width="23" height="23" rx="6" style="--c:#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" style="--c:#1f8a53"/></svg>
+  <div class="bt-name">ふくい圃場マップ</div><div class="bt-num"><span id="btNum">0</span><small>%</small></div><div class="bt-bar"><i id="btBar"></i></div><div class="bt-sub"><span id="btSub">データを読み込んでいます</span><b id="btTag"></b></div></div></div>
+<script>
+// 起動の画面: ホーム画面のアプリで開いたときだけ出す（?splash=1 でも見られる）。数字は、実際の読み込みの進み（下の BOOT.stage・BOOT.at）に向かって数え上げ、100% で地図を出す
+(function(){ var sa=false; try{ sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){}
+  if(/[?&]splash=1(&|$)/.test(location.search)) sa=true;
+  var el=document.getElementById('boot'); window.BOOT=null; if(!sa){ el.parentNode.removeChild(el); return; }
+  el.classList.add('on'); var num=document.getElementById('btNum'), bar=document.getElementById('btBar'), sub=document.getElementById('btSub'), tag=document.getElementById('btTag'), tiles=document.getElementById('btLogo').querySelectorAll('rect'), ORD=[0,1,3,2,4,6,5,7,8], lit=0;   // ロゴのタイルは、ななめに（黄→深い緑）
+  var B=window.BOOT={shown:0,target:2,lo:0,hi:12,t0:performance.now(),done:false,fin:false};
+  B.stage=function(lo,hi,txt,tg){ if(B.done) return; B.lo=Math.max(B.lo,lo); B.hi=Math.max(hi,B.lo+1); B.t0=performance.now(); B.target=Math.max(B.target,lo); if(txt) sub.textContent=txt; if(tg) tag.textContent=tg; };
+  B.at=function(x){ if(!B.done) B.target=Math.max(B.target,Math.min(x,99)); };
+  B.tag=function(t){ if(!B.done) tag.textContent=t; };
+  B.finish=function(){ if(B.done) return; B.done=true; B.target=100; tag.textContent=''; sub.textContent='地図を開きます'; };
+  function frame(now){ var creep=B.lo+(B.hi-B.lo)*(1-Math.exp(-(now-B.t0)/1500)), goal=B.done?100:Math.max(B.target,Math.min(creep,B.hi-0.5));   // 待っている間も、次の区切りの手前まで少しずつ進む
+    B.shown+=(goal-B.shown)*(B.done?0.2:0.07); if(B.done&&100-B.shown<0.6) B.shown=100;
+    num.textContent=Math.floor(B.shown); bar.style.clipPath='inset(0 '+(100-B.shown).toFixed(1)+'% 0 0)';
+    var n=Math.min(9,Math.floor(B.shown*9/100+1e-6)); while(lit<n){ tiles[ORD[lit]].classList.add('on'); lit++; }
+    if(B.shown>=100){ if(!B.fin){ B.fin=true; el.classList.add('done'); setTimeout(function(){ el.classList.add('out'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },500); },650); } return; }   // 100% になったら、9枚とも色づいたロゴを一瞬見せてから、地図へ
+    requestAnimationFrame(frame); }
+  requestAnimationFrame(frame);
+  setTimeout(function(){ B.finish(); },25000);   // 通信がとても遅くても、25秒で地図を出す
+})();
+</script>
 <header>
   <h1 class="fukui-logo"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="8 8 84 84"><rect x="12" y="12" width="23" height="23" rx="6" fill="#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" fill="#1f8a53"/></svg><span>ふくい圃場マップ</span></h1>
   <span class="meta" id="meta"></span>
@@ -882,7 +928,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
     <div class="ctl">
-      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button>
+      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button> <button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）">日付を選んで地図を出力</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
@@ -904,7 +950,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
-      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より0.1以上低いV字の点（雲・かすみの疑い）を灰色にして線から外す</label></div>
+      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より低いV字の点（雲・かすみの疑い。前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上）を、グラフと計算から外す</label></div>
+      <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）の99%以上が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
       <div class="excl" id="excl"></div>
@@ -1023,6 +1070,16 @@ function loadPackage(p, label){
 function thr(){ return (+document.getElementById('thr').value||70)/100; }
 function dipOn(){ return document.getElementById('dipOn').checked; }
 function lsCheckOn(){ return document.getElementById('lsOn').checked; }
+// 近くの雲の割合（data/cloudnear.json。pipeline/cloudnear.py）: セルの中心から半径3kmの円の中で、雲・雲の影・巻雲・雲の質が低い画素の割合（%）。
+// 99%以上の日は、晴れて見える区画があっても、うすい雲・巻雲のベールで NDVI がそろって下がりやすい（論文解析 T18）。NDVI の値は見ずに、その日の Sentinel-2 の観測を使わない。ファイルがない・値がない日は使う
+const CN_TH=99, CN_FROM='06-01', CN_TO='09-30';   // 評価した 6〜9月（2025・2026年）の日にだけ使う。5月は NDVI が低い時期で、評価の物差し（NDVI 0.7 以上の田）が使えなかったので対象外
+let cnData=null, cnVer=0;
+function cnOn(){ return !!cnData&&document.getElementById('cnOn').checked; }
+function cnBad(cell,d){ const md=d.slice(5); if(md<CN_FROM||md>CN_TO) return false; const a=cnData.d[d], j=cnData.ci[cell]; if(!a||j===undefined) return false; const v=a[j]; return v!==null&&v!==undefined&&v>=CN_TH; }
+async function loadCloudNear(){
+  try{ const r=await fetch(DATA+'cloudnear.json',{cache:'no-cache'}); if(!r.ok) return; const j=await r.json();
+    if(j.v!==1||!j.cells||!j.d) return; const ci=Object.create(null); j.cells.forEach((c,i)=>ci[c]=i); cnData={ci,d:j.d}; cnVer++; }
+  catch(e){ cnData=null; } }
 // Landsat（HLS L30, 30m画素）は畦・道が画素に混ざり、同じ田の同じ日の Sentinel-2 より、茂った時期は低く（平均 −0.03）、水・土のころは高く（+0.10）出る。
 // 県内の同じ日の組（約36万組）から作った換算表で Sentinel-2 相当に直す。直しても1回ごとのばらつき（±0.07ほど）は残るので、
 // 前後3日以内に Sentinel-2 がある日は使わず（梅雨どきなどの穴埋めだけ）、前後の Sentinel-2 を結んだ線から 0.08 以上ずれる点も除く（lsFits）
@@ -1036,23 +1093,25 @@ function lsFits(s2,t,v){ // 前後3日以内に Sentinel-2 がない、かつ前
   return Math.abs(v-(pv[1]+(nx[1]-pv[1])*(t-pv[0])/(nx[0]-pv[0])))<0.08;
 }
 const dayMs=new Map(), tOf=d=>{ let v=dayMs.get(d); if(v===undefined){ v=Date.parse(d); dayMs.set(d,v); } return v; };   // 日付の文字 → ms（毎回 Date.parse しない）
-const DIP=0.10;   // 前後の両方より、これ以上低い点を「雲・かすみの疑い」にする（片側だけ低い段差＝田植え・収穫などは対象外）
+const DIP=0.10, DIP_HI=0.07, DIP_HI_AT=0.7;   // 前後の両方が NDVI 0.7 以上のときは、0.07 以上低い点も対象にする（葉が詰まった時期は、NDVI の変化が小さく、0.03〜0.05 の揺れが目立つため）
+//   // 前後の両方より、これ以上低い点を「雲・かすみの疑い」にする（片側だけ低い段差＝田植え・収穫などは対象外）
 function isDip(s,i){ // one parcel only: lower than both neighbours (each within 15 days) by DIP or more
   if(i<=0||i>=s.length-1) return false; const pv=s[i-1],nx=s[i+1],tD=tOf(s[i][0]);
   if(tD-tOf(pv[0])>15*864e5||tOf(nx[0])-tD>15*864e5) return false;
-  return pv[1]-s[i][1]>=DIP-1e-9&&nx[1]-s[i][1]>=DIP-1e-9;
+  const th=pv[1]>=DIP_HI_AT&&nx[1]>=DIP_HI_AT?DIP_HI:DIP;
+  return pv[1]-s[i][1]>=th-1e-9&&nx[1]-s[i][1]>=th-1e-9;
 }
 // filtered rows per parcel, cached; rebuilt when threshold / excluded days / dip or Landsat filter / data change
 let clean=new Map(), cleanKey='', dataVer=0;
-function syncClean(){ const k=`${thr()}|${dipOn()}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
+function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
-  const t=thr()-1e-9, dip=dipOn(); let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0]));
+  const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0])));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
-  const opt=s.filter((r,i)=>!(dip&&isDip(s,i))), by=new Map(opt.map(r=>[r[0],r[1]]));
+  const isD=s.map((r,i)=>dip&&isDip(s,i)), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
   if(radarOn()&&rad&&rad.length){ // レーダーの推定値は光の観測がない日だけ足す。前後のレーダーより急に上下した点（ノイズ）は除く
     const od=new Set(s.map(r=>r[0])), rs=rad.filter(r=>r[2]>=t&&!od.has(r[0])); rows=rows.concat(rs.filter((r,i)=>!radarSpike(rs,i))).sort((a,b)=>a[0]<b[0]?-1:1); }
-  c={rows,by}; clean.set(pid,c); return c; }   // by（地図の色・近隣平均に使う値）は光の観測だけ
+  c={rows,by,dips}; clean.set(pid,c); return c; }   // by（地図の色・近隣平均に使う値）は光の観測だけ
 function radarOn(){ return document.getElementById('radarOn').checked; }
 function radarSpike(s,i){ if(i<=0||i>=s.length-1) return false; const pv=s[i-1],nx=s[i+1],tD=Date.parse(s[i][0]);
   if(tD-Date.parse(pv[0])>15*864e5||Date.parse(nx[0])-tD>15*864e5) return false; const a=s[i][1]-pv[1], b=s[i][1]-nx[1];
@@ -1408,7 +1467,7 @@ function keyBox(msg){ if(document.getElementById('keyBox')) return; const h=docu
   b.innerHTML=`<div>${msg||'鍵をお持ちの方は、ここに入れてください（英数字）'}</div><div style="display:flex;gap:6px;margin-top:6px"><input id="keyIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;font-size:16px;padding:7px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn" id="keyGo" type="button">開く</button></div>`;
   h.parentNode.insertBefore(b,h); document.getElementById('keyGo').onclick=()=>{ const k=document.getElementById('keyIn').value.trim(); if(k.length<12){ alert('鍵は12文字以上です。もう一度確かめてください'); return; } try{ localStorage.setItem('devkey',k); }catch(e){} location.reload(); }; }
 if(!DEV&&(()=>{ try{ return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){ return false; } })()) keyBox();
-function loadPriv(){ return new Promise(res=>{ if(!DEV) return res(false); const sc=document.createElement('script'); sc.src=PRIV_URL+'?k='+encodeURIComponent(DEV_KEY);
+function loadPriv(){ return new Promise(res=>{ if(!DEV) return res(false); if(window.BOOT) BOOT.stage(3,14,'',''); const sc=document.createElement('script'); sc.src=PRIV_URL+'?k='+encodeURIComponent(DEV_KEY);
   sc.onload=()=>res(true); sc.onerror=()=>{ setStatus('開発者の機能を読み込めませんでした（鍵を確かめてください）'); keyBox('鍵が合わないようです。もう一度入れてください'); res(false); }; document.head.appendChild(sc); }); }
 const SHOW_RANK=DEV;
 const cl01=x=>Math.max(0,Math.min(1,x)), SETUP_PCT=8;   // 20a の田で機械の出し入れが作業時間に占める割合（%）
@@ -1505,8 +1564,8 @@ async function buildPxDates(){   // 圃場内モードでは、選んだ圃場�
   document.getElementById('dateCtl').style.display=noDate?'none':'inline-flex';
   if(noDate){ paintMap(); return; }
   if(!selected.length){ buildColorDates(); if([...sel.options].some(o=>o.value===keep)) sel.value=keep; paintMap(); return; }
-  const Y=allDates.length?+allDates[allDates.length-1].slice(0,4):new Date().getFullYear(), ds=new Set();
-  for(const s of selected){ const c=parcels[s.pid]?.cell; if(!c) continue; for(const y of [Y-1,Y]){ const r=await pxLoad(c,y); if(r) r.m.dates.forEach(x=>{ if(!excluded.has(x)) ds.add(x); }); } }   // もやの日（除外している日）は出さない
+  const Y=allDates.length?+allDates[allDates.length-1].slice(0,4):new Date().getFullYear(), ds=new Set(), cn=cnOn();
+  for(const s of selected){ const c=parcels[s.pid]?.cell; if(!c) continue; for(const y of [Y-1,Y]){ const r=await pxLoad(c,y); if(r) r.m.dates.forEach(x=>{ if(!excluded.has(x)&&!(cn&&cnBad(c,x))) ds.add(x); }); } }   // もやの日（除外している日）・近くがほぼ雲の日は出さない
   const list=[...ds].sort().reverse(); if(!list.length){ buildColorDates(); paintMap(); return; }
   sel.innerHTML=''; for(const x of list){ const o=document.createElement('option'); o.value=x; o.textContent=x; sel.appendChild(o); }
   sel.value=list.includes(keep)?keep:list[0]; paintMap();
@@ -1714,18 +1773,18 @@ document.getElementById('btnXlsx').onclick=async()=>{
   try{
     const [EJ,map_,data]=await Promise.all([loadExcelJs(),exportMap(null,{max:1600}),exportRows()]);
     const wb=new EJ.Workbook(), ws=wb.addWorksheet('一覧'), today=new Date(), ds=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    ws.getCell('A1').value=`ふくい圃場マップ　選んだ圃場の一覧（${ds}）`; ws.getCell('A1').font={bold:true,size:14};
-    // 地図は基本は表の上（同じシート）。枚数が多いときは表が長くなるので、地図を別のシートに分ける
+    ws.getCell('A1').value=`ふくい圃場マップ　選んだ圃場の一覧（${ds}）`; ws.getCell('A1').font={bold:true,size:14}; ws.getRow(1).height=38;
+    // 地図は表の下（同じシート）。表の上に置くと、Excel の行の高さの違いで表と重なることがあった。枚数が多いときは表が長くなるので、地図を別のシートに分ける
     const MAP_SAME=data.rows.length<=12;
-    ws.getCell('A2').value=MAP_SAME?'地図の番号と、下の表の「圃場」が同じ圃場です。':'「地図」のシートの番号と、下の表の「圃場」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}};
+    ws.getCell('A2').value=MAP_SAME?'表の「圃場」の番号と、表の下の地図の番号が同じ圃場です。':'「地図」のシートの番号と、下の表の「圃場」が同じ圃場です。'; ws.getCell('A2').font={color:{argb:'FF555555'}}; ws.getRow(2).height=26;
     let row=4;
-    if(map_){ const id=wb.addImage({base64:map_.url,extension:'png'});
-      if(MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(id,{tl:{col:0,row:2},ext:{width:w,height:h}}); row=3+Math.ceil(h/20)+2; }   // 行の高さは 20px
+    let mapId=null; if(map_){ const id=mapId=wb.addImage({base64:map_.url,extension:'png'});
+      if(MAP_SAME){ /* 表の下に置く（下の行の表を書いたあと） */ }
       else { const wm=wb.addWorksheet('地図'); wm.getCell('A1').value='選んだ圃場の地図（番号は「一覧」のシートの「圃場」）'; wm.getCell('A1').font={bold:true};
         const w=Math.min(1400,map_.W), h=Math.round(map_.H*w/map_.W); wm.addImage(id,{tl:{col:0,row:1},ext:{width:w,height:h}}); } }
     const cols=[['圃場',15],['面積(a)',9],
       ['直近のNDVI',10],['直近の日付',11],['今年の最大NDVI',11],['最大の日付',11],['緯度',11],['経度',11],['地図で開く',12],['区画ID',38]];
-    ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'};
+    ws.getRow(row).values=cols.map(c=>c[0]); ws.getRow(row).font={bold:true,name:'Calibri',size:11}; ws.getRow(row).alignment={wrapText:true,vertical:'middle'}; ws.getRow(row).height=52;
     ws.getRow(row).eachCell(c=>{ c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFE8EFE6'}}; c.border={bottom:{style:'thin'}}; });
     cols.forEach((c,i)=>{ ws.getColumn(i+1).width=c[1]; });
     const base=location.href.split('#')[0].split('?')[0], r1=v=>v==null?null:Math.round(v*10)/10;
@@ -1734,20 +1793,144 @@ document.getElementById('btnXlsx').onclick=async()=>{
         o.last?Math.round(o.last.ndvi*100)/100:null,o.last?o.last.date:'',o.max?Math.round(o.max.ndvi*100)/100:null,o.max?o.max.date:'',
         Math.round(o.lat*1e6)/1e6,Math.round(o.lon*1e6)/1e6,
         {text:'地図',hyperlink:`${base}#c=${o.lat.toFixed(6)},${o.lon.toFixed(6)}&z=18`},o.pid];
-      ws.getRow(row).values=v; ws.getRow(row).alignment={vertical:'top',wrapText:true};
+      ws.getRow(row).values=v; ws.getRow(row).alignment={vertical:'middle'}; ws.getRow(row).height=30;   // 行の高さを決める。Excel の環境によっては、決めた高さより低く表示され（0.7倍ほど）、文字が切れるので、余裕をもたせる
       ws.getRow(row).getCell(1).font={bold:true,color:{argb:'FF'+o.color.slice(1).toUpperCase()}};
       const lk=ws.getRow(row).getCell(cols.findIndex(c=>c[0]==='地図で開く')+1); lk.font={color:{argb:'FF1A73E8'},underline:true}; }
+    if(map_&&MAP_SAME){ const w=Math.min(900,map_.W), h=Math.round(map_.H*w/map_.W); ws.addImage(mapId,{tl:{col:0,row:row+1},ext:{width:w,height:h}}); }   // 表の最後の行の、1行あけた下
     // NDVI の推移（日付 × 田）
     const ws2=wb.addWorksheet('NDVIの推移'), S=selected.filter(s=>parcels[s.pid]).map(s=>({s,m:new Map(seriesOf(s.pid).filter(q=>!q.rad).map(q=>[q.date,q]))})), dd=[...new Set(S.flatMap(x=>[...x.m.keys()]))].sort();
-    ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考']; ws2.getRow(1).font={bold:true}; ws2.getColumn(1).width=12;
+    const dOf=d=>new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))), d1=dd.filter(d=>!excluded.has(d)), d2=dd.filter(d=>excluded.has(d));   // 日付は Excel の日付（グラフの横軸にそのまま使える）。除外している日は表の下に分ける（グラフに入れない）
+    const col=i=>String.fromCharCode(65+i), HC=S.length+2, ser2=d=>Math.round(Date.UTC(2000,+d.slice(5,7)-1,+d.slice(8,10))/864e5)+25569;   // HC: 「月日（比較用）」の列（0始まり）。年をそろえた日付（2000年）で、2つの年を重ねるグラフの横軸にする
+    ws2.getRow(1).values=['日付',...S.map(x=>selLabel(x.s.pid)),'備考','月日（比較用）']; ws2.getRow(1).font={bold:true,name:'Calibri',size:11}; ws2.getColumn(1).width=12; ws2.getColumn(HC+1).width=14;
     S.forEach((x,i)=>{ ws2.getColumn(i+2).width=13; ws2.getRow(1).getCell(i+2).font={bold:true,color:{argb:'FF'+x.s.color.slice(1).toUpperCase()}}; });
-    dd.forEach((d,i)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(i+2).values=[d,...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; });
-    ws2.getRow(dd.length+3).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。'];
-    const buf=await wb.xlsx.writeBuffer(), a=document.createElement('a');
+    const put=(d,r)=>{ const q=S.map(x=>x.m.get(d)), ls=q.some(z=>z&&z.ls); ws2.getRow(r).values=[dOf(d),...q.map(z=>z?Math.round(z.ndvi*1000)/1000:null),(ls?'Landsat（30m）':'')+(excluded.has(d)?' 雲・かすみの疑い':'')]; ws2.getRow(r).getCell(1).numFmt='yyyy-mm-dd';
+      const c=ws2.getRow(r).getCell(HC+1); c.value={formula:`DATE(2000,MONTH(A${r}),DAY(A${r}))`,result:ser2(d)}; c.numFmt='m/d'; };
+    d1.forEach((d,i)=>put(d,i+2)); let nr=d1.length+2;
+    if(d2.length){ nr++; ws2.getRow(nr).values=['雲・かすみの疑いで除外している日（グラフには入れていません）']; ws2.getRow(nr).font={italic:true,name:'Calibri',size:11,color:{argb:'FF777777'}}; d2.forEach(d=>put(d,++nr)); }
+    ws2.getRow(nr+2).values=['NDVI は区画の平均（Sentinel-2 10m・Landsat 30m）。雲やかすみで低く出る日があります。グラフは、次のシートにあります（稲の期間 5/10〜9/30 だけ）。'];
+    // グラフ3種類（稲の期間 5/10〜9/30）: 今年・前の年・2つの年の比較。1枚ずつ別のシートに置く
+    const Y=d1.length?+d1[d1.length-1].slice(0,4):0, inS=d=>{ const md=d.slice(5); return md>='05-10'&&md<='09-30'; }, rowsOf=y=>{ const ix=d1.map((d,i)=>+d.slice(0,4)===y&&inS(d)?i:-1).filter(i=>i>=0); return ix.length>=2?[ix[0]+2,ix[ix.length-1]+2]:null; };
+    const sSer=(y,r)=>S.map((x,i)=>({x,i})).filter(({x})=>d1.some((d,j)=>+d.slice(0,4)===y&&inS(d)&&x.m.has(d))), sn="'NDVIの推移'!", sr=(c,r)=>`${sn}$${c}$${r[0]}:$${c}$${r[1]}`;
+    const plan=[], R1=rowsOf(Y), R0=rowsOf(Y-1), sx=y=>Math.round(Date.UTC(y,4,10)/864e5)+25569, ex=y=>Math.round(Date.UTC(y,8,30)/864e5)+25569;
+    const mk=(y,r)=>({title:`${y}年 稲の期間（5/10〜9/30）のNDVI`,xmin:sx(y),xmax:ex(y)+1,major:14,xfmt:'m/d',ymin:0,ymax:1,ser:sSer(y,r).map(({x,i})=>({ref:`${sn}$${col(i+1)}$1`,color:x.s.color.slice(1).toUpperCase(),x:sr('A',r),y:sr(col(i+1),r)}))});
+    const cap=(w,t)=>{ w.getCell('A1').value=t; w.getCell('A1').font={bold:true}; };
+    if(R1){ const w=wb.addWorksheet(`${Y}年の稲の期間`); cap(w,'表のデータ（「NDVIの推移」シート）から作ったグラフです。クリックして、色・題名・軸を直せます。'); plan.push({sheet:w.name,...mk(Y,R1)}); }
+    if(R0){ const w=wb.addWorksheet(`${Y-1}年の稲の期間`); cap(w,'表のデータ（「NDVIの推移」シート）から作ったグラフです。クリックして、色・題名・軸を直せます。'); plan.push({sheet:w.name,...mk(Y-1,R0)}); }
+    if(R1&&R0){ const w=wb.addWorksheet(`${Y}と${Y-1}の比較`); cap(w,`${Y}年（実線）と${Y-1}年（点線）を、月日をそろえて重ねたグラフです。同じ色が同じ圃場です。`);
+      plan.push({sheet:w.name,title:`NDVIの比較（実線＝${Y}年、点線＝${Y-1}年。5/10〜9/30）`,xmin:Math.round(Date.UTC(2000,4,10)/864e5)+25569,xmax:Math.round(Date.UTC(2000,8,30)/864e5)+25569+1,major:14,xfmt:'m/d',xtitle:'月日',ymin:0,ymax:1,
+        ser:[...sSer(Y,R1).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y}年`,color:x.s.color.slice(1).toUpperCase(),w:28575,x:sr(col(HC),R1),y:sr(col(i+1),R1)})),
+             ...sSer(Y-1,R0).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y-1}年`,color:x.s.color.slice(1).toUpperCase(),w:15875,dash:1,x:sr(col(HC),R0),y:sr(col(i+1),R0)}))]}); }
+    wb.worksheets.forEach(w=>w.eachRow({includeEmpty:false},r=>r.eachCell({includeEmpty:false},c=>{ const f=c.font||{}; if(!f.name||!f.size) c.font={...f,name:f.name||'Calibri',size:f.size||11}; })));   // 名前・大きさのないフォントは、Excel で行の高さが狂うことがある
+    let buf=await wb.xlsx.writeBuffer(), chartNote='';
+    if(plan.length){ try{ buf=await addXlsxCharts(buf,plan); }catch(e){ chartNote='（グラフを付けられませんでした: '+e.message+'）'; } } else chartNote='（稲の期間のデータが少ないため、グラフは付けませんでした）';
+    const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=`fukui_hojo_${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),10000); setStatus('');
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000); setStatus(chartNote);
   }catch(e){ setStatus('Excel を作れませんでした: '+e.message); }
   finally{ btn.disabled=false; }
+};
+
+// ---------- Excel のグラフ（編集できる折れ線）を、書き出した xlsx に足す ----------
+// ExcelJS はグラフを作れないので、できあがった xlsx（zip）に、グラフの部品（chart・drawing）を足す。グラフは表のセルを見ているので、Excel で数値を直すとグラフも変わる
+let jszipP=null;
+function loadJsZip(){ return jszipP||(jszipP=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+  sc.onload=()=>ok(window.JSZip); sc.onerror=()=>{ jszipP=null; ng(new Error('JSZip を読み込めませんでした')); }; document.head.appendChild(sc); })); }
+async function addXlsxCharts(buf,charts){   // charts=[{sheet: グラフを置くシート名, title, xmin,xmax,major,xfmt, ymin,ymax, ser:[{ref|text: 系列の名前, color, dash, w, x, y: セルの範囲}]}]。グラフは1枚ずつ別のシートの左上に置く（行の高さ・列の幅に左右されない）
+  const JZ=await loadJsZip(), z=await JZ.loadAsync(buf), PR=new DOMParser(), RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships', RT=RNS+'/drawing';
+  const rd=async f=>{ const e=z.file(f); return e?await e.async('string'):null; }, esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const wbx=PR.parseFromString(await rd('xl/workbook.xml'),'application/xml'), wr=PR.parseFromString(await rd('xl/_rels/workbook.xml.rels'),'application/xml'), REL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+  let ct=await rd('[Content_Types].xml');
+  const tx=(t,sz,b)=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="${sz}" b="${b}"/></a:pPr><a:r><a:rPr lang="ja-JP" sz="${sz}" b="${b}"/><a:t>${esc(t)}</a:t></a:r></a:p></c:rich></c:tx>`;
+  for(let k=0;k<charts.length;k++){ const o=charts[k], id=90+k;
+    const sh=[...wbx.getElementsByTagName('sheet')].find(e=>e.getAttribute('name')===o.sheet); if(!sh) throw new Error('シートが見つかりません: '+o.sheet);
+    const rid=sh.getAttributeNS(RNS,'id')||sh.getAttribute('r:id'), tg=[...wr.getElementsByTagName('Relationship')].find(e=>e.getAttribute('Id')===rid).getAttribute('Target'), sp=tg[0]==='/'?tg.slice(1):'xl/'+tg,
+      rp=sp.replace(/[^/]+$/,'')+'_rels/'+sp.split('/').pop()+'.rels';
+    const ser=o.ser.map((x,i)=>`<c:ser><c:idx val="${i}"/><c:order val="${i}"/>${x.ref?`<c:tx><c:strRef><c:f>${x.ref}</c:f></c:strRef></c:tx>`:`<c:tx><c:v>${esc(x.text)}</c:v></c:tx>`}`+
+      `<c:spPr><a:ln w="${x.w||22225}" cap="rnd"><a:solidFill><a:srgbClr val="${x.color}"/></a:solidFill>${x.dash?'<a:prstDash val="dash"/>':''}<a:round/></a:ln></c:spPr>`+
+      `<c:marker><c:symbol val="circle"/><c:size val="${x.dash?4:5}"/><c:spPr><a:solidFill><a:srgbClr val="${x.color}"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:ln></c:spPr></c:marker>`+
+      `<c:xVal><c:numRef><c:f>${x.x}</c:f></c:numRef></c:xVal><c:yVal><c:numRef><c:f>${x.y}</c:f></c:numRef></c:yVal><c:smooth val="0"/></c:ser>`).join('');
+    const chart=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${RNS}"><c:roundedCorners val="0"/>`+
+      `<c:chart><c:title>${tx(o.title,1400,1)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>`+
+      `<c:scatterChart><c:scatterStyle val="lineMarker"/><c:varyColors val="0"/>${ser}<c:axId val="50010"/><c:axId val="50020"/></c:scatterChart>`+
+      `<c:valAx><c:axId val="50010"/><c:scaling><c:orientation val="minMax"/><c:max val="${o.xmax}"/><c:min val="${o.xmin}"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:title>${tx(o.xtitle||'日付',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="${o.xfmt||'m/d'}" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="low"/><c:crossAx val="50020"/><c:crosses val="autoZero"/><c:crossBetween val="midCat"/><c:majorUnit val="${o.major||14}"/></c:valAx>`+
+      `<c:valAx><c:axId val="50020"/><c:scaling><c:orientation val="minMax"/><c:max val="${o.ymax}"/><c:min val="${o.ymin}"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="D9D9D9"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:title>${tx('NDVI',1000,0)}<c:overlay val="0"/></c:title><c:numFmt formatCode="0.0" sourceLinked="0"/><c:majorTickMark val="out"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/><c:crossAx val="50010"/><c:crosses val="min"/><c:crossBetween val="midCat"/><c:majorUnit val="0.1"/></c:valAx>`+
+      `</c:plotArea><c:legend><c:legendPos val="b"/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="span"/></c:chart></c:chartSpace>`;
+    const drawing=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><xdr:oneCellAnchor><xdr:from><xdr:col>0</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>2</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="${900*9525}" cy="${540*9525}"/>`+
+      `<xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="2" name="${esc(o.title)}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${RNS}" r:id="rId1"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>`;
+    z.file(`xl/charts/chart${id}.xml`,chart); z.file(`xl/drawings/drawing${id}.xml`,drawing);
+    z.file(`xl/drawings/_rels/drawing${id}.xml.rels`,REL+`<Relationship Id="rId1" Type="${RNS}/chart" Target="../charts/chart${id}.xml"/></Relationships>`);
+    const dr=`<Relationship Id="rIdNdvi" Type="${RT}" Target="../drawings/drawing${id}.xml"/>`, old=await rd(rp);
+    z.file(rp,old?old.replace('</Relationships>',dr+'</Relationships>'):REL+dr+'</Relationships>');
+    let sx=await rd(sp); if(!/xmlns:r=/.test(sx)) sx=sx.replace(/<worksheet /,'<worksheet xmlns:r="'+RNS+'" ');
+    const tag='<drawing r:id="rIdNdvi"/>', at=sx.search(/<legacyDrawing|<tableParts|<extLst/); sx=at>=0?sx.slice(0,at)+tag+sx.slice(at):sx.replace('</worksheet>',tag+'</worksheet>'); z.file(sp,sx);
+    ct=ct.replace('</Types>',`<Override PartName="/xl/charts/chart${id}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/drawings/drawing${id}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`); }
+  z.file('[Content_Types].xml',ct);
+  return await z.generateAsync({type:'arraybuffer',compression:'DEFLATE'}); }
+
+// ---------- 日付を選んで、地図を複数出力（NDVI の経過を地図で見る） ----------
+// 選んだ圃場の色分け（絶対表示・相対表示）を、選んだ日付ぶん、同じ範囲・同じ番号の地図にして、1枚にまとめた画像（PNG）か、日付ごとの画像（ZIP）で保存する
+const imgOf=src=>new Promise((ok,ng)=>{ const im=new Image(); im.onload=()=>ok(im); im.onerror=()=>ng(new Error('画像を作れませんでした')); im.src=src; });
+const toBlob=cv=>new Promise((ok,ng)=>cv.toBlob(b=>b?ok(b):ng(new Error('画像を作れませんでした')),'image/png'));
+async function sxPanel(d,im,mode){   // 地図の画像に、日付（左上）と凡例をつけた canvas
+  const I=await imgOf(im.url), cv=document.createElement('canvas'); cv.width=im.W; cv.height=im.H; const x=cv.getContext('2d'); x.drawImage(I,0,0);
+  const fs=Math.max(16,Math.round(im.W/30)); x.font=`700 ${fs}px sans-serif`; x.textAlign='left'; x.textBaseline='top'; const tw=x.measureText(d).width;
+  x.fillStyle='rgba(255,255,255,.92)'; x.fillRect(8,8,tw+16,fs+10); x.fillStyle='#1e3a2f'; x.fillText(d,16,13);
+  const kind=mode==='rel'?'rel':'abs', lw=Math.min(240,Math.round(im.W*0.42)), lh=12, lx=8, ly=fs+28;
+  x.fillStyle='rgba(255,255,255,.92)'; x.fillRect(lx,ly-5,lw+16,lh+27);
+  const E=BANDS[kind].edges, pos=kind==='abs'?E.map(e=>(e-0.2)/0.7):E.map(e=>(e+1)/2), st=[0,...pos,1], cols=bandCols(kind);
+  if(bandOn()) for(let i=0;i<cols.length;i++){ x.fillStyle=`rgb(${cols[i].join(',')})`; x.fillRect(lx+8+st[i]*lw,ly,(st[i+1]-st[i])*lw+0.6,lh); }
+  else for(let i=0;i<lw;i++){ const t=i/lw; x.fillStyle=kind==='abs'?ndviColor(0.2+0.7*t):`rgb(${relColor(t*2-1).join(',')})`; x.fillRect(lx+8+i,ly,1.6,lh); }
+  x.font='12px sans-serif'; x.fillStyle='#222'; x.textBaseline='alphabetic'; const yy=ly+lh+13;
+  if(kind==='abs'){ x.textAlign='left'; x.fillText('NDVI 0.2',lx+8,yy); x.textAlign='right'; x.fillText('0.9',lx+8+lw,yy); }
+  else { x.textAlign='left'; x.fillText('低い',lx+8,yy); x.textAlign='center'; x.fillText('その田の平均との差',lx+8+lw/2,yy); x.textAlign='right'; x.fillText('高い',lx+8+lw,yy); }
+  return cv; }
+async function sxRun(dates,kind,msg){   // 日付ごとに、色分けを描いて、地図の画像にする
+  const sel=document.getElementById('colorDate'), keep=sel.value, mode=fillMode(), out=[];
+  try{ for(let i=0;i<dates.length;i++){ msg(`${i+1}/${dates.length} 枚目（${dates[i]}）を作っています…`);
+      sel.value=dates[i]; await renderPx();
+      const im=await exportMap(null,{max:kind==='sheet'?(dates.length>9?560:760):1400}); if(!im) throw new Error('地図を作れませんでした');
+      out.push({d:dates[i],cv:await sxPanel(dates[i],im,mode)}); }
+  }finally{ sel.value=keep; paintMap(); }
+  return out; }
+function sxSheet(P,title){   // 1枚にまとめる（日付の順に、左上から並べる）
+  const n=P.length, cols=n<=2?n:n<=4?2:n<=9?3:4, rows=Math.ceil(n/cols), w=P[0].cv.width, h=P[0].cv.height, gap=10, top=44;
+  const cv=document.createElement('canvas'); cv.width=cols*w+(cols+1)*gap; cv.height=top+rows*(h+gap); const x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height);
+  x.fillStyle='#1e3a2f'; x.font='700 20px sans-serif'; x.textAlign='left'; x.textBaseline='middle'; x.fillText(title,gap,top/2);
+  P.forEach((p,i)=>{ x.drawImage(p.cv,gap+(i%cols)*(w+gap),top+Math.floor(i/cols)*(h+gap)); });
+  return cv; }
+document.getElementById('btnSeries').onclick=()=>{
+  if(!selected.length){ setStatus('圃場を選んでから押してください。'); return; }
+  const fm=fillMode(); if(fm!=='abs'&&fm!=='rel'){ setStatus('地図の「表示モード」を、絶対表示か相対表示にしてから押してください。'); return; }
+  if(!document.getElementById('colorOn').checked){ setStatus('地図の色分けをオンにしてから押してください。'); return; }
+  const cd=document.getElementById('colorDate'), dates=[...cd.options].map(o=>o.value).filter(Boolean).sort();
+  if(!dates.length){ setStatus('選んだ圃場に、使える日付の画像がありません。'); return; }
+  setStatus(''); const MAX=24, ov=document.createElement('div'); ov.className='sx';
+  ov.innerHTML=`<div role="dialog" aria-label="日付を選んで地図を出力"><h3>日付を選んで、地図を出力</h3>
+    <p>選んだ圃場（${selected.length}枚）の、NDVI の色分け（${fm==='rel'?'相対表示':'絶対表示'}）を、選んだ日付ぶん、同じ範囲・同じ番号の地図にします。日付は、衛星の画像がある日です。</p>
+    <div class="sxb"><button class="btn small" data-q="all">全部</button><button class="btn small" data-q="year">今年だけ</button><button class="btn small" data-q="none">解除</button></div>
+    <div class="sxd">${(()=>{ const ly=+dates[dates.length-1].slice(0,4); let h='', y0=''; for(const d of dates.slice().reverse()){ const y=d.slice(0,4);   // 新しい日から。年ごとに見出しと色を分ける
+        if(y!==y0){ y0=y; h+=`<div class="sxy ${+y===ly?'now':'old'}">${y}年${+y===ly?'（今年）':+y===ly-1?'（昨年）':''}</div>`; }
+        h+=`<label class="${+y===ly?'now':'old'}"><input type="checkbox" value="${d}" ${d===cd.value?'checked':''}> ${d}</label>`; } return h; })()}</div>
+    <div class="sxm" id="sxm"></div>
+    <div class="sxb"><button class="btn primary" data-o="sheet">1枚にまとめて保存（PNG）</button><button class="btn" data-o="zip">日付ごとに保存（ZIP）</button><button class="btn" data-o="close">閉じる</button></div></div>`;
+  document.body.appendChild(ov);
+  const ck=()=>[...ov.querySelectorAll('.sxd input')], pick=()=>ck().filter(i=>i.checked).map(i=>i.value).sort(),   // 出力は古い日から新しい日の順（経過が左から右へ）
+     $m=ov.querySelector('#sxm'); let busy=false;
+  const upd=()=>{ if(busy) return; const n=pick().length; $m.textContent=n?`${n}日を選んでいます${n>MAX?`（多すぎます。${MAX}日までにしてください）`:''}`:'日付を選んでください'; };
+  ov.addEventListener('change',upd); upd();
+  const yr=cd.options.length?String(allDates[allDates.length-1]||dates[dates.length-1]).slice(0,4):'';
+  ov.onclick=async e=>{ if(e.target===ov&&!busy){ ov.remove(); return; } const b=e.target.closest('button'); if(!b||busy) return;
+    if(b.dataset.q){ const q=b.dataset.q; ck().forEach(i=>{ const d=i.value, y=d.slice(0,4)===dates[dates.length-1].slice(0,4); let v=false;
+        if(q==='all') v=true; else if(q==='year') v=y; i.checked=v; }); upd(); return; }
+    if(b.dataset.o==='close'){ ov.remove(); return; }
+    const sel=pick(); if(!sel.length||sel.length>MAX){ upd(); return; }
+    busy=true; ov.querySelectorAll('button').forEach(x=>x.disabled=true);
+    try{ const P=await sxRun(sel,b.dataset.o,m=>{ $m.textContent=m; }), td=new Date(), ds=`${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`;
+      if(b.dataset.o==='sheet'){ $m.textContent='1枚にまとめています…'; dl(await toBlob(sxSheet(P,`ふくい圃場マップ　NDVIの経過（${fm==='rel'?'相対表示':'絶対表示'}・${selected.map(s=>selLabel(s.pid)).join(' ')}）`)),`fukui_hojo_ndvi_series_${ds}.png`); }
+      else { $m.textContent='ZIP にまとめています…'; const JZ=await loadJsZip(), zp=new JZ(); for(const p of P) zp.file(`ndvi_${p.d}.png`,await toBlob(p.cv)); dl(await zp.generateAsync({type:'blob'}),`fukui_hojo_ndvi_maps_${ds}.zip`); }
+      ov.remove(); setStatus(`${P.length}日ぶんの地図を保存しました`);
+    }catch(err){ busy=false; ov.querySelectorAll('button').forEach(x=>x.disabled=false); $m.textContent='作れませんでした: '+err.message; } };
+  document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ if(!busy) ov.remove(); document.removeEventListener('keydown',esc); } if(!ov.isConnected) document.removeEventListener('keydown',esc); });
 };
 
 // ---------- exclusions ----------
@@ -1761,7 +1944,7 @@ function buildExcl(){
 }
 document.getElementById('btnAddExcl').onclick=()=>{const d=document.getElementById('addExcl').value; if(d){excluded.add(d); refresh(); buildPxDates();}};
 document.getElementById('thr').onchange=()=>{detectOutliers(); refresh(); buildPxDates();};   // 圃場内モードでは画素がある日の一覧のまま
-document.getElementById('dipOn').onchange=refresh; document.getElementById('lsOn').onchange=refresh; document.getElementById('radarOn').onchange=refresh;
+document.getElementById('dipOn').onchange=refresh; document.getElementById('cnOn').onchange=()=>{ refresh(); buildPxDates(); }; document.getElementById('lsOn').onchange=refresh; document.getElementById('radarOn').onchange=refresh;
 document.getElementById('nbR').onchange=refresh; document.getElementById('nbOn').onchange=refresh;
 document.getElementById('mode').onchange=refresh;
 
@@ -1789,8 +1972,9 @@ function cullCells(){
     if(v!==!!cellShown[id]){ cellShown[id]=v; changed=true; for(const l of cellLayers[id]){ if(v) geoLayer.addLayer(l); else { geoLayer.removeLayer(l); l._stk=''; } } } }
   if(changed||!shownPids){ shownPids=[]; for(const id in cellShown) if(cellShown[id]) for(const l of cellLayers[id]) shownPids.push(l._pid); }
   return changed; }
-async function boot(){
-  try{ index=await (await fetch(DATA+'index.json',{cache:'no-cache'})).json(); }catch(e){ setStatus('data/index.json が読めません。配信先の設定を確認してください。'); return; }
+async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一覧を読み込んでいます','');   // 起動の画面の進み
+  try{ index=await (await fetch(DATA+'index.json',{cache:'no-cache'})).json(); }catch(e){ setStatus('data/index.json が読めません。配信先の設定を確認してください。'); if(BT) BT.finish(); return; }
+  if(BT) BT.stage(30,38,'雲のデータを確かめています','');
   pkg={meta:{name:'',source:index.source||'Sentinel-2 L2A',attribution:'Contains modified Copernicus Sentinel data'},parcels:{type:'FeatureCollection',features:[]},series:{},radar:{}};
   geoLayer=L.geoJSON([], {style:()=>({color:'#fff',weight:1,opacity:.8,fillColor:'#888',fillOpacity:.35}),
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
@@ -1804,7 +1988,10 @@ async function boot(){
   if(h.c) map.setView(h.c,h.z||15); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]]);
   let bulkZ=map.getZoom()>=BULK_ZOOM;
   map.on('moveend',()=>{ const ch=cullCells(); loadVisible(); writeHash(); const bz=map.getZoom()>=BULK_ZOOM; if(ch||fillMode()!=='abs'||bz||bulkZ) paintMap(); bulkZ=bz; });   // 絶対表示も、拡大しているときは動かすたびに圃場の中を塗り直す
+  await loadCloudNear();   // 近くの雲の割合（なければ何もしない）。最初の区画を読む前にそろえる
+  if(BT) BT.stage(38,88,'区画と衛星データを読み込んでいます','');
   cullCells(); await loadVisible();
+  if(BT){ BT.stage(88,99,'地図を描いています',''); BT.tag(''); const bl=[photo,std].find(l=>map.hasLayer(l)); if(bl&&bl.isLoading&&bl.isLoading()) await new Promise(r=>{ bl.once('load',r); setTimeout(r,3000); }); BT.finish(); }   // 地図の写真がそろってから開く（最大3秒待つ）
   if(SHOW_PLAN&&plan.items.length) planEnsureCells().then(()=>{ planRender(); paintMap(); });
   if(h.sel){ for(const pid of h.sel.split(',')) if(parcels[pid]&&!selected.some(s=>s.pid===pid)) toggleSelect(pid); }
 }
@@ -1820,7 +2007,7 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
   const wait=[...new Set(need.filter(c=>cellPending.has(c.id)).map(c=>cellPending.get(c.id)))];   // 読み込み中のセルは終わるのを待つ
   need=need.filter(c=>!loadedCells.has(c.id)); if(!need.length){ await Promise.all(wait); return; }
   const hint=document.getElementById('maphint'); hint.textContent='区画を読み込み中…'; hint.classList.remove('hidden'); loading++;
-  let done; const run=new Promise(r=>done=r); need.forEach(c=>cellPending.set(c.id,run));
+  let done; const run=new Promise(r=>done=r); need.forEach(c=>cellPending.set(c.id,run)); const BT=window.BOOT&&!window.BOOT.done?window.BOOT:null, nN=need.length; let nD=0;
   await Promise.all(need.map(async c=>{
     loadedCells.add(c.id);
     try{
@@ -1838,6 +2025,7 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
       for(const f of g.features) if(parcels[f.properties.pid]) parcels[f.properties.pid].cell=c.id;
       cellLayers[c.id]=g.features.map(f=>parcels[f.properties.pid]&&parcels[f.properties.pid].layer).filter(Boolean); cellShown[c.id]=true; shownPids=null;
     }catch(e){ loadedCells.delete(c.id); console.error(c.id,e); }
+    if(BT){ nD++; BT.at(38+50*nD/nN); BT.tag(`${nD}/${nN}`); }   // 起動の画面: 区画のまとまりを1つ読むごとに進める
   }));
   loading--; hint.classList.add('hidden'); need.forEach(c=>cellPending.delete(c.id)); done(); await Promise.all(wait); cullCells();
   allDates=[...new Set(Object.values(pkg.series).flat().map(r=>r[0]))].sort();
@@ -1860,7 +2048,7 @@ const AR_THREE='https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.mi
 // 色の出どころ。get(pid) → {cells:[{sq:[[緯度,経度]×4（マスの角）], rgb:[r,g,b], txt}], legend:{grad, lo, hi, unit}, note} か {err}
 const AR_SRC=[{k:'ndvi',name:'NDVI（地図の日付）',get:pid=>arNdvi(pid)},{k:'line',name:'輪郭だけ（確認用）',get:async()=>({cells:[],legend:null,note:'筆の輪郭と頂点の番号だけ'})}];
 const AR_OP=0.6;   // 色の濃さ（半透明）
-let AR3=null, AR3p=null, arOk=null, arNoDepth=false;   // arNoDepth: 奥行き（深度）つきで AR を始められなかった端末では、次から奥行きなしで始める
+let AR3=null, AR3p=null, arOk=null;
 const arLoad3=()=>AR3p||(AR3p=import(AR_THREE).then(m=>AR3=m).catch(()=>{ AR3p=null; throw new Error('AR の部品を読み込めません（電波を確かめてください）'); }));
 const arSupport=(navigator.xr&&navigator.xr.isSessionSupported?navigator.xr.isSessionSupported('immersive-ar').catch(()=>false):Promise.resolve(false)).then(v=>arOk=!!v);
 const arP={on:false};   // 地図で角を選んでいる間
@@ -1942,11 +2130,6 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 #arTouch{position:absolute;inset:0;touch-action:none;pointer-events:none}
 #arPad{position:absolute;right:8px;bottom:calc(158px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,48px);gap:4px;pointer-events:none} #arPad button{min-width:0;min-height:48px;padding:0;font-size:22px;background:rgba(255,255,255,.82)}
 #arConfirm{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;pointer-events:auto} #arConfirm div{background:#fff;color:#17372a;border-radius:14px;padding:18px 16px 14px;width:min(86vw,340px);text-align:center;font-weight:700;font-size:18px} #arConfirm .r{display:flex;gap:10px;margin-top:14px} #arConfirm button{flex:1 1 0;box-shadow:none;border:2px solid #17372a} #arConfirm button.go{background:#b71c1c;color:#fff;border-color:#b71c1c}
-#arHud #arClean{position:absolute;right:8px;top:50%;margin-top:-26px;min-width:64px;min-height:52px;padding:4px 8px;font-size:13px;background:rgba(255,255,255,.72)}
-/* すっきり表示: 地図・角のやり直し・ずらしボタン・メニューをしまい、モノを置く／終わるボタンだけ小さく残す */
-#arHud.clean #arSk,#arHud.clean #arPad,#arHud.clean #arL,#arHud.clean #arMenu{display:none!important}
-#arHud.clean #arObjBtn{top:calc(8px + env(safe-area-inset-top));min-height:44px;background:rgba(255,255,255,.82)} #arHud.clean #arObjMenu{top:calc(60px + env(safe-area-inset-top))}
-#arHud.clean #arBtns button.end{min-height:44px;font-size:13px;background:rgba(255,255,255,.82)}
 #arHud [hidden]{display:none!important}`; document.head.appendChild(st); }
 function arNote(btn,msg){   // 押したボタンのすぐ横に知らせる（スマホでは下の知らせの欄が画面の外のことがある）
   setStatus(msg); if(!btn) return; let n=btn.nextElementSibling; if(!n||!n.classList.contains('arNote')){ n=document.createElement('span'); n.className='hint arNote'; n.style.cssText='color:var(--warn);font-weight:700;margin-left:4px'; btn.after(n); }
@@ -2047,13 +2230,12 @@ function arDom(){ let v=document.getElementById('arView'); if(v) return v; arCss
   v=document.createElement('div'); v.id='arView'; v.hidden=true;
   v.innerHTML=`<div id="arHud"><div id="arTouch"></div><canvas id="arSk" width="192" height="192"></canvas><div id="arMsg" hidden></div><div id="arCredit" hidden></div>
 <div id="arPad" hidden><button data-m="rl" aria-label="左に回す">⟲</button><button data-m="f" aria-label="奥へ">↑</button><button data-m="rr" aria-label="右に回す">⟳</button><button data-m="l" aria-label="左へ">←</button><span></span><button data-m="r" aria-label="右へ">→</button><span></span><button data-m="b" aria-label="手前へ">↓</button><span></span></div>
-<button id="arMenu" hidden></button><button id="arClean" hidden>すっきり</button>
+<button id="arMenu" hidden></button>
 ${DEV?'<button id="arObjBtn">🧱 モノを配置する</button><div id="arObjMenu" hidden></div>':''}
 <div id="arBtns"><div class="l" id="arL"><button id="arC1">角1 やり直し</button><button id="arC2">角2 やり直し</button></div><button id="arEnd" class="end">ARを終了する</button></div>
 <div id="arConfirm" hidden><div>ARを終了しますか？<div class="r"><button id="arKeep">続ける</button><button id="arSure" class="go">終了する</button></div></div></div></div>`;
   document.body.appendChild(v); const $=id=>document.getElementById(id);
   $('arEnd').onclick=()=>{ $('arConfirm').hidden=false; }; $('arKeep').onclick=()=>{ $('arConfirm').hidden=true; }; $('arSure').onclick=()=>{ $('arConfirm').hidden=true; arEnd(); };   // 押しまちがいを避けるため、終わる前に確かめる
-  $('arClean').onclick=()=>{ ar.clean=!ar.clean; ar.cleanAuto=true; arHud(); };   // 邪魔な表示をしまう／もどす
   $('arC1').onclick=()=>arCorner(0); $('arC2').onclick=()=>arCorner(1); if($('arObjBtn')) $('arObjBtn').onclick=()=>arObjMenuToggle();
   $('arMenu').onclick=()=>{ if(ar.setup!==false){ ar.setup=false; ar.edit=null; } else ar.setup=true; arHud(); };   // 「追肥開始」で細かい設定のボタンをしまう・「メニュー」で呼び戻す
   { const pad=$('arPad'); let tm=null, iv=null; const stop=()=>{ clearTimeout(tm); clearInterval(iv); tm=iv=null; };   // 押しつづけると、くり返しずれる
@@ -2096,18 +2278,13 @@ function arFaceMascots(){   // キャラは、見ている人のほう（横ま�
 function arPin(p,lbl,col){ const T=AR3, g=new T.Group(); g.add(arMascot(lbl==='角2'?2:1)); g.position.set(p[0],p[1],p[2]); ar.scene.add(g); return g; }
 async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document.getElementById(id), hud=(arDom(),$('arHud'));
   $('arView').hidden=false;   // dom-overlay の親は見えている必要がある（隠れたままだと全画面にできない）
-  const req=dep=>navigator.xr.requestSession('immersive-ar',Object.assign({requiredFeatures:['hit-test','dom-overlay'],optionalFeatures:dep?['anchors','depth-sensing']:['anchors'],domOverlay:{root:hud}},
-    dep?{depthSensing:{usagePreference:['cpu-optimized'],dataFormatPreference:['luminance-alpha','float32']}}:{}));   // 奥行き（深度）は「あれば使う」（なくても AR は始まる）。物の後ろに隠すのに使う（arOcc…）
-  let s; try{ try{ s=await req(!arNoDepth); }   // 押した直後に呼ぶ（待つと「押した」扱いが切れる）
-    catch(e0){ if(arNoDepth) throw e0; arNoDepth=true; console.warn('奥行きつきで始められなかったので、奥行きなしでもう一度やります',e0); s=await req(false); } }
+  let s; try{ s=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],optionalFeatures:['anchors'],domOverlay:{root:hud}}); }   // 押した直後に呼ぶ（待つと「押した」扱いが切れる）
   catch(e){ console.error(e); $('arView').hidden=true; $('arPrepMsg').textContent='AR を始められませんでした（'+(e.message||e.name)+'）。この端末ではAR表示に対応していない可能性があります（Play ストアの「Google Play 開発者サービス for AR」を入れる・更新すると使えることがあります）'; return; }
-  Object.assign(ar,{on:true,session:s,model:M,adj:null,gestT:0,setup:true,phase:'scan',p1:null,p2:null,anc:[],pins:[],hit:null,hitSrc:null,tap:false,lift:null,liftAuto:true,fy:[],fit:null,fitBad:false,warnT:0,paint:null,clean:false,cleanAuto:false,occ:null,depthOn:false});
-  try{ const ef=Array.from(s.enabledFeatures||[]);   // 奥行きが使えるか。three.js r169 は 'depth-sensing' を見つけると、使っていない描き方（WebXR Layers）の関数を呼んで止まるので、three.js にだけは見えないようにして、奥行きは自分で読む
-    if(ef.includes('depth-sensing')){ Object.defineProperty(s,'enabledFeatures',{value:Object.freeze(ef.filter(f=>f!=='depth-sensing')),configurable:true}); ar.depthOn=true; } }catch(e){ console.warn(e); }
+  Object.assign(ar,{on:true,session:s,model:M,adj:null,gestT:0,setup:true,phase:'scan',p1:null,p2:null,anc:[],pins:[],hit:null,hitSrc:null,tap:false,lift:null,liftAuto:true,fy:[],fit:null,fitBad:false,warnT:0,paint:null});
   history.pushState({ar:1},''); ar.pushed=true; arHud();
   s.addEventListener('end',()=>{ if(ar.on&&ar.session===s) arEnd('session'); }); s.addEventListener('select',()=>{ if(ar.session===s) ar.tap=true; });   // タップは次の絵のときに、その時のリングの所で受ける
   const gone=()=>!ar.on||ar.session!==s;   // 用意の途中で終わった（戻る・終わる）
-  try{ await arLoad3(); if(gone()) return; const T=AR3; ar.occ=ar.depthOn?arOccInit(T):null;
+  try{ await arLoad3(); if(gone()) return; const T=AR3;
     if(!ar.renderer){ ar.renderer=new T.WebGLRenderer({antialias:true,alpha:true}); ar.renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1)); $('arView').insertBefore(ar.renderer.domElement,hud);
       ar.renderer.xr.addEventListener('sessionend',()=>{ if(!ar.on) ar.renderer.setAnimationLoop(null); }); }   // three.js は AR が終わると画面の絵の繰り返しを始め直すので止める
     const R=ar.renderer; R.xr.enabled=true; R.xr.setReferenceSpaceType('local'); R.setClearColor(0x000000,0);   // 'local' は setSession より前に（three.js の初めの値 local-floor は求めていないので失敗する）
@@ -2125,7 +2302,7 @@ async function arStart(){ const M=arP.model; if(!M) return; const $=id=>document
       ar.eye=pose.transform.position;
       if(ar.tap){ ar.tap=false; arTap(hr,frame,ref); }
       if(ar.phase==='show'){ arAnchors(frame,ref); arShowTick(); if(ar.labs&&(!ar.labT||t-ar.labT>100)){ ar.labT=t; arLabTick(); } }
-      arOccTick(frame,pose); arFaceMascots(); R.render(ar.scene,ar.cam); }catch(e){ console.error(e); } });   // 1回の失敗で AR が止まらないように
+      arFaceMascots(); R.render(ar.scene,ar.cam); }catch(e){ console.error(e); } });   // 1回の失敗で AR が止まらないように
     // three.js r169 は、Chrome 147 からの新しい描き方（WebXR Layers）を通る。スマホで長く使われてきた XRWebGLLayer の描き方にする（?xrlayer=proj で新しい方）
     if(!/[?&]xrlayer=proj/.test(location.search)) try{ Object.defineProperty(s.renderState,'layers',{value:undefined,configurable:true}); }catch(e){}
     await R.xr.setSession(s); if(gone()) return;
@@ -2234,16 +2411,15 @@ function arShowTick(force){ const T=AR3, M=ar.model, now=performance.now(); if(!
     txt=c?`リングの所: <b>${escH(c.txt)}</b>`:arInside(M,x,y,0)?'リングの所: 筆の中':'リングの所: 筆の外'; ar.mmP=[x,y]; arMiniDraw(ar.mmP); }
   else{ txt='リングを田に向けると、その所の値を出します'; if(ar.mmP){ ar.mmP=null; arMiniDraw(null); } }
   const b=document.getElementById('arValP'); if(b&&b.innerHTML!==txt) b.innerHTML=txt; }
-function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.phase, sh=ph==='show', cl=!!ar.clean&&sh;   // cl: すっきり表示（合わせたあとだけ。角を合わせる案内は、いつも出す）
+function arHud(){ const $=id=>document.getElementById(id), M=ar.model, ph=ar.phase, sh=ph==='show';
   const base=ph==='scan'?'地面を映してください'
     :ph==='c1'?'リングを <b>角1</b> に合わせて、タップ'
     :ph==='c2'?`リングを <b>角2</b> に合わせて、タップ（約${Math.round(Math.hypot(M.P[M.c2][0]-M.P[M.c1][0],M.P[M.c2][1]-M.P[M.c1][1]))}m先）`
     :ar.edit!=null?`置き直す所にリングを合わせて、タップ（<b>角${ar.edit+1}</b>）`
-    :ar.fitBad&&!cl?`距離が合いません（地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。角を置き直してください`:'';
+    :ar.fitBad?`距離が合いません（地図 ${ar.fit.dM.toFixed(1)}m・AR ${ar.fit.dA.toFixed(1)}m）。角を置き直してください`:'';
   const t=ar.warnTxt||base, m=$('arMsg'); m.hidden=!t; if(t&&m.innerHTML!==t) m.innerHTML=t; m.classList.toggle('warn',!!ar.warnTxt||(sh&&!!ar.fitBad&&ar.edit==null));
   $('arC1').classList.toggle('on',ar.edit===0); $('arC2').classList.toggle('on',ar.edit===1);
-  const su=ar.setup!==false; $('arL').style.display=su?'':'none'; $('arPad').hidden=!(sh&&su); $('arTouch').style.pointerEvents=sh&&su&&!cl&&ar.edit==null?'auto':'none'; const mn=$('arMenu'); mn.hidden=!sh; mn.textContent=su?'追肥開始':'メニュー'; mn.className=su?'go':'';
-  $('arHud').classList.toggle('clean',cl); const cb=$('arClean'); cb.hidden=!sh; cb.textContent=cl?'表示を戻す':'すっきり';   // ずらしボタンと 2本指の向き直しは、合わせたあとだけ（角を置き直すあいだは、タップを AR に渡す）
+  const su=ar.setup!==false; $('arL').style.display=su?'':'none'; $('arPad').hidden=!(sh&&su); $('arTouch').style.pointerEvents=sh&&su&&ar.edit==null?'auto':'none'; const mn=$('arMenu'); mn.hidden=!sh; mn.textContent=su?'追肥開始':'メニュー'; mn.className=su?'go':'';   // ずらしボタンと 2本指の向き直しは、合わせたあとだけ（角を置き直すあいだは、タップを AR に渡す）
   if(sh) arMiniDraw(ar.mmP||null); else arSketch(); }
 function arCorner(k){   // 角を置き直す。合わせたあと: 次のタップでその角を置き直す（もう一度押すと取り消し）。合わせる前: 角1 は最初から、角2 はなにもしない
   if(!ar.on) return; if(ar.phase==='show'){ ar.edit=ar.edit===k?null:k; arHud(); return; }
@@ -2275,41 +2451,6 @@ async function arNextSrc(){   // 色の出どころを切り替える（位置�
   const i=AR_SRC.findIndex(s=>s.k===ar.model.k); for(let j=1;j<=AR_SRC.length;j++){ const s=AR_SRC[(i+j)%AR_SRC.length], key=ar.model.pid+'|'+s.k+'|'+document.getElementById('colorDate').value;
     const r=await (arP.data[key]||(arP.data[key]=s.get(ar.model.pid).catch(e=>({err:e.message})))); if(r.err) continue;
     const M=ar.model; ar.model=arModel(M.pid,s.k,r,M.V,M.c1,M.c2); arPaint(); arHud(); return; } }
-// ---- 物の後ろに隠す（奥行き＝深度）----
-//   置いたモノが、手前にあるブース・柱・人などの向こう側になるとき、その部分は描かない（足もとが壁を突きぬけて見えるのを防ぐ）。
-//   AR の深度（ARCore の Depth。Chrome の WebXR depth-sensing）で、画面を細かく区切って「そこまでの距離」を読み、モノの各点のほうが遠ければ描かない。
-//   読んだ距離は、画面と同じ向きの小さな絵（ar.occ.tex）にして、モノの材質の描き方（シェーダー）に足す。対応しない端末では何もしない（これまでどおり、ぜんぶ見える）。
-//   深度が正確なのは 8m ほどまで（それより遠いブースは、うまく隠れないことがある）。端末を少し動かすと精度が上がる。
-const AR_OCC_N=[112,63];   // 画面を区切る数（横長の画面で 横×縦。縦長の画面では入れかえる）
-const AR_OCC_DECL=`varying float vOccZ; uniform highp sampler2D uOccTex; uniform vec4 uOccVp; uniform vec2 uOccSz; uniform float uOccOn;
-float occReal(vec2 uv){ vec2 p=uv*uOccSz-0.5, i=floor(p), f=p-i, t=1.0/uOccSz;
-  float a=texture2D(uOccTex,(i+vec2(0.5,0.5))*t).r, b=texture2D(uOccTex,(i+vec2(1.5,0.5))*t).r, c=texture2D(uOccTex,(i+vec2(0.5,1.5))*t).r, d=texture2D(uOccTex,(i+vec2(1.5,1.5))*t).r;
-  float wa=(1.0-f.x)*(1.0-f.y)*step(0.01,a), wb=f.x*(1.0-f.y)*step(0.01,b), wc=(1.0-f.x)*f.y*step(0.01,c), wd=f.x*f.y*step(0.01,d), ws=wa+wb+wc+wd;
-  return ws<0.0001?0.0:(a*wa+b*wb+c*wc+d*wd)/ws; }`;   // 4点の距離を、読めた点だけで混ぜる（0 は「読めなかった」）
-const AR_OCC_MAIN=`if(uOccOn>0.5){ vec2 q=gl_FragCoord.xy-uOccVp.xy; float r=occReal(vec2(q.x/uOccVp.z,1.0-q.y/uOccVp.w)); if(r>0.0&&vOccZ>r+0.15+0.04*r) discard; }`;   // 画面の上から数えた位置の距離 r より、モノの点が（15cm＋遠さの 4%）以上遠ければ描かない
-const arOccPref=()=>{ try{ return localStorage.getItem('fhmOcc')!=='0'; }catch(e){ return true; } };
-function arOccInit(T){ const O={T,u:{uOccTex:{value:null},uOccVp:{value:new T.Vector4(0,0,1,1)},uOccSz:{value:new T.Vector2(AR_OCC_N[0],AR_OCC_N[1])},uOccOn:{value:0}},w:0,h:0,buf:null,tex:null,t:0,fail:0,ok:false,dead:false,pref:arOccPref()};
-  arOccAlloc(O,AR_OCC_N[0],AR_OCC_N[1]); return O; }
-function arOccAlloc(O,w,h){ const T=O.T; if(O.tex) O.tex.dispose(); O.w=w; O.h=h; O.buf=new Float32Array(w*h);
-  const tx=new T.DataTexture(O.buf,w,h,T.RedFormat,T.FloatType); tx.minFilter=tx.magFilter=T.NearestFilter; tx.generateMipmaps=false; tx.needsUpdate=true; O.tex=tx; O.u.uOccTex.value=tx; O.u.uOccSz.value.set(w,h); }
-function arOccTick(frame,pose){ const O=ar.occ; if(!O||O.dead) return;   // 毎回の絵のとき: 深度を読んで、モノの描き方に渡す
-  if(!O.pref){ O.u.uOccOn.value=0; return; }
-  const cams=ar.renderer.xr.getCamera().cameras, v0=cams&&cams[0], vp=v0&&v0.viewport; if(!vp||!(vp.z>0&&vp.w>0)) return; O.u.uOccVp.value.copy(vp);
-  const now=performance.now(); if(now-O.t<66) return; O.t=now;   // 1秒に 15 回ほど読む（毎回は重い）
-  let di=null; try{ const v=pose.views[0]; di=v&&frame.getDepthInformation(v); }catch(e){ if(++O.fail>=8){ O.dead=true; O.u.uOccOn.value=0; console.warn('奥行きを読めません',e); } return; }
-  if(!di) return;   // まだ用意できていない（端末を少し動かすとできる）
-  const por=vp.w>vp.z, W=por?AR_OCC_N[1]:AR_OCC_N[0], H=por?AR_OCC_N[0]:AR_OCC_N[1]; if(W!==O.w||H!==O.h) arOccAlloc(O,W,H);
-  const b=O.buf; let n=0;
-  try{ for(let j=0;j<H;j++){ const y=(j+0.5)/H; for(let i=0;i<W;i++){ const d=di.getDepthInMeters((i+0.5)/W,y); if(d>0&&d<80){ b[j*W+i]=d; n++; } else b[j*W+i]=0; } } }   // 画面の座標（左上が 0,0）で、そこまでの距離 m
-  catch(e){ if(++O.fail>=8){ O.dead=true; O.u.uOccOn.value=0; console.warn('奥行きを読めません',e); } return; }
-  O.fail=0; O.tex.needsUpdate=true; O.ok=n>W*H*0.05; O.u.uOccOn.value=O.ok?1:0; }   // 読めた点が少なすぎるときは使わない
-function arOccPatch(mat){ const O=ar.occ; if(!O||!mat||mat.userData.arOcc||!(mat.isMeshStandardMaterial||mat.isMeshBasicMaterial||mat.isMeshLambertMaterial||mat.isMeshPhongMaterial||mat.isMeshToonMaterial)) return;
-  const prev=mat.onBeforeCompile; mat.userData.arOcc=true;
-  mat.onBeforeCompile=function(sh,r){ if(prev) prev.call(this,sh,r); Object.assign(sh.uniforms,O.u);   // 値は1か所（O.u）で変えれば、すべてのモノに届く
-    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying float vOccZ;').replace('#include <project_vertex>','#include <project_vertex>\nvOccZ=-mvPosition.z;');   // 目からの前向きの距離
-    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+AR_OCC_DECL).replace('void main() {','void main() {\n'+AR_OCC_MAIN); };
-  mat.customProgramCacheKey=()=>'arOcc|'+(prev?prev.toString():''); mat.needsUpdate=true; }
-const arOccLabel=()=>(ar.occ.pref?'物の後ろに隠す: ON（押すと切る）':'物の後ろに隠す: OFF（押すと入れる）')+(ar.occ.pref&&!ar.occ.ok?'\n（奥行きを準備中。端末をゆっくり動かしてください）':'');
 // ---- 開発者用: 「モノを配置する」。3D モデルを、リング（白い輪）の所に、実物の大きさで置く ----
 //   モノを増やすには: ① site/models/ にファイル（.glb）を入れる ② 下の AR_OBJECTS に 1行足す（README は site/models/README.txt）
 //   id: 内部の名前 / name: ボタンの名前 / url: ファイル / fit: [モデルのどの軸（'x'|'y'|'z'）, 実物の長さ m]（その軸の長さが、この長さになる大きさにする）
@@ -2336,10 +2477,8 @@ function arObjClear(n){ const L=ar.objs||[]; let d=0; for(let k=0;k<(n||L.length
 function arObjMenuToggle(){ const m=document.getElementById('arObjMenu'); if(!m||!ar.on||!DEV) return; if(!m.hidden){ m.hidden=true; return; }
   const n=(ar.objs||[]).length;
   m.innerHTML='<div class="h">置くものを選ぶと、白い輪（リング）の所に置きます</div>'+AR_OBJECTS.map(o=>`<button type="button" data-id="${o.id}">${o.name}</button>`).join('')
-    +(n?`<button type="button" class="del" data-id="_undo">最後に置いたものを消す</button><button type="button" class="del" data-id="_clear">ぜんぶ消す（${n}個）</button>`:'')+'<button type="button" data-id="_snd">'+(arSndOn()?'効果音: ON（押すと切る）':'効果音: OFF（押すと入れる）')+'</button>'
-    +(ar.occ&&!ar.occ.dead?'<button type="button" data-id="_occ">'+arOccLabel()+'</button>':'<div class="h">この端末は奥行き（深度）が使えないため、物の後ろには隠せません</div>')+'<button type="button" data-id="_close">とじる</button>';
-  m.hidden=false; m.onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; const id=b.dataset.id; if(id==='_snd'){ try{ localStorage.setItem('fhmSnd',arSndOn()?'0':'1'); }catch(er){} b.textContent=arSndOn()?'効果音: ON（押すと切る）':'効果音: OFF（押すと入れる）'; arSnd('tap'); return; }
-    if(id==='_occ'){ if(!ar.occ) return; ar.occ.pref=!ar.occ.pref; try{ localStorage.setItem('fhmOcc',ar.occ.pref?'1':'0'); }catch(er){} b.textContent=arOccLabel(); arSnd('tap'); return; } m.hidden=true; if(id!=='_undo'&&id!=='_clear') arSnd('tap');
+    +(n?`<button type="button" class="del" data-id="_undo">最後に置いたものを消す</button><button type="button" class="del" data-id="_clear">ぜんぶ消す（${n}個）</button>`:'')+'<button type="button" data-id="_snd">'+(arSndOn()?'効果音: ON（押すと切る）':'効果音: OFF（押すと入れる）')+'</button><button type="button" data-id="_close">とじる</button>';
+  m.hidden=false; m.onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; const id=b.dataset.id; if(id==='_snd'){ try{ localStorage.setItem('fhmSnd',arSndOn()?'0':'1'); }catch(er){} b.textContent=arSndOn()?'効果音: ON（押すと切る）':'効果音: OFF（押すと入れる）'; arSnd('tap'); return; } m.hidden=true; if(id!=='_undo'&&id!=='_clear') arSnd('tap');
     if(id==='_undo') arObjClear(1); else if(id==='_clear') arObjClear(); else if(id!=='_close') arObjPlace(AR_OBJECTS.find(o=>o.id===id)); }; }
 async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
   if(!ar.hit){ arWarn('地面が見つかっていません。リング（白い輪）が出ている所で押してください',2500); return; }
@@ -2354,10 +2493,8 @@ async function arObjPlace(def){ if(!ar.on||!DEV||!def) return;
     if(!ar.lit){ ar.lit=true; ar.scene.add(new T.HemisphereLight(0xffffff,0x9a9a9a,1.6)); const d=new T.DirectionalLight(0xffffff,1.4); d.position.set(1,2,1.5); ar.scene.add(d); }
     if(!ar.scene.environment) try{ const {RoomEnvironment}=await import(AR_THREE_BASE+'environments/RoomEnvironment.js'), pm=new T.PMREMGenerator(ar.renderer); ar.scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; pm.dispose(); }catch(e){ console.warn('環境の反射を作れませんでした',e); }   // ぬりの照り返し
     const m=gltf.scene, bb=new T.Box3().setFromObject(m), sz=bb.getSize(new T.Vector3()), c=bb.getCenter(new T.Vector3()), inner=new T.Group(), root=new T.Group(), ax=(def.fit&&def.fit[0])||'z';
-    m.traverse(o=>{ if(o.isMesh) for(const mt of [].concat(o.material)) arOccPatch(mt); });   // 手前の物の向こう側は描かない（奥行きが使える端末だけ）
     m.position.set(-c.x,-bb.min.y,-c.z); inner.add(m); inner.rotation.y=def.yaw0||0; inner.scale.setScalar((def.fit?def.fit[1]:1)/sz[ax]);   // 底を地面に・中心を置いた所に・実物の大きさに
     root.add(inner); root.position.set(p[0],p[1],p[2]); root.rotation.y=th+Math.PI; root.userData.credit=def.credit||''; ar.scene.add(root); (ar.objs=ar.objs||[]).push(root); arObjCredit(); arWarn(''); arSnd('place');
-    if(!ar.cleanAuto){ ar.cleanAuto=true; ar.clean=true; arHud(); }   // はじめて置いたとき、邪魔な表示（地図・距離の警告・ずらしボタン）をしまう。「表示を戻す」で戻せる
   }catch(e){ console.error(e); arSnd('err'); arWarn(def.name+' を読み込めませんでした。通信を確かめて、もう一度ためしてください',4500); } }
 async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう戻った）・'session'（AR が外から終わった）・なし（終わるボタンなど）
   if(!ar.on) return; ar.on=false; const R=ar.renderer;
@@ -2366,7 +2503,6 @@ async function arEnd(why){   // why: 'nav'（戻るボタンで履歴がもう�
   if(R) R.setAnimationLoop(null);
   if(ar.session){ const s=ar.session; ar.session=null; try{ await s.end(); }catch(e){} }
   if(R){ R.setAnimationLoop(null); R.xr.enabled=false; }
-  if(ar.occ){ try{ if(ar.occ.tex) ar.occ.tex.dispose(); }catch(e){} ar.occ=null; } ar.depthOn=false; ar.clean=false;
   if(ar.scene) arDispose(ar.scene); ar.scene=null; ar.pins=[]; ar.paint=null; ar.mascots=[]; ar.lit=false; ar.objs=[]; { const c=document.getElementById('arCredit'), m=document.getElementById('arObjMenu'); if(c) c.hidden=true; if(m) m.hidden=true; }
   document.getElementById('arView').hidden=true; arWarn('');
   if(ar.pushed&&why!=='nav') history.back(); ar.pushed=false; }
