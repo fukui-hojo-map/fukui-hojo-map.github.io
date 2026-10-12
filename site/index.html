@@ -20,7 +20,7 @@
 html,body{margin:0;background:#f4f7f2}
   /* 起動の画面（ホーム画面のアプリで開いたとき）: Android がアプリを開いた瞬間に出す画面（アイコンと同じ地の色に、色つきのロゴを画面の真ん中）と同じ見た目から始め、切れ目なく 0→100% の数え上げに入る。
      ロゴは動かさず（同じ大きさ・同じ位置）、進みに合わせてタイルが左上の黄から右下の深い緑へ順に跳ねる。100% で地図を出す */
-  #boot{position:fixed;inset:0;z-index:99999;display:none;background:#f4f7f2;color:#0F3D2E;font-family:'FhmBoot','Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;transition:opacity .5s ease,visibility .5s}
+  #boot{position:fixed;inset:0;z-index:99999;display:none;background:#f4f7f2;color:#0F3D2E;font-family:'FhmBoot','Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;transition:opacity .3s ease,visibility .3s}
   #boot.on{display:block} #boot.out{opacity:0;visibility:hidden;pointer-events:none}
   #boot .bt-logo,#boot .bt-scan{position:absolute;left:50%;top:calc(50% + var(--d,0px));width:124.4px;height:124.4px;margin:-62.2px 0 0 -62.2px;display:block}   /* Android の最初の画面のロゴと同じ大きさ（タイルの幅 約114px）・同じ位置（画面全体の真ん中。上の帯と下の帯の高さのちがいぶん --d でずらす） */
   #boot .bt-logo{transition:transform .55s cubic-bezier(.2,1.5,.4,1)}
@@ -69,22 +69,23 @@ html,body{margin:0;background:#f4f7f2}
 // 起動の画面: ホーム画面のアプリで開いたときだけ出す（?splash=1 でも見られる）。数字は、実際の読み込みの進み（下の BOOT.stage・BOOT.at）に向かって数え上げ、100% で地図を出す
 (function(){ var sa=false; try{ sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){}
   if(/[?&]splash=1(&|$)/.test(location.search)) sa=true;
+  try{ window.__idx=fetch('data/index.json',{cache:'no-cache'}).then(function(r){ if(!r.ok) throw 0; return r.json(); }); window.__idx.catch(function(){}); window.__cn=fetch('data/cloudnear.json',{cache:'no-cache'}).catch(function(){ return null; }); }catch(e){}   // 先読み（大きな script を読み込んで動かす間に、データも取りに行く）
   var el=document.getElementById('boot'); window.BOOT=null; if(!sa){ el.parentNode.removeChild(el); return; }
   try{ var dd=Math.max(-14,Math.min(14,(screen.height-innerHeight-64)/2)); if(isFinite(dd)) el.style.setProperty('--d',dd.toFixed(1)+'px'); }catch(e){}   // Android の最初の画面は、上の帯・下の帯をふくむ画面全体の真ん中にロゴを置く。ページの表示範囲の真ん中とのずれ（(下の帯−上の帯)÷2。上の帯は約32）を、画面の高さと表示範囲の高さから見積もる
   var tc=document.querySelector('meta[name=theme-color]'), tc0=tc&&tc.content; if(tc) tc.content='#f4f7f2';   // 上の帯も、起動の画面の間は地の色（Android の最初の画面と同じ）
   el.classList.add('on'); (function(){ var go=function(){ el.classList.add('ready'); }; try{ if(document.fonts&&document.fonts.load) Promise.race([document.fonts.load('700 25px FhmBoot','ふくい圃場マップ0123456789%'),new Promise(function(r){ setTimeout(r,500); })]).then(go,go); else go(); }catch(e){ go(); } })();   // 文字は、字体（ページに埋めこんだ、必要な字だけの小さな字体）がそろってから（最大0.5秒）
   var num=document.getElementById('btNum'), bar=document.getElementById('btBar'), sub=document.getElementById('btSub'), tag=document.getElementById('btTag'), tiles=document.getElementById('btLogo').querySelectorAll('rect'), ORD=[0,1,3,2,4,6,5,7,8], lit=0, holo=false;   // ロゴのタイルは、ななめに（黄→深い緑）
-  var B=window.BOOT={shown:0,target:2,lo:0,hi:12,t0:performance.now(),done:false,fin:false};
+  var B=window.BOOT={shown:0,target:2,lo:0,hi:12,t0:performance.now(),done:false,fin:false,m:[]}; B.mark=function(n){ B.m.push([n,Math.round(performance.now())]); };   // m: 読み込みの各段階の時刻（試験・調べ用）
   B.stage=function(lo,hi,txt,tg){ if(B.done) return; B.lo=Math.max(B.lo,lo); B.hi=Math.max(hi,B.lo+1); B.t0=performance.now(); B.target=Math.max(B.target,lo); if(txt) sub.textContent=txt; if(tg) tag.textContent=tg; };
   B.at=function(x){ if(!B.done) B.target=Math.max(B.target,Math.min(x,99)); };
   B.tag=function(t){ if(!B.done) tag.textContent=t; };
-  B.finish=function(){ if(B.done) return; B.done=true; B.target=100; tag.textContent=''; sub.textContent='地図を開きます'; };
+  B.finish=function(){ if(B.done) return; B.mark('finish'); B.done=true; B.target=100; tag.textContent=''; sub.textContent='地図を開きます'; };
   function frame(now){ var creep=B.lo+(B.hi-B.lo)*(1-Math.exp(-(now-B.t0)/1500)), goal=B.done?100:Math.max(B.target,Math.min(creep,B.hi-0.5));   // 待っている間も、次の区切りの手前まで少しずつ進む
-    B.shown+=(goal-B.shown)*(B.done?0.2:0.07); if(B.done&&100-B.shown<0.6) B.shown=100;
+    B.shown+=(goal-B.shown)*(B.done?0.45:0.07); if(B.done&&100-B.shown<1.5) B.shown=100;
     num.textContent=Math.floor(B.shown); bar.style.clipPath='inset(0 '+(100-B.shown).toFixed(1)+'% 0 0)';
     if(!holo&&B.shown>=30){ holo=true; el.classList.add('holo'); }   // 途中（30%）から、ホログラム
     var n=Math.min(9,Math.floor(B.shown*9/100+1e-6)); while(lit<n){ tiles[ORD[lit]].classList.add('hit'); lit++; }
-    if(B.shown>=100){ if(!B.fin){ B.fin=true; el.classList.add('done'); setTimeout(function(){ el.classList.add('out'); if(tc) tc.content=tc0; setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },500); },650); } return; }   // 100% になったら、9枚とも色づいたロゴを一瞬見せてから、地図へ
+    if(B.shown>=100){ if(!B.fin){ B.fin=true; el.classList.add('done'); setTimeout(function(){ el.classList.add('out'); if(tc) tc.content=tc0; setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },330); },180); } return; }   // 100% になったら、9枚とも色づいたロゴを一瞬見せてから、地図へ
     requestAnimationFrame(frame); }
   requestAnimationFrame(frame);
   setTimeout(function(){ B.finish(); },25000);   // 通信がとても遅くても、25秒で地図を出す
@@ -1111,8 +1112,9 @@ const CN_TH=99, CN_FROM='06-01', CN_TO='09-30';   // 評価した 6〜9月（202
 let cnData=null, cnVer=0;
 function cnOn(){ return !!cnData&&document.getElementById('cnOn').checked; }
 function cnBad(cell,d){ const md=d.slice(5); if(md<CN_FROM||md>CN_TO) return false; const a=cnData.d[d], j=cnData.ci[cell]; if(!a||j===undefined) return false; const v=a[j]; return v!==null&&v!==undefined&&v>=CN_TH; }
+let cloudP=null;
 async function loadCloudNear(){
-  try{ const r=await fetch(DATA+'cloudnear.json',{cache:'no-cache'}); if(!r.ok) return; const j=await r.json();
+  try{ const r=await (window.__cn||fetch(DATA+'cloudnear.json',{cache:'no-cache'})); if(!r||!r.ok) return; const j=await r.json();
     if(j.v!==1||!j.cells||!j.d) return; const ci=Object.create(null); j.cells.forEach((c,i)=>ci[c]=i); cnData={ci,d:j.d}; cnVer++; }
   catch(e){ cnData=null; } }
 // Landsat（HLS L30, 30m画素）は畦・道が画素に混ざり、同じ田の同じ日の Sentinel-2 より、茂った時期は低く（平均 −0.03）、水・土のころは高く（+0.10）出る。
@@ -2008,8 +2010,8 @@ function cullCells(){
   if(changed||!shownPids){ shownPids=[]; for(const id in cellShown) if(cellShown[id]) for(const l of cellLayers[id]) shownPids.push(l._pid); }
   return changed; }
 async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一覧を読み込んでいます','');   // 起動の画面の進み
-  try{ index=await (await fetch(DATA+'index.json',{cache:'no-cache'})).json(); }catch(e){ setStatus('data/index.json が読めません。配信先の設定を確認してください。'); if(BT) BT.finish(); return; }
-  if(BT) BT.stage(30,38,'雲のデータを確かめています','');
+  try{ index=await (window.__idx||Promise.reject()).catch(()=>fetch(DATA+'index.json',{cache:'no-cache'}).then(r=>r.json())); }catch(e){ setStatus('data/index.json が読めません。配信先の設定を確認してください。'); if(BT) BT.finish(); return; }
+  if(BT){ BT.mark('index'); BT.stage(30,38,'地図を準備しています',''); }
   pkg={meta:{name:'',source:index.source||'Sentinel-2 L2A',attribution:'Contains modified Copernicus Sentinel data'},parcels:{type:'FeatureCollection',features:[]},series:{},radar:{}};
   geoLayer=L.geoJSON([], {style:()=>({color:'#fff',weight:1,opacity:.8,fillColor:'#888',fillOpacity:.35}),
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
@@ -2023,10 +2025,12 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   if(h.c) map.setView(h.c,h.z||15); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]]);
   let bulkZ=map.getZoom()>=BULK_ZOOM;
   map.on('moveend',()=>{ const ch=cullCells(); loadVisible(); writeHash(); const bz=map.getZoom()>=BULK_ZOOM; if(ch||fillMode()!=='abs'||bz||bulkZ) paintMap(); bulkZ=bz; });   // 絶対表示も、拡大しているときは動かすたびに圃場の中を塗り直す
-  await loadCloudNear();   // 近くの雲の割合（なければ何もしない）。最初の区画を読む前にそろえる
-  if(BT) BT.stage(38,88,'区画と衛星データを読み込んでいます','');
-  cullCells(); await loadVisible();
-  if(BT){ BT.stage(88,99,'地図を描いています',''); BT.tag(''); const bl=[photo,std].find(l=>map.hasLayer(l)); if(bl&&bl.isLoading&&bl.isLoading()) await new Promise(r=>{ bl.once('load',r); setTimeout(r,3000); }); BT.finish(); }   // 地図の写真がそろってから開く（最大3秒待つ）
+  cloudP=loadCloudNear();   // 近くの雲の割合（なければ何もしない）。区画を読む前（loadCells の頭）にそろえる。広い地図で区画を読まないときは、待たずに地図を出す（約750KB）
+  if(nearEnough()){ if(BT) BT.stage(38,88,'区画と衛星データを読み込んでいます',''); await cloudP; }
+  cullCells(); const lv=loadVisible();
+  if(BT) await Promise.race([lv,new Promise(r=>setTimeout(r,2500))]);   // 区画のデータが遅くても、起動の画面は最大2.5秒で閉じる（地図は先に使え、区画は読み込めしだい出る）
+  if(BT){ BT.stage(88,99,'地図を描いています',''); BT.tag(''); const bl=[photo,std].find(l=>map.hasLayer(l)); if(bl&&bl.isLoading&&bl.isLoading()) await new Promise(r=>{ bl.once('load',r); setTimeout(r,700); }); BT.mark('tiles'); BT.finish(); }   // 地図の写真がそろうのを、最大0.7秒だけ待ってから開く（残りは、開いたあとに埋まる）
+  await lv;
   if(SHOW_PLAN&&plan.items.length) planEnsureCells().then(()=>{ planRender(); paintMap(); });
   if(h.sel){ for(const pid of h.sel.split(',')) if(parcels[pid]&&!selected.some(s=>s.pid===pid)) toggleSelect(pid); }
 }
@@ -2039,6 +2043,7 @@ async function loadVisible(){
   await loadCells(need);
 }
 async function loadCells(need){   // セル（区画・NDVI）を読み込む。見えている範囲のほか、計画用リストの田のセルも
+  if(cloudP) await cloudP;   // 近くの雲の割合は、区画（NDVI の線）を作る前にそろえる
   const wait=[...new Set(need.filter(c=>cellPending.has(c.id)).map(c=>cellPending.get(c.id)))];   // 読み込み中のセルは終わるのを待つ
   need=need.filter(c=>!loadedCells.has(c.id)); if(!need.length){ await Promise.all(wait); return; }
   const hint=document.getElementById('maphint'); hint.textContent='区画を読み込み中…'; hint.classList.remove('hidden'); loading++;
