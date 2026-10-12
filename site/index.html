@@ -22,11 +22,12 @@ html,body{margin:0;background:#f4f7f2}
      ロゴは動かさず（同じ大きさ・同じ位置）、進みに合わせてタイルが左上の黄から右下の深い緑へ順に跳ねる。100% で地図を出す */
   #boot{position:fixed;inset:0;z-index:99999;display:none;background:#f4f7f2;color:#0F3D2E;font-family:'FhmBoot','Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;transition:opacity .5s ease,visibility .5s}
   #boot.on{display:block} #boot.out{opacity:0;visibility:hidden;pointer-events:none}
-  #boot .bt-logo{position:absolute;left:50%;top:50%;width:123px;height:123px;margin:-61.5px 0 0 -61.5px;display:block;transition:transform .55s cubic-bezier(.2,1.5,.4,1)}   /* Android の最初の画面のロゴと同じ大きさ（タイルの幅 約113px）・同じ位置（画面の真ん中） */
+  #boot .bt-logo,#boot .bt-scan{position:absolute;left:50%;top:calc(50% + var(--d,0px));width:124.4px;height:124.4px;margin:-62.2px 0 0 -62.2px;display:block}   /* Android の最初の画面のロゴと同じ大きさ（タイルの幅 約114px）・同じ位置（画面全体の真ん中。上の帯と下の帯の高さのちがいぶん --d でずらす） */
+  #boot .bt-logo{transition:transform .55s cubic-bezier(.2,1.5,.4,1)}
   #boot .bt-logo rect{fill:var(--c);transform-box:fill-box;transform-origin:center}
   #boot .bt-logo rect.hit{animation:btHit .6s cubic-bezier(.2,1.6,.4,1)}
   @keyframes btHit{0%{transform:scale(1)}35%{transform:scale(1.2)}100%{transform:scale(1)}}
-  #boot .bt-info{position:absolute;left:50%;top:calc(50% + 80px);width:min(76vw,300px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;opacity:0}
+  #boot .bt-info{position:absolute;left:50%;top:calc(50% + 80px + var(--d,0px));width:min(76vw,300px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;opacity:0}
   #boot.ready .bt-info{animation:btIn .45s ease both}   /* 字体がそろってから出す（別の字体で一瞬出ないように） */
   @keyframes btIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
   #boot .bt-name{font-size:25px;font-weight:700;line-height:1.15;letter-spacing:.04em;white-space:nowrap}
@@ -37,6 +38,24 @@ html,body{margin:0;background:#f4f7f2}
   #boot .bt-sub{margin-top:12px;min-height:1.5em;font-family:'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;font-weight:400;font-size:13px;color:#4c5a52;text-align:center;white-space:nowrap}
   #boot .bt-sub b{font-weight:400;margin-left:6px;font-variant-numeric:tabular-nums;color:#2f7d4f}
   #boot.done .bt-logo{transform:scale(1.08)}
+  /* ホログラム（途中から）: 走査線が上から下へ流れ、ときどきロゴが消えかけて、青緑とピンクに色がずれる。100% でそろって落ち着く */
+  #boot .bt-scan{opacity:0;transition:opacity .3s;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='8 8 84 84'%3E%3Cg fill='%23000'%3E%3Crect x='12' y='12' width='23' height='23' rx='6'/%3E%3Crect x='39' y='12' width='23' height='23' rx='6'/%3E%3Crect x='66' y='12' width='23' height='23' rx='6'/%3E%3Crect x='12' y='39' width='23' height='23' rx='6'/%3E%3Crect x='39' y='39' width='23' height='23' rx='6'/%3E%3Crect x='66' y='39' width='23' height='23' rx='6'/%3E%3Crect x='12' y='66' width='23' height='23' rx='6'/%3E%3Crect x='39' y='66' width='23' height='23' rx='6'/%3E%3Crect x='66' y='66' width='23' height='23' rx='6'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='8 8 84 84'%3E%3Cg fill='%23000'%3E%3Crect x='12' y='12' width='23' height='23' rx='6'/%3E%3Crect x='39' y='12' width='23' height='23' rx='6'/%3E%3Crect x='66' y='12' width='23' height='23' rx='6'/%3E%3Crect x='12' y='39' width='23' height='23' rx='6'/%3E%3Crect x='39' y='39' width='23' height='23' rx='6'/%3E%3Crect x='66' y='39' width='23' height='23' rx='6'/%3E%3Crect x='12' y='66' width='23' height='23' rx='6'/%3E%3Crect x='39' y='66' width='23' height='23' rx='6'/%3E%3Crect x='66' y='66' width='23' height='23' rx='6'/%3E%3C/g%3E%3C/svg%3E") center/100% 100% no-repeat;background:repeating-linear-gradient(180deg,rgba(6,38,30,.36) 0 1px,transparent 1px 3px);overflow:hidden}
+  #boot .bt-scan::after{content:'';position:absolute;left:0;right:0;height:26%;top:-30%;background:linear-gradient(180deg,transparent,rgba(255,255,255,.7),transparent);animation:btSweep 1.5s linear infinite}
+  @keyframes btSweep{from{top:-30%}to{top:105%}}
+  #boot.holo .bt-scan{opacity:1} #boot.done .bt-scan{opacity:0}
+  #boot.holo .bt-logo{animation:btOn .7s linear 1,btHolo 1.5s linear .7s infinite}
+  @keyframes btOn{0%{opacity:.12;filter:drop-shadow(-6px 0 0 rgba(31,209,191,.85)) drop-shadow(6px 0 0 rgba(255,80,140,.6));transform:translateX(-3px) scaleY(.94)}
+    12%{opacity:1;filter:drop-shadow(5px 0 0 rgba(31,209,191,.85)) drop-shadow(-5px 0 0 rgba(255,80,140,.6));transform:translateX(3px)}
+    24%{opacity:.2;filter:none;transform:none}
+    38%{opacity:1;filter:drop-shadow(-3px 0 0 rgba(31,209,191,.8)) drop-shadow(3px 0 0 rgba(255,80,140,.55));transform:translateX(-2px)}
+    52%{opacity:.5;transform:none} 66%{opacity:1;filter:drop-shadow(2px 0 0 rgba(31,209,191,.7)) drop-shadow(-2px 0 0 rgba(255,80,140,.45))} 100%{opacity:1;filter:none;transform:none}}
+  @keyframes btHolo{0%,76%{opacity:1;filter:none;transform:none}
+    78%{opacity:.35} 80%{opacity:1;filter:drop-shadow(-4px 0 0 rgba(31,209,191,.8)) drop-shadow(4px 0 0 rgba(255,80,140,.5));transform:translateX(2px)}
+    84%{opacity:.55;filter:drop-shadow(3px 0 0 rgba(31,209,191,.7)) drop-shadow(-3px 0 0 rgba(255,80,140,.45));transform:translateX(-3px)}
+    88%{opacity:1;filter:none;transform:none} 93%{opacity:.5} 95%,100%{opacity:1;filter:none;transform:none}}
+  #boot.done .bt-logo{animation:btLock .5s ease-out both}
+  @keyframes btLock{0%{opacity:.55;filter:drop-shadow(-5px 0 0 rgba(31,209,191,.85)) drop-shadow(5px 0 0 rgba(255,80,140,.6))} 45%{opacity:1;filter:drop-shadow(-2px 0 0 rgba(31,209,191,.6)) drop-shadow(2px 0 0 rgba(255,80,140,.4))} 100%{opacity:1;filter:none}}
+  @media (prefers-reduced-motion:reduce){ #boot *,#boot *::after{animation:none!important;transition:none!important} }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -44,15 +63,17 @@ html,body{margin:0;background:#f4f7f2}
 </head>
 <body>
 <div id="boot" aria-hidden="true"><svg class="bt-logo" id="btLogo" viewBox="8 8 84 84" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="12" width="23" height="23" rx="6" style="--c:#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" style="--c:#1f8a53"/></svg>
+  <div class="bt-scan" aria-hidden="true"></div>
   <div class="bt-info"><div class="bt-name">ふくい圃場マップ</div><div class="bt-num"><span id="btNum">0</span><small>%</small></div><div class="bt-bar"><i id="btBar"></i></div><div class="bt-sub"><span id="btSub">データを読み込んでいます</span><b id="btTag"></b></div></div></div>
 <script>
 // 起動の画面: ホーム画面のアプリで開いたときだけ出す（?splash=1 でも見られる）。数字は、実際の読み込みの進み（下の BOOT.stage・BOOT.at）に向かって数え上げ、100% で地図を出す
 (function(){ var sa=false; try{ sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){}
   if(/[?&]splash=1(&|$)/.test(location.search)) sa=true;
   var el=document.getElementById('boot'); window.BOOT=null; if(!sa){ el.parentNode.removeChild(el); return; }
+  try{ var dd=Math.max(-14,Math.min(14,(screen.height-innerHeight-64)/2)); if(isFinite(dd)) el.style.setProperty('--d',dd.toFixed(1)+'px'); }catch(e){}   // Android の最初の画面は、上の帯・下の帯をふくむ画面全体の真ん中にロゴを置く。ページの表示範囲の真ん中とのずれ（(下の帯−上の帯)÷2。上の帯は約32）を、画面の高さと表示範囲の高さから見積もる
   var tc=document.querySelector('meta[name=theme-color]'), tc0=tc&&tc.content; if(tc) tc.content='#f4f7f2';   // 上の帯も、起動の画面の間は地の色（Android の最初の画面と同じ）
   el.classList.add('on'); (function(){ var go=function(){ el.classList.add('ready'); }; try{ if(document.fonts&&document.fonts.load) Promise.race([document.fonts.load('700 25px FhmBoot','ふくい圃場マップ0123456789%'),new Promise(function(r){ setTimeout(r,500); })]).then(go,go); else go(); }catch(e){ go(); } })();   // 文字は、字体（ページに埋めこんだ、必要な字だけの小さな字体）がそろってから（最大0.5秒）
-  var num=document.getElementById('btNum'), bar=document.getElementById('btBar'), sub=document.getElementById('btSub'), tag=document.getElementById('btTag'), tiles=document.getElementById('btLogo').querySelectorAll('rect'), ORD=[0,1,3,2,4,6,5,7,8], lit=0;   // ロゴのタイルは、ななめに（黄→深い緑）
+  var num=document.getElementById('btNum'), bar=document.getElementById('btBar'), sub=document.getElementById('btSub'), tag=document.getElementById('btTag'), tiles=document.getElementById('btLogo').querySelectorAll('rect'), ORD=[0,1,3,2,4,6,5,7,8], lit=0, holo=false;   // ロゴのタイルは、ななめに（黄→深い緑）
   var B=window.BOOT={shown:0,target:2,lo:0,hi:12,t0:performance.now(),done:false,fin:false};
   B.stage=function(lo,hi,txt,tg){ if(B.done) return; B.lo=Math.max(B.lo,lo); B.hi=Math.max(hi,B.lo+1); B.t0=performance.now(); B.target=Math.max(B.target,lo); if(txt) sub.textContent=txt; if(tg) tag.textContent=tg; };
   B.at=function(x){ if(!B.done) B.target=Math.max(B.target,Math.min(x,99)); };
@@ -61,6 +82,7 @@ html,body{margin:0;background:#f4f7f2}
   function frame(now){ var creep=B.lo+(B.hi-B.lo)*(1-Math.exp(-(now-B.t0)/1500)), goal=B.done?100:Math.max(B.target,Math.min(creep,B.hi-0.5));   // 待っている間も、次の区切りの手前まで少しずつ進む
     B.shown+=(goal-B.shown)*(B.done?0.2:0.07); if(B.done&&100-B.shown<0.6) B.shown=100;
     num.textContent=Math.floor(B.shown); bar.style.clipPath='inset(0 '+(100-B.shown).toFixed(1)+'% 0 0)';
+    if(!holo&&B.shown>=30){ holo=true; el.classList.add('holo'); }   // 途中（30%）から、ホログラム
     var n=Math.min(9,Math.floor(B.shown*9/100+1e-6)); while(lit<n){ tiles[ORD[lit]].classList.add('hit'); lit++; }
     if(B.shown>=100){ if(!B.fin){ B.fin=true; el.classList.add('done'); setTimeout(function(){ el.classList.add('out'); if(tc) tc.content=tc0; setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },500); },650); } return; }   // 100% になったら、9枚とも色づいたロゴを一瞬見せてから、地図へ
     requestAnimationFrame(frame); }
@@ -914,7 +936,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
     #map{height:56vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
     header{padding:8px 12px} .side{padding:10px 12px 30px}
   }
-  @media (prefers-reduced-motion:reduce){ #boot *{animation:none!important;transition:none!important} }
 </style>
 
 <header>
