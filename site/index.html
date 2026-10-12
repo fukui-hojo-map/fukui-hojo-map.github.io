@@ -12,15 +12,69 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ふくい圃場マップ">
+<style id="bootcss">/* 起動の画面だけの小さな style（最初の絵を、ほかの読み込みを待たずに出すため、head の先頭に置く） */
+@font-face{font-family:'FhmBoot';font-weight:700;font-display:block;src:url(data:font/woff2;base64,d09GMgABAAAAAAI8ABAAAAAABGAAAAHlAAEAgwAAAAAAAAAAAAAAAAAAAAAAAAAAGYFSGyAcIAZgADQRCAqBRIFDATYCJAMGCwYABCAFBgcgFyQYBhtAA6iOlC4rThE8b/f1dfr2qHsBvp1lBmaUP6BQygBmP4KYTvdMmTM7s51ORzuf0EBHOrDAEg30KbDI8oQDDyxKEoiUglzcFgfZYxfOoKsEGm2yTq5+yrQ5S9Q2nzy0x7jth7buNm7Hxn071XZv3LdRbc/GI/uMUw8yuT4GqLlFPUhyrbTTyQVRPSnSFFFdJddFvnPztk1qj7xL6HFo/959IX8YdWND6DVAOAEWeukjAq81yqGqgHOep4+yF9WRXZOtwGzGYp1O0d9Io7Osmjqvv37L0/KUDlRXkV8V/RAQX2cvop+EDAmdJIFOcv2QywXLU1W1ebhFQI5lpQAZyNGAKZiDamjI8xF5bV3a0L5+X9u6NmtTGUWUUSrveLTL/Ocm33Zbp1KhzC68WBT33NujvPbOiEIRheVlFEvKKPi/UycdWnPo101nHj8z/Ybn32p+7m8zNsxY8eFDn0xuHO9v2zj3r+Z3t456auLIOLZwaPtrWvfdcfOGm7fe+ubHO5p3vDnE5q1vTt1R2/HmYGtbgUC4dMmcwbX1bSf931imn+CzN55pDz/8s+Rf06o30r1ptFAvA0F+VctXpJ9MMy3dKwAAkX7CNIHMFA0gWOslYXVaJxjtxH8trWKpE01MTyBKOmAiAAA=) format('woff2');unicode-range:U+5703}
+@font-face{font-family:'FhmBoot';font-weight:700;font-display:block;src:url(data:font/woff2;base64,d09GMgABAAAAAAKcABAAAAAABMgAAAJHAAEAgwAAAAAAAAAAAAAAAAAAAAAAAAAAGYFSGyAcIAZgADQRCAqCLIIbATYCJAMGCwYABCAFBgcgFyQYBhuYAxAGHuq96nU6q+ws7cMcZH0B+LoqMf/vTL92P08o0EgDCyywOMqPHWAjm094YKfILTAaKU1PZox8o70p79GjEIA57WmNimlhcWUjgjsM69+T1C79O/UgtWu73t0I7tGudzuCe7Yb2JtUTAFQUPHGn2DmYwqARMWALY6MRegHEbIQoU9FxRm1W4fO7a078Dehj/59evWW9eHgighx5yZAGJpqeOKNEN9mjgqg6wDAx1V5WzmJCSjTFSNQ4cNEaxyFHyDMadK8qNoPX2Ni7kD21aeCOlX4AgJAvFROAr5IQAEk4IhEAI6o+AIqKgKMibrelS23EABOkC0aAAoAKmACdAPGgc0BMKlTDaraa/H2484n7t+P0fbeuVO6ePv2nZy8k7r4dHB5Nt6BZmCTLVdShCYsE4gaW26ERMsGw8KljlZj+STXnTc1bfl69513WksrxWg5Y4vHig33PbS9d5pbXn5Izbm68w+nDd9bN67qmBnxtnX3vo23GlccW7i3Q66xbktM8yYlh1d9tFjQKKeksnHrTiNr/VsENPX66dl34Se333269Lkw8EKXLl1uX08Is21sbDyo7FD3wV6yztxoqF5mczC52OXx/JcFqVN9avbXXDhX7DJyUNubZrkm3vG5XTa/vRd7r+xezD0AEIBgQpu5wrmNTeY3c0v5AeDJhSN2AO8+N/qCr75PnpCZCExRABCgTv3/AuQHfImSJxAQnxXyA+CLABS6YQKAAKQpEqM+AkdSYYv4+t+g2yYSJs8AIsi+JAI=) format('woff2');unicode-range:U+5834}
+@font-face{font-family:'FhmBoot';font-weight:700;font-display:block;src:url(data:font/woff2;base64,d09GMgABAAAAAAS4ABAAAAAAB+AAAARgAAEAgwAAAAAAAAAAAAAAAAAAAAAAAAAAGYFSGyAcVAZgAFwRCAqHRIYiATYCJAMSCxIABCAFBgcgFyQYEhsTBlGUK84CiC8OMrn6DSMhWhivvJhEvwitiUHR7Dnz2zYevl97PXffywZKCBpREYD8E9nxFbIWZXwBaDzhDuCpmYB0VDErzUD4xWE1TJhc3nyOmG/WbFqbP39NfZ8uaxVkAxzowEZVINm6BiyC+QGtSqBApgM9cJrNNcSpm32uUI54+a+fEmiw2XpZOWvOolWGbvnhvabv2LY9pu9s/y5D97R/k6F7O7rfdCUoZH0NNNQlJUiy1trr7KKo5kQyFFWRrKu8a8v2zTJ/9BcT1nH4wL796XyPhO6EYeltE1BO5pv0DspGmgMNMlQVxCj++5uJikooPsk0p+3xZ3miziEFwtlWKlNBQ3SZDfNxTreKNXUUzYUTForeWK9zDACu9NHVs5cM0H+8oVcpqqqRayGMgHhbrKG/hILi7SwJIZuXb6vBbUw5fpaljmkZ/3j8q6piy4jbG+aUMSB/e6iAfIigbJOihoe0RwdiFHGFljNmvhAXkVwZ0Lp9615tB/xNmpeeno6Wtn2Dd/OBZGNnB2f/vtTgKF8nAb1ByFaBmtrG5dbxeCALh/MdIRBuEHD/Nf6aJwnbeEoknnLVt7dz9OFwuMCBCwJB0h0iz5xL+B4R9CcIMIlBXfhrcs3zUoO3ZOrHxznGcL4tLgEBDzd4+o7CiaGd/ka2zigRJiFoCFeQHgIZA3iwbmkpcri14eFzMC+zh0NDHDtfyhekoLE8cviaemDNu2FigpNIhOdIUj++FHCXQktuSLJv0ZVeA1lX6NLNpWmDtmStse7dMhODoJTLDOkU3Dw9zQP3lb4MzOsfcEUlJNtGx8AkhCzLynpFwY0wqOAGLeH+SI13UiPbzgr6HAbyygqmthKRXjQaerr6v7McbDJf6etW/lLrStKLeF1pKGEokfELsXTbzEJP2kzRQPbqk+ArEwkDwXhdryBDIVPJp3RApx8fTMv6SSVbvJq1milZf7rYHvFifnpESplMEx5r/96RQUMD7EAbCKm5qVn7eyKLkA7aHnJOHS/eAM7m7Eg3Ux8Ld33zeGYVunwDAzM7Y0jT9nO0pbsljPWwczwNKIZ0TU2dTJy1rGl+BHDUyDGytrGww6g52m7/f52xnpHRo+wy8hryPAq/7N2Q3iG+CmgiKyOLqNsx1Y8ytrOHsQ7ew2TSR556QMlt+M29DdSv+xt5nECWnmISVChS5W97kMScAg6SuqYeW4RwZ9v/l3/jCI6A4PAdml0tJVwAN8nF/RzAiD7u+0fSuGvuWS8mjqqU/ZW0BXoxVGmni3BVurWRFS2boFudEcgOl1cDZjzp2x6RunXDPePNxFkpvXRaZXZ5ymVX/ix3BTUqtJh1aqezUFWaR4kidvg/mTvUthbnyYRkvzXQkb2GFy1Xg0+fHQdW8+lVshJKhUCYcu3/41CAfiNEeuUQRl91ZYRdfgl02a1Aog1rMF/WV4K1lASszuhsONqLr//p0wc7yJh0E7EhRVnpvkm+1kZs9wsAAAA=) format('woff2');unicode-range:U+3075,U+304F,U+3044,U+30DE,U+30C3,U+30D7}
+@font-face{font-family:'FhmBoot';font-weight:700;font-display:block;src:url(data:font/woff2;base64,d09GMgABAAAAAAT4ABAAAAAACIQAAASjAAEAgwAAAAAAAAAAAAAAAAAAAAAAAAAAGYFSG1AcIAZgADwRCAqIYIcdATYCJAMwCxoABCAFBgcgFyQYGhuQBijGf8DNfD8J0Capcz3LOqpCkKUijrWeAD1Rh7kIMnHP/3/v9L3msIWfagNHnwMNKLuvMQfYHJxmgeUBZZ1sDcACCjmwAKhh2+g0c3qWHwUCkAAN0+BgbOvoc6HAv239SihL1gdXQFmqrl6GghXqahUFK9WNq6HACABgwCELOSjA6TACAFhwEJEKM/aC9DtBbBtIPwoOmeCW+ec0ML/xlwmrWL9m1eodLZegBXwU+h+rEITY2s4jC2WgnXoTwAHAVzexIrh+NRKANiU4MEHKguJ4GSHd3V426B+val1CFsY5AMe+wTwIA8CEGB+A3modmoaZshHohKvG2weyYUE+qtm1+lGAO0qWkUr6iHmwaAH7CkFgygwWJOdQhI0FArOO40wEoao+/XP9NdCuFOk6+KBo8ILZeQAFAPr0Hm6sy4BAIMzsw4KBITXVZCkTWMtxYqokiAjCOzk+wR2KxWhfPC6Eo1HsjUQ84UfitC/2MB96MIK90YcEg8vjFTiB9sW9N7zxxOIrXudDj4LfN43nutBXN7phQRLcoRhpOOum+4TwG7L2Os9TiZ7of5kP3Xuj2bNHQnku35FEIi0RGAE8NIGdX5O9171EcJzMml7As0ngcc09M33qKAhB70Jbyl3X38+HIq4bXjize27jq9mXPSZcEceaNpGScGMkLN1vofb+W6aL7pvNeqOAvRPHdVwaiP+xiQ0V3useEsJm+dpn+fcBA9A3PpOfczlxhdcmQgMIgRZ6JNgwO7CifzKMHC9V3PvYXA1k0z+JQ2ODeZds3Zp3KVEMDfkGSYvvEjgwGMy/OWONP5CZ3Zyf/3D6moD/H30Yd9m3DSrjL+waeQhSdlfPEe/odztreJbKSy9Sli9dtsFdM15pm6CW5OLBtp773u0YnhI0vJnYOdeT2aVa+l07smy31ToeUWRNlv8ulY/mLaoL9M8WLGwN9DTUj1fIo9V258jp6Q0T9TPr10A6L30k/Y3As9q0dp7w+zVZeM/QuKL+kzGlIZivKC11zXyZdM85/tMC2l/3CrvNis9qV3tWbdsCLrF0QKrvyj5IS5mntt291jGj3DdYL/1gaW3aQdsSvrUoXlmebGqq9HuU5mBZVbNDFosq6tMW/IsNG/POqbzWcfkp8/zh3tLiHSUn5Z8k7d6F/xIbphx2tcnh9GzKLO2y1lb5PFalGgB8ba21rOv3TQ6Po9kxO+WoD8pdNc4B2Trg3BCsK7nKatXz83Wr9So8kWifPuH5wbrFHx7f1riTtiW8a1F8p3mquVLzKjVlA1JdV84hWso+ufVu34HKhrQFYknpCTcn4bnJTrfqHnXPdnZgkNBSK1/S4RF1l0ft6MauH+Iz3v7fk3lTcz2q1pM7a62aHVra7Z/t7pn1AwBAAAgHhuMvnj+TUvdbgsB+CQDvPnFPGgB8/rPrFzD618w7TAQEIxgAAAHc0f8/BNgvwUBg3gEh+EX9ZUG/o5zOA0OPQaKPYabvwVMMZvoRpXQpePoX5fQBzKwJ5SAAImwwAAAIUG0EC5v6DpjRTqmgX/8Xz2f/QmjsYQCEaIhdi+twB27O5bfhTsIIDFwI) format('woff2');unicode-range:U+0030,U+0031,U+0032,U+0033,U+0034,U+0035,U+0036,U+0037,U+0038,U+0039,U+0025}
+html,body{margin:0;background:#f4f7f2}
+  /* 起動の画面（ホーム画面のアプリで開いたとき）: Android がアプリを開いた瞬間に出す画面（アイコンと同じ地の色に、色つきのロゴを画面の真ん中）と同じ見た目から始め、切れ目なく 0→100% の数え上げに入る。
+     ロゴは動かさず（同じ大きさ・同じ位置）、進みに合わせてタイルが左上の黄から右下の深い緑へ順に跳ねる。100% で地図を出す */
+  #boot{position:fixed;inset:0;z-index:99999;display:none;background:#f4f7f2;color:#0F3D2E;font-family:'FhmBoot','Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;transition:opacity .5s ease,visibility .5s}
+  #boot.on{display:block} #boot.out{opacity:0;visibility:hidden;pointer-events:none}
+  #boot .bt-logo{position:absolute;left:50%;top:50%;width:123px;height:123px;margin:-61.5px 0 0 -61.5px;display:block;transition:transform .55s cubic-bezier(.2,1.5,.4,1)}   /* Android の最初の画面のロゴと同じ大きさ（タイルの幅 約113px）・同じ位置（画面の真ん中） */
+  #boot .bt-logo rect{fill:var(--c);transform-box:fill-box;transform-origin:center}
+  #boot .bt-logo rect.hit{animation:btHit .6s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes btHit{0%{transform:scale(1)}35%{transform:scale(1.2)}100%{transform:scale(1)}}
+  #boot .bt-info{position:absolute;left:50%;top:calc(50% + 80px);width:min(76vw,300px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;opacity:0}
+  #boot.ready .bt-info{animation:btIn .45s ease both}   /* 字体がそろってから出す（別の字体で一瞬出ないように） */
+  @keyframes btIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  #boot .bt-name{font-size:25px;font-weight:700;line-height:1.15;letter-spacing:.04em;white-space:nowrap}
+  #boot .bt-num{margin-top:22px;font-size:54px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:.01em}
+  #boot .bt-num small{font-size:23px;margin-left:5px;color:#3fa45a}
+  #boot .bt-bar{position:relative;margin-top:14px;width:100%;height:8px;border-radius:4px;background:#e1e8dc;overflow:hidden}
+  #boot .bt-bar i{position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,#f5c542,#d7d65a 25%,#6cc24a 50%,#3fa45a 75%,#1f8a53);clip-path:inset(0 100% 0 0)}
+  #boot .bt-sub{margin-top:12px;min-height:1.5em;font-family:'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;font-weight:400;font-size:13px;color:#4c5a52;text-align:center;white-space:nowrap}
+  #boot .bt-sub b{font-weight:400;margin-left:6px;font-variant-numeric:tabular-nums;color:#2f7d4f}
+  #boot.done .bt-logo{transform:scale(1.08)}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"%3E %3Cdefs%3E %3CclipPath id="c"%3E%3Crect x="4" y="4" width="120" height="120" rx="30"/%3E%3C/clipPath%3E %3ClinearGradient id="sky" x1="0" y1="0" x2="0" y2="1"%3E%3Cstop offset="0" stop-color="#d9f1ff"/%3E%3Cstop offset="1" stop-color="#f4fbff"/%3E%3C/linearGradient%3E %3C/defs%3E %3Cg clip-path="url(#c)"%3E %3Crect x="4" y="4" width="120" height="120" fill="url(#sky)"/%3E %3Cg transform="translate(64 96) skewX(-18)"%3E %3Crect x="-62" y="-22" width="40" height="18" rx="3" fill="#8bc34a"/%3E %3Crect x="-19" y="-22" width="40" height="18" rx="3" fill="#f2d65c"/%3E %3Crect x="24" y="-22" width="40" height="18" rx="3" fill="#43a047"/%3E %3Crect x="-66" y="-1" width="40" height="28" rx="3" fill="#cddc39"/%3E %3Crect x="-23" y="-1" width="40" height="28" rx="3" fill="#2e7d32"/%3E %3Crect x="20" y="-1" width="40" height="28" rx="3" fill="#aed581"/%3E %3C/g%3E %3C/g%3E %3Cg transform="translate(96 26) rotate(-30)"%3E %3Crect x="-15" y="-4" width="10" height="8" rx="1.5" fill="#5c9ded"/%3E %3Crect x="5" y="-4" width="10" height="8" rx="1.5" fill="#5c9ded"/%3E %3Crect x="-5" y="-6" width="10" height="12" rx="3" fill="#fff" stroke="#3a6fb5" stroke-width="2"/%3E %3C/g%3E %3Cpath d="M82 38 q6 6 12 2" fill="none" stroke="#5c9ded" stroke-width="2.4" stroke-linecap="round"/%3E %3Cpath d="M78 44 q10 9 20 3" fill="none" stroke="#5c9ded" stroke-width="2.4" stroke-linecap="round" opacity=".6"/%3E %3Cg transform="translate(52 62)"%3E %3Cpath d="M0 18 C -2 4 -14 -6 -24 -8 C -20 4 -10 12 0 14" fill="#66bb6a"/%3E %3Cpath d="M2 16 C 4 0 16 -10 26 -12 C 22 2 12 12 2 14" fill="#43a047"/%3E %3Cpath d="M1 22 C 0 8 2 -8 4 -20" stroke="#388e3c" stroke-width="3" fill="none" stroke-linecap="round"/%3E %3Cellipse cx="3" cy="-24" rx="7" ry="10" fill="#f6c945" stroke="#d9a520" stroke-width="1.5"/%3E %3Ccircle cx="0.5" cy="-25" r="1.3" fill="#3b2c10"/%3E%3Ccircle cx="5.5" cy="-25" r="1.3" fill="#3b2c10"/%3E %3Cpath d="M0.5 -21 q2.5 2.2 5 0" stroke="#3b2c10" stroke-width="1.2" fill="none" stroke-linecap="round"/%3E %3Ccircle cx="-2" cy="-22" r="1.6" fill="#f59a8b" opacity=".7"/%3E%3Ccircle cx="8" cy="-22" r="1.6" fill="#f59a8b" opacity=".7"/%3E %3C/g%3E %3Crect x="4" y="4" width="120" height="120" rx="30" fill="none" stroke="#2f7d4f" stroke-width="3"/%3E %3C/svg%3E">
+</head>
+<body>
+<div id="boot" aria-hidden="true"><svg class="bt-logo" id="btLogo" viewBox="8 8 84 84" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="12" width="23" height="23" rx="6" style="--c:#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" style="--c:#1f8a53"/></svg>
+  <div class="bt-info"><div class="bt-name">ふくい圃場マップ</div><div class="bt-num"><span id="btNum">0</span><small>%</small></div><div class="bt-bar"><i id="btBar"></i></div><div class="bt-sub"><span id="btSub">データを読み込んでいます</span><b id="btTag"></b></div></div></div>
+<script>
+// 起動の画面: ホーム画面のアプリで開いたときだけ出す（?splash=1 でも見られる）。数字は、実際の読み込みの進み（下の BOOT.stage・BOOT.at）に向かって数え上げ、100% で地図を出す
+(function(){ var sa=false; try{ sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){}
+  if(/[?&]splash=1(&|$)/.test(location.search)) sa=true;
+  var el=document.getElementById('boot'); window.BOOT=null; if(!sa){ el.parentNode.removeChild(el); return; }
+  var tc=document.querySelector('meta[name=theme-color]'), tc0=tc&&tc.content; if(tc) tc.content='#f4f7f2';   // 上の帯も、起動の画面の間は地の色（Android の最初の画面と同じ）
+  el.classList.add('on'); (function(){ var go=function(){ el.classList.add('ready'); }; try{ if(document.fonts&&document.fonts.load) Promise.race([document.fonts.load('700 25px FhmBoot','ふくい圃場マップ0123456789%'),new Promise(function(r){ setTimeout(r,500); })]).then(go,go); else go(); }catch(e){ go(); } })();   // 文字は、字体（ページに埋めこんだ、必要な字だけの小さな字体）がそろってから（最大0.5秒）
+  var num=document.getElementById('btNum'), bar=document.getElementById('btBar'), sub=document.getElementById('btSub'), tag=document.getElementById('btTag'), tiles=document.getElementById('btLogo').querySelectorAll('rect'), ORD=[0,1,3,2,4,6,5,7,8], lit=0;   // ロゴのタイルは、ななめに（黄→深い緑）
+  var B=window.BOOT={shown:0,target:2,lo:0,hi:12,t0:performance.now(),done:false,fin:false};
+  B.stage=function(lo,hi,txt,tg){ if(B.done) return; B.lo=Math.max(B.lo,lo); B.hi=Math.max(hi,B.lo+1); B.t0=performance.now(); B.target=Math.max(B.target,lo); if(txt) sub.textContent=txt; if(tg) tag.textContent=tg; };
+  B.at=function(x){ if(!B.done) B.target=Math.max(B.target,Math.min(x,99)); };
+  B.tag=function(t){ if(!B.done) tag.textContent=t; };
+  B.finish=function(){ if(B.done) return; B.done=true; B.target=100; tag.textContent=''; sub.textContent='地図を開きます'; };
+  function frame(now){ var creep=B.lo+(B.hi-B.lo)*(1-Math.exp(-(now-B.t0)/1500)), goal=B.done?100:Math.max(B.target,Math.min(creep,B.hi-0.5));   // 待っている間も、次の区切りの手前まで少しずつ進む
+    B.shown+=(goal-B.shown)*(B.done?0.2:0.07); if(B.done&&100-B.shown<0.6) B.shown=100;
+    num.textContent=Math.floor(B.shown); bar.style.clipPath='inset(0 '+(100-B.shown).toFixed(1)+'% 0 0)';
+    var n=Math.min(9,Math.floor(B.shown*9/100+1e-6)); while(lit<n){ tiles[ORD[lit]].classList.add('hit'); lit++; }
+    if(B.shown>=100){ if(!B.fin){ B.fin=true; el.classList.add('done'); setTimeout(function(){ el.classList.add('out'); if(tc) tc.content=tc0; setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },500); },650); } return; }   // 100% になったら、9枚とも色づいたロゴを一瞬見せてから、地図へ
+    requestAnimationFrame(frame); }
+  requestAnimationFrame(frame);
+  setTimeout(function(){ B.finish(); },25000);   // 通信がとても遅くても、25秒で地図を出す
+})();
+</script>
+<link rel="stylesheet" href="data:text/css,%20">
 <script>
 // 公開の切り替え（switch.json）: site を "off" にすると停止中の表示だけ、dev を "off" にすると開発者モードをだれにも出さない
 window.SW=(function(){ var s={}; try{ var x=new XMLHttpRequest(); x.open('GET','switch.json?t='+Date.now(),false); x.send(); if(x.status===200) s=JSON.parse(x.responseText)||{}; }catch(e){} return s; })();
-if(SW.site==='off'&&location.protocol!=='file:'&&!/^(localhost|127\.)/.test(location.hostname)){ document.write('<body style="font-family:sans-serif;padding:40px 20px;color:#333"><h2 style="color:#1e5b3a">ふくい圃場マップ</h2><p>ただいま公開を停止しています。</p></body>'); if(window.stop) window.stop(); }
+if(SW.site==='off'&&location.protocol!=='file:'&&!/^(localhost|127\.)/.test(location.hostname)){ var bt=document.getElementById('boot'); if(bt) bt.parentNode.removeChild(bt); document.write('<body style="font-family:sans-serif;padding:40px 20px;color:#333"><h2 style="color:#1e5b3a">ふくい圃場マップ</h2><p>ただいま公開を停止しています。</p></body>'); if(window.stop) window.stop(); }
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700&display=swap" rel="stylesheet">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"%3E %3Cdefs%3E %3CclipPath id="c"%3E%3Crect x="4" y="4" width="120" height="120" rx="30"/%3E%3C/clipPath%3E %3ClinearGradient id="sky" x1="0" y1="0" x2="0" y2="1"%3E%3Cstop offset="0" stop-color="#d9f1ff"/%3E%3Cstop offset="1" stop-color="#f4fbff"/%3E%3C/linearGradient%3E %3C/defs%3E %3Cg clip-path="url(#c)"%3E %3Crect x="4" y="4" width="120" height="120" fill="url(#sky)"/%3E %3Cg transform="translate(64 96) skewX(-18)"%3E %3Crect x="-62" y="-22" width="40" height="18" rx="3" fill="#8bc34a"/%3E %3Crect x="-19" y="-22" width="40" height="18" rx="3" fill="#f2d65c"/%3E %3Crect x="24" y="-22" width="40" height="18" rx="3" fill="#43a047"/%3E %3Crect x="-66" y="-1" width="40" height="28" rx="3" fill="#cddc39"/%3E %3Crect x="-23" y="-1" width="40" height="28" rx="3" fill="#2e7d32"/%3E %3Crect x="20" y="-1" width="40" height="28" rx="3" fill="#aed581"/%3E %3C/g%3E %3C/g%3E %3Cg transform="translate(96 26) rotate(-30)"%3E %3Crect x="-15" y="-4" width="10" height="8" rx="1.5" fill="#5c9ded"/%3E %3Crect x="5" y="-4" width="10" height="8" rx="1.5" fill="#5c9ded"/%3E %3Crect x="-5" y="-6" width="10" height="12" rx="3" fill="#fff" stroke="#3a6fb5" stroke-width="2"/%3E %3C/g%3E %3Cpath d="M82 38 q6 6 12 2" fill="none" stroke="#5c9ded" stroke-width="2.4" stroke-linecap="round"/%3E %3Cpath d="M78 44 q10 9 20 3" fill="none" stroke="#5c9ded" stroke-width="2.4" stroke-linecap="round" opacity=".6"/%3E %3Cg transform="translate(52 62)"%3E %3Cpath d="M0 18 C -2 4 -14 -6 -24 -8 C -20 4 -10 12 0 14" fill="#66bb6a"/%3E %3Cpath d="M2 16 C 4 0 16 -10 26 -12 C 22 2 12 12 2 14" fill="#43a047"/%3E %3Cpath d="M1 22 C 0 8 2 -8 4 -20" stroke="#388e3c" stroke-width="3" fill="none" stroke-linecap="round"/%3E %3Cellipse cx="3" cy="-24" rx="7" ry="10" fill="#f6c945" stroke="#d9a520" stroke-width="1.5"/%3E %3Ccircle cx="0.5" cy="-25" r="1.3" fill="#3b2c10"/%3E%3Ccircle cx="5.5" cy="-25" r="1.3" fill="#3b2c10"/%3E %3Cpath d="M0.5 -21 q2.5 2.2 5 0" stroke="#3b2c10" stroke-width="1.2" fill="none" stroke-linecap="round"/%3E %3Ccircle cx="-2" cy="-22" r="1.6" fill="#f59a8b" opacity=".7"/%3E%3Ccircle cx="8" cy="-22" r="1.6" fill="#f59a8b" opacity=".7"/%3E %3C/g%3E %3Crect x="4" y="4" width="120" height="120" rx="30" fill="none" stroke="#2f7d4f" stroke-width="3"/%3E %3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>/* required styles */
 
 .leaflet-pane,
@@ -860,49 +914,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     #map{height:56vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
     header{padding:8px 12px} .side{padding:10px 12px 30px}
   }
-  /* 起動の画面（ホーム画面のアプリで開いたとき）: アプリのアイコンと同じ地の色・ロゴ・字体で、読み込みの進みを 0→100% と数え上げる。ロゴの9枚のタイルが、進みに合わせて黄→緑の順に色づく。100% で地図を出す */
-  #boot{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:#f4f7f2;color:#0F3D2E;font-family:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;transition:opacity .5s ease,visibility .5s}
-  #boot.on{display:flex} #boot.out{opacity:0;visibility:hidden;pointer-events:none}
-  #boot .bt-in{display:flex;flex-direction:column;align-items:center;width:min(76vw,300px);margin-top:-6vh}
-  #boot .bt-logo{width:124px;height:124px;display:block;transition:transform .55s cubic-bezier(.2,1.5,.4,1)}
-  #boot .bt-logo rect{fill:#e1e8dc;transform-box:fill-box;transform-origin:center;transition:fill .4s ease}
-  #boot .bt-logo rect.on{fill:var(--c);animation:btPop .5s cubic-bezier(.2,1.7,.4,1)}
-  @keyframes btPop{0%{transform:scale(.55)}100%{transform:scale(1)}}
-  #boot .bt-name{margin-top:20px;font-size:25px;font-weight:700;line-height:1.15;letter-spacing:.04em;white-space:nowrap}
-  #boot .bt-num{margin-top:30px;font-size:58px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";letter-spacing:.01em}
-  #boot .bt-num small{font-size:24px;margin-left:5px;color:#3fa45a}
-  #boot .bt-bar{position:relative;margin-top:16px;width:100%;height:8px;border-radius:4px;background:#e1e8dc;overflow:hidden}
-  #boot .bt-bar i{position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,#f5c542,#d7d65a 25%,#6cc24a 50%,#3fa45a 75%,#1f8a53);clip-path:inset(0 100% 0 0)}
-  #boot .bt-sub{margin-top:14px;min-height:1.5em;font-family:'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;font-weight:400;font-size:13px;color:#4c5a52;text-align:center;white-space:nowrap}
-  #boot .bt-sub b{font-weight:400;margin-left:6px;font-variant-numeric:tabular-nums;color:#2f7d4f}
-  #boot.done .bt-logo{transform:scale(1.08)}
   @media (prefers-reduced-motion:reduce){ #boot *{animation:none!important;transition:none!important} }
 </style>
-</head>
-<body>
-<div id="boot" aria-hidden="true"><div class="bt-in"><svg class="bt-logo" id="btLogo" viewBox="8 8 84 84" xmlns="http://www.w3.org/2000/svg"><rect x="12" y="12" width="23" height="23" rx="6" style="--c:#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" style="--c:#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" style="--c:#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" style="--c:#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" style="--c:#1f8a53"/></svg>
-  <div class="bt-name">ふくい圃場マップ</div><div class="bt-num"><span id="btNum">0</span><small>%</small></div><div class="bt-bar"><i id="btBar"></i></div><div class="bt-sub"><span id="btSub">データを読み込んでいます</span><b id="btTag"></b></div></div></div>
-<script>
-// 起動の画面: ホーム画面のアプリで開いたときだけ出す（?splash=1 でも見られる）。数字は、実際の読み込みの進み（下の BOOT.stage・BOOT.at）に向かって数え上げ、100% で地図を出す
-(function(){ var sa=false; try{ sa=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){}
-  if(/[?&]splash=1(&|$)/.test(location.search)) sa=true;
-  var el=document.getElementById('boot'); window.BOOT=null; if(!sa){ el.parentNode.removeChild(el); return; }
-  el.classList.add('on'); var num=document.getElementById('btNum'), bar=document.getElementById('btBar'), sub=document.getElementById('btSub'), tag=document.getElementById('btTag'), tiles=document.getElementById('btLogo').querySelectorAll('rect'), ORD=[0,1,3,2,4,6,5,7,8], lit=0;   // ロゴのタイルは、ななめに（黄→深い緑）
-  var B=window.BOOT={shown:0,target:2,lo:0,hi:12,t0:performance.now(),done:false,fin:false};
-  B.stage=function(lo,hi,txt,tg){ if(B.done) return; B.lo=Math.max(B.lo,lo); B.hi=Math.max(hi,B.lo+1); B.t0=performance.now(); B.target=Math.max(B.target,lo); if(txt) sub.textContent=txt; if(tg) tag.textContent=tg; };
-  B.at=function(x){ if(!B.done) B.target=Math.max(B.target,Math.min(x,99)); };
-  B.tag=function(t){ if(!B.done) tag.textContent=t; };
-  B.finish=function(){ if(B.done) return; B.done=true; B.target=100; tag.textContent=''; sub.textContent='地図を開きます'; };
-  function frame(now){ var creep=B.lo+(B.hi-B.lo)*(1-Math.exp(-(now-B.t0)/1500)), goal=B.done?100:Math.max(B.target,Math.min(creep,B.hi-0.5));   // 待っている間も、次の区切りの手前まで少しずつ進む
-    B.shown+=(goal-B.shown)*(B.done?0.2:0.07); if(B.done&&100-B.shown<0.6) B.shown=100;
-    num.textContent=Math.floor(B.shown); bar.style.clipPath='inset(0 '+(100-B.shown).toFixed(1)+'% 0 0)';
-    var n=Math.min(9,Math.floor(B.shown*9/100+1e-6)); while(lit<n){ tiles[ORD[lit]].classList.add('on'); lit++; }
-    if(B.shown>=100){ if(!B.fin){ B.fin=true; el.classList.add('done'); setTimeout(function(){ el.classList.add('out'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },500); },650); } return; }   // 100% になったら、9枚とも色づいたロゴを一瞬見せてから、地図へ
-    requestAnimationFrame(frame); }
-  requestAnimationFrame(frame);
-  setTimeout(function(){ B.finish(); },25000);   // 通信がとても遅くても、25秒で地図を出す
-})();
-</script>
+
 <header>
   <h1 class="fukui-logo"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="8 8 84 84"><rect x="12" y="12" width="23" height="23" rx="6" fill="#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" fill="#1f8a53"/></svg><span>ふくい圃場マップ</span></h1>
   <span class="meta" id="meta"></span>
