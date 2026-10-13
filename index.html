@@ -884,6 +884,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .hint{color:var(--ink2);font-size:14px}
   .ctl{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin:4px 0}
   .ctl label{display:inline-flex;align-items:center;gap:6px}
+  .btnrow3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 4px} .btnrow3 .btn{min-height:42px;padding:4px 6px;font-size:13.5px;line-height:1.25;text-align:center;white-space:normal} .btnrow3 .btn span{display:inline-block}   /* グラフの下に、ボタンを1行に3つ（文字が長いものは2行にして、高さをそろえる） */
   .ctl select,.ctl input[type=date],.ctl input[type=number]{font:inherit;font-size:15px;padding:5px 6px;border:1px solid var(--line);border-radius:5px}
   .svgwrap{position:relative} svg.chart{width:100%;height:auto;display:block;font-family:var(--sans)}
   .tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.14);padding:6px 9px;font-size:13.5px;display:none;min-width:150px;z-index:5}
@@ -964,7 +965,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
     <div class="ctl">
-      <button class="btn small" id="btnClear">すべて解除</button> <button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button> <button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）">日付を選んで地図を出力</button>
+      <button class="btn small" id="btnClear">すべて解除</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
@@ -978,9 +979,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="hint" id="trendHint" style="display:none">生育傾向マップのときは、グラフは稲の年ごとに、いちばん茂った時の NDVI を「近くの、同じころに植えて同じころに刈った田」の平均とくらべた差を表示します（上ほど、その年よく育った）</div>
     <div class="status" id="status"></div>
     <div class="svgwrap"><svg class="chart" id="chart" viewBox="0 0 560 340" role="img" aria-label="NDVI推移"></svg><div class="tip" id="tip"></div></div>
-    <div class="ctl"><button class="btn small" id="btnPng">グラフを画像で保存</button><span class="hint" id="note"></span></div>
-    <h2 id="sumH" hidden>要約</h2>
-    <table id="sum"></table>
+    <div class="btnrow3"><button class="btn small" id="btnPng"><span>グラフを</span><span>画像で保存</span></button><button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button><button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）"><span>日付を選んで</span><span>地図を出力</span></button></div>
+    <div class="ctl"><span class="hint" id="note"></span></div>
     </div>
     <!-- 詳細設定は画面に出さない（初期値のまま自動で働く） -->
     <div hidden>
@@ -1405,7 +1405,7 @@ function vigOf(pid,r){   // {s: 田の値（NDVI の差。年が足りなけれ�
   const a=r&&r.vg&&r.vg.p&&r.vg.p[pid]; if(!a) return null;
   return {s:a[0]==null?null:a[0]/1000,yrs:a.slice(1).map(q=>({y:q[0],d:q[1]==null?null:q[1]/1000,vmax:q[2]/1000,n:q[3],t50:q[4],th:q[5]}))}; }
 let vigStats=null, vigStatsP=null;   // 県全体の田の値の分布。生育傾向のデータを初めて読むときに読む
-function vigStatsLoad(){ return vigStatsP||(vigStatsP=fetch(`${DATA}vig_stats.json`).then(r=>r.ok?r.json():null).then(j=>{ vigStats=j; if(j&&selected.length){ renderSummary(); if(isTrend(fillMode())) drawChart(); } }).catch(()=>{})); }
+function vigStatsLoad(){ return vigStatsP||(vigStatsP=fetch(`${DATA}vig_stats.json`).then(r=>r.ok?r.json():null).then(j=>{ vigStats=j; if(j&&selected.length){ if(isTrend(fillMode())) drawChart(); } }).catch(()=>{})); }
 const vigLevel=s=>s==null?'':s>=0.02?'よく育つ':s>=0.008?'やや よく育つ':s>-0.01?'近くの田なみ':s>-0.03?'やや弱い':'弱い';   // 例年の育ちの目安（ことば）
 const vigTxt=s=>s==null?'—':(s>=0?'+':'−')+Math.abs(s).toFixed(3);
 const vigOdd=V=>{ const a=V?V.yrs.filter(q=>q.d!=null):[]; return a.length>=2&&a.reduce((x,q)=>x+q.vmax,0)/a.length<0.65; };   // 稲の年の頭打ちの平均が 0.65 未満（ふつうの稲は 0.8 前後）
@@ -1538,7 +1538,7 @@ async function renderTrend(gen,mode,note,lbl){
   else if(few) msg.push(`出せない田 ${few}枚（くらべられた稲の年が2回に足りない）`);
   if(wait) msg.push(`まだ準備中 ${wait}枚`);
   note.textContent=msg.join(' / ');
-  renderSummary(); drawChart();
+  drawChart();
 }
 const MODE_DESC={   // 表示モードごとのひとこと説明
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
@@ -1707,23 +1707,6 @@ let lastPick=null;
   const pick=()=>{ const d=lastPick; if(!d) return; const sel=document.getElementById('colorDate'); if([...sel.options].some(o=>o.value===d)&&sel.value!==d){ sel.value=d; paintMap(); } };   // グラフの点をタップ → その日で地図を塗る
   svg.addEventListener('click',pick); svg.addEventListener('touchend',pick);
   svg.addEventListener('mouseleave',()=>{tip.style.display='none';svg.querySelector('#hl')?.setAttribute('visibility','hidden');}); })();
-
-// ---------- summary ----------
-function renderSummary(){
-  const t=document.getElementById('sum'); document.getElementById('sumH').hidden=!selected.length; if(!selected.length){t.innerHTML='';return;}
-  const dot=s=>`<td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px"></i><span style="color:${s.color};font-weight:700">${selLabel(s.pid)}</span></td>`;
-  if(isTrend(fillMode())){   // 生育傾向マップ: 例年の育ち（近くの同じ作期の田との差）と県内の順位
-    t.innerHTML='<tr><th>圃場</th><th class="num">例年の育ち</th><th>目安</th><th>稲の年</th></tr>'+selected.map(s=>{
-      const r=trReady[parcels[s.pid]?.cell], V=r?vigOf(s.pid,r):null, ok=V?V.yrs.filter(q=>q.d!=null):[];
-      const col=V&&V.s!=null?`rgb(${vigColor(V.s).map(c=>Math.round(c*.8)).join(',')})`:'var(--ink2)';
-      return `<tr>${dot(s)}<td class="num" style="color:${col};font-weight:700">${r?(V&&V.s!=null?vigTxt(V.s):'—'):'…'}</td><td>${V&&V.s!=null?vigLevel(V.s):''}</td><td>${ok.length?`${ok.length}回中 ${ok.filter(q=>q.d>0).length}回 近くの田より良い`:''}${vigOdd(V)?'<br><small>NDVI が低い（稲作でないかも）</small>':''}</td></tr>`; }).join('');
-    return; }
-  const nb=document.getElementById('nbOn').checked?neighborSeries():null;
-  t.innerHTML='<tr><th>圃場</th><th class="num">直近</th><th>日付</th><th class="num">今年の最大</th><th>日付</th>'+(nb&&nb.n?'<th class="num">近隣との差(直近)</th>':'')+'</tr>'+selected.map(s=>{
-    const ser=seriesOf(s.pid).filter(p=>!p.rad); const last=ser[ser.length-1]; const y=allDates.length?allDates[allDates.length-1].slice(0,4):''; const yr=ser.filter(p=>p.date.startsWith(y)); const mx=yr.length?yr.reduce((a,b)=>b.ndvi>a.ndvi?b:a):null;
-    let nbd=''; if(nb&&nb.n&&last){ const q=nb.pts.find(p=>p.date===last.date); nbd=q?`<td class="num" style="color:${last.ndvi-q.ndvi>=0?'var(--accent)':'var(--warn)'}">${(last.ndvi-q.ndvi>=0?'+':'')+(last.ndvi-q.ndvi).toFixed(2)}</td>`:'<td class="num">—</td>'; }
-    return `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${s.color};margin-right:6px"></i><span style="color:${s.color};font-weight:700">${selLabel(s.pid)}</span></td><td class="num">${last?last.ndvi.toFixed(2):'—'}</td><td>${last?fmtD(last.date):''}</td><td class="num">${mx?mx.ndvi.toFixed(2):'—'}</td><td>${mx?fmtD(mx.date):''}</td>${nbd}</tr>`; }).join('');
-}
 
 // ---------- Excel に保存（選んだ田の一覧・番号つきの地図・NDVI の推移） ----------
 // 地図: 航空写真（地理院タイル）の上に、いまの色分けと田の形を描き、選んだ田に ①② … の番号をつけた画像。表は同じ番号で並べる
@@ -1985,7 +1968,7 @@ document.getElementById('dipOn').onchange=refresh; document.getElementById('cnOn
 document.getElementById('nbR').onchange=refresh; document.getElementById('nbOn').onchange=refresh;
 document.getElementById('mode').onchange=refresh;
 
-function refresh(){ syncClean(); renderChips(); paintMap(); drawChart(); renderSummary(); buildExcl(); if(index) writeHash(); if(typeof arPrepSync==='function') arPrepSync(); }
+function refresh(){ syncClean(); renderChips(); paintMap(); drawChart(); buildExcl(); if(index) writeHash(); if(typeof arPrepSync==='function') arPrepSync(); }
 
 // ---------- export ----------
 document.getElementById('btnPng').onclick=()=>{ const svg=document.getElementById('chart'); const vb=svg.getAttribute('viewBox').split(' ').map(Number); const clone=svg.cloneNode(true);
