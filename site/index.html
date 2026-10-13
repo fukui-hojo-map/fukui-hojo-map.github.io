@@ -97,7 +97,7 @@ html,body{margin:0;background:#f4f7f2}
 window.SW=(function(){ var s={}; try{ var x=new XMLHttpRequest(); x.open('GET','switch.json?t='+Date.now(),false); x.send(); if(x.status===200) s=JSON.parse(x.responseText)||{}; }catch(e){} return s; })();
 if(SW.site==='off'&&location.protocol!=='file:'&&!/^(localhost|127\.)/.test(location.hostname)){ var bt=document.getElementById('boot'); if(bt) bt.parentNode.removeChild(bt); document.write('<body style="font-family:sans-serif;padding:40px 20px;color:#333"><h2 style="color:#1e5b3a">ふくい圃場マップ</h2><p>ただいま公開を停止しています。</p></body>'); if(window.stop) window.stop(); }
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>/* required styles */
 
 .leaflet-pane,
@@ -776,10 +776,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
 </style>
 <style>
   :root{--ink:#1e3a2f;--ink2:#4c5a52;--line:#cfd6cc;--panel:#f3f6f1;--accent:#2f7d4f;--warn:#b8442c;--grid:#e6eae3;
-    --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP",system-ui,sans-serif;box-sizing:border-box;
+    --sans:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic","Meiryo","Noto Sans JP",system-ui,sans-serif;box-sizing:border-box;
     padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
   *,*::before,*::after{box-sizing:inherit}
   html{scroll-padding-top:env(safe-area-inset-top,0px)}
+  button,input,select,textarea{font-family:inherit}   /* 題字と同じ「Zen Kaku Gothic New」を、アプリ内のすべての文字に（利用者の指示） */
   body{margin:0;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--ink);background:#fff;font-feature-settings:"tnum"}
   header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border-bottom:2px solid var(--ink)}
   header h1{margin:0;display:flex;align-items:center}
@@ -1498,6 +1499,7 @@ const histCache={};
 function histLoad(cell){ if(!(cell in histCache)) histCache[cell]=fetch(`${DATA}cells/${cell}/hist.json`).then(r=>r.ok?r.json():null).catch(()=>null); return histCache[cell]; }
 // 開発者の機能（圃場スコア・作付計画・追肥マップ・生育予測）は、このページには入れていない。開発者の鍵を持つ端末だけが PRIV_URL から読み込む
 //   ページを ?dev=鍵 をつけて1回開くとその端末に覚える（?dev=off で消す）。switch.json の dev が "off" のときはだれにも出さない
+const FHM_FONT='"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif';   // 画像に描く文字も、題字と同じ字体に
 const PRIV_URL='https://hojo-core.fukuihojomap.workers.dev/priv.js';
 const DEV_KEY=(()=>{ const q=new URLSearchParams(location.search).get('dev');
   try{ if(q==='off') localStorage.removeItem('devkey'); else if(q) localStorage.setItem('devkey',q); }catch(e){}
@@ -1761,10 +1763,10 @@ async function exportMap(items,opt){   // 田を囲む範囲の地図（PNG の 
   if(opt.text){   // 数字だけ（白いふち）。大きさは田の大きさに合わせる（小さい田は小さい字）
     for(const s of items){ const cc=labelPt(parcels[s.pid].feature.geometry), q=pr(L.latLng(cc[1],cc[0])), [u,v]=px(q.x,q.y), lb=s.label||'', bb=parcels[s.pid].layer.getBounds();
       const a=pr(bb.getSouthWest()), c=pr(bb.getNorthEast()), wpx=(c.x-a.x)/r, hpx=(c.y-a.y)/r, f=Math.max(9,Math.min(opt.text,Math.round(Math.min(hpx*0.6,wpx*1.1/Math.max(1,lb.length*0.62)))));
-      x.font=`700 ${f}px sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.lineJoin='round'; x.lineWidth=Math.max(2.5,f/4); x.strokeStyle='rgba(255,255,255,.95)'; x.strokeText(lb,u,v+1); x.fillStyle='#111'; x.fillText(lb,u,v+1); } }
+      x.font=`700 ${f}px ${FHM_FONT}`; x.textAlign='center'; x.textBaseline='middle'; x.lineJoin='round'; x.lineWidth=Math.max(2.5,f/4); x.strokeStyle='rgba(255,255,255,.95)'; x.strokeText(lb,u,v+1); x.fillStyle='#111'; x.fillText(lb,u,v+1); } }
   else { const placed=[], fsz=items.length>60?fs:Math.max(13,Math.min(20,fs));   // 丸い番号。ほかの番号と重なるときは、重ならない所へずらして細い線で田とつなぐ
     for(const s of items){ const cc=labelPt(parcels[s.pid].feature.geometry), q=pr(L.latLng(cc[1],cc[0])), [u,v]=px(q.x,q.y), lb=s.label||'';
-      x.font=`700 ${fsz}px sans-serif`; const rr=Math.max(fsz*0.72,x.measureText(lb).width/2+3);
+      x.font=`700 ${fsz}px ${FHM_FONT}`; const rr=Math.max(fsz*0.72,x.measureText(lb).width/2+3);
       const free=(a,b)=>a>rr&&b>rr&&a<W-rr&&b<H-rr-36&&placed.every(([pa,pb,pr_])=>Math.hypot(pa-a,pb-b)>=pr_+rr+2);
       let pu=u, pv=v;
       if(!free(u,v)){ let ok=false; for(let k=1;k<=6&&!ok;k++) for(let d=0;d<16&&!ok;d++){ const an=d*Math.PI/8+(k%2)*Math.PI/16, a=u+Math.cos(an)*rr*2.3*k, b=v+Math.sin(an)*rr*2.3*k; if(free(a,b)){ pu=a; pv=b; ok=true; } } }
@@ -1775,9 +1777,9 @@ async function exportMap(items,opt){   // 田を囲む範囲の地図（PNG の 
       x.fillStyle=s.color==='#ffffff'?'#333':s.color; x.textAlign='center'; x.textBaseline='middle'; x.fillText(lb,pu,pv+1); } }
   // 縮尺と方位
   const m=r/Math.cos(bbx.getCenter().lat*Math.PI/180), nice=[20,50,100,200,500,1000,2000].find(v=>v/m>=W*0.12)||2000, sw=nice/m;
-  x.fillStyle='rgba(255,255,255,.85)'; x.fillRect(8,H-34,sw+70,26); x.fillStyle='#222'; x.fillRect(16,H-18,sw,4); x.font='12px sans-serif'; x.textAlign='left'; x.textBaseline='alphabetic';
-  x.fillText(nice>=1000?`${nice/1000}km`:`${nice}m`,20+sw,H-14); x.font='700 14px sans-serif'; x.fillText('↑北',W-40,22);
-  x.font='11px sans-serif'; x.fillStyle='rgba(255,255,255,.85)'; const at='地理院タイル（航空写真）・筆ポリゴン（農林水産省）'; const tw=x.measureText(at).width; x.fillRect(W-tw-12,H-20,tw+8,16); x.fillStyle='#333'; x.fillText(at,W-tw-8,H-8);
+  x.fillStyle='rgba(255,255,255,.85)'; x.fillRect(8,H-34,sw+70,26); x.fillStyle='#222'; x.fillRect(16,H-18,sw,4); x.font='12px '+FHM_FONT; x.textAlign='left'; x.textBaseline='alphabetic';
+  x.fillText(nice>=1000?`${nice/1000}km`:`${nice}m`,20+sw,H-14); x.font='700 14px '+FHM_FONT; x.fillText('↑北',W-40,22);
+  x.font='11px '+FHM_FONT; x.fillStyle='rgba(255,255,255,.85)'; const at='地理院タイル（航空写真）・筆ポリゴン（農林水産省）'; const tw=x.measureText(at).width; x.fillRect(W-tw-12,H-20,tw+8,16); x.fillStyle='#333'; x.fillText(at,W-tw-8,H-8);
   return {url:cv.toDataURL('image/png'),W,H};
 }
 async function exportRows(){   // 田ごとの行（点数はスコアマップで表示しているときだけ入れる。データがない田は空欄）
@@ -1900,14 +1902,14 @@ const imgOf=src=>new Promise((ok,ng)=>{ const im=new Image(); im.onload=()=>ok(i
 const toBlob=cv=>new Promise((ok,ng)=>cv.toBlob(b=>b?ok(b):ng(new Error('画像を作れませんでした')),'image/png'));
 async function sxPanel(d,im,mode){   // 地図の画像に、日付（左上）と凡例をつけた canvas
   const I=await imgOf(im.url), cv=document.createElement('canvas'); cv.width=im.W; cv.height=im.H; const x=cv.getContext('2d'); x.drawImage(I,0,0);
-  const fs=Math.max(16,Math.round(im.W/30)); x.font=`700 ${fs}px sans-serif`; x.textAlign='left'; x.textBaseline='top'; const tw=x.measureText(d).width;
+  const fs=Math.max(16,Math.round(im.W/30)); x.font=`700 ${fs}px ${FHM_FONT}`; x.textAlign='left'; x.textBaseline='top'; const tw=x.measureText(d).width;
   x.fillStyle='rgba(255,255,255,.92)'; x.fillRect(8,8,tw+16,fs+10); x.fillStyle='#1e3a2f'; x.fillText(d,16,13);
   const kind=mode==='rel'?'rel':'abs', lw=Math.min(240,Math.round(im.W*0.42)), lh=12, lx=8, ly=fs+28;
   x.fillStyle='rgba(255,255,255,.92)'; x.fillRect(lx,ly-5,lw+16,lh+27);
   const E=BANDS[kind].edges, pos=kind==='abs'?E.map(e=>(e-0.2)/0.7):E.map(e=>(e+1)/2), st=[0,...pos,1], cols=bandCols(kind);
   if(bandOn()) for(let i=0;i<cols.length;i++){ x.fillStyle=`rgb(${cols[i].join(',')})`; x.fillRect(lx+8+st[i]*lw,ly,(st[i+1]-st[i])*lw+0.6,lh); }
   else for(let i=0;i<lw;i++){ const t=i/lw; x.fillStyle=kind==='abs'?ndviColor(0.2+0.7*t):`rgb(${relColor(t*2-1).join(',')})`; x.fillRect(lx+8+i,ly,1.6,lh); }
-  x.font='12px sans-serif'; x.fillStyle='#222'; x.textBaseline='alphabetic'; const yy=ly+lh+13;
+  x.font='12px '+FHM_FONT; x.fillStyle='#222'; x.textBaseline='alphabetic'; const yy=ly+lh+13;
   if(kind==='abs'){ x.textAlign='left'; x.fillText('NDVI 0.2',lx+8,yy); x.textAlign='right'; x.fillText('0.9',lx+8+lw,yy); }
   else { x.textAlign='left'; x.fillText('低い',lx+8,yy); x.textAlign='center'; x.fillText('その田の平均との差',lx+8+lw/2,yy); x.textAlign='right'; x.fillText('高い',lx+8+lw,yy); }
   return cv; }
@@ -1922,7 +1924,7 @@ async function sxRun(dates,kind,msg){   // 日付ごとに、色分けを描い�
 function sxSheet(P,title){   // 1枚にまとめる（日付の順に、左上から並べる）
   const n=P.length, cols=n<=2?n:n<=4?2:n<=9?3:4, rows=Math.ceil(n/cols), w=P[0].cv.width, h=P[0].cv.height, gap=10, top=44;
   const cv=document.createElement('canvas'); cv.width=cols*w+(cols+1)*gap; cv.height=top+rows*(h+gap); const x=cv.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,cv.width,cv.height);
-  x.fillStyle='#1e3a2f'; x.font='700 20px sans-serif'; x.textAlign='left'; x.textBaseline='middle'; x.fillText(title,gap,top/2);
+  x.fillStyle='#1e3a2f'; x.font='700 20px '+FHM_FONT; x.textAlign='left'; x.textBaseline='middle'; x.fillText(title,gap,top/2);
   P.forEach((p,i)=>{ x.drawImage(p.cv,gap+(i%cols)*(w+gap),top+Math.floor(i/cols)*(h+gap)); });
   return cv; }
 document.getElementById('btnSeries').onclick=()=>{
@@ -2388,9 +2390,9 @@ function arLabTex(t,rgb,n){ const k=t+'|'+(n||'')+'|'+rgb.join(','); if(arLabT.h
   const rr=(a,b,w,h,r)=>{ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); };
   x.shadowColor='rgba(0,0,0,.55)'; x.shadowBlur=14; x.shadowOffsetY=5; rr(14,12,228,96,34); const gr=x.createLinearGradient(0,12,0,108); gr.addColorStop(0,'rgba(40,40,44,.92)'); gr.addColorStop(1,'rgba(10,10,12,.92)'); x.fillStyle=gr; x.fill();
   x.shadowColor='transparent'; x.lineWidth=9; x.strokeStyle=c; rr(14,12,228,96,34); x.stroke();
-  if(n!=null&&n!==''){ x.font='bold 56px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,48); x.shadowBlur=0; x.fillText(t,128,48);   // 尿素の量（大）の下に、窒素の量（小）
-    x.font='bold 30px sans-serif'; x.fillStyle='rgba(255,255,255,.88)'; x.fillText('N'+n,128,88); }
-  else{ x.font='bold 70px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,63); x.shadowBlur=0; x.fillText(t,128,63); }
+  if(n!=null&&n!==''){ x.font='bold 56px '+FHM_FONT; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,48); x.shadowBlur=0; x.fillText(t,128,48);   // 尿素の量（大）の下に、窒素の量（小）
+    x.font='bold 30px '+FHM_FONT; x.fillStyle='rgba(255,255,255,.88)'; x.fillText('N'+n,128,88); }
+  else{ x.font='bold 70px '+FHM_FONT; x.textAlign='center'; x.textBaseline='middle'; x.shadowColor=c; x.shadowBlur=18; x.fillStyle='#fff'; x.fillText(t,128,63); x.shadowBlur=0; x.fillText(t,128,63); }
   const tx=new AR3.CanvasTexture(cv); tx.colorSpace=AR3.SRGBColorSpace; arLabT.set(k,tx); return tx; }
 function arPaint(){   // 地面に塗る: マスの色（半透明）・輪郭・頂点の番号
   const T=AR3, M=ar.model; if(ar.paint){ ar.geo.remove(ar.paint); ar.paint.traverse(o=>{ if(o.isSprite) return; if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); }
@@ -2458,14 +2460,14 @@ function arSketch(){ const cv=document.getElementById('arSk'), x=cv.getContext('
   const S=p=>[W/2+(p[0]-cx)*sc,W/2-(p[1]-cy)*sc]; x.clearRect(0,0,W,W); x.lineWidth=4; x.strokeStyle='#ffe14d'; x.fillStyle='rgba(255,225,77,.2)';
   x.beginPath(); P.forEach((q,i)=>{ const s=S(q); x[i?'lineTo':'moveTo'](s[0],s[1]); }); x.closePath(); x.fill(); x.stroke();
   for(const [i,c,l,on] of [[M.c1,'#ff5a1f','1',ar.phase!=='c2'],[M.c2,'#1e88e5','2',ar.phase==='c2']]){ const s=S(P[i]); x.fillStyle=c; x.beginPath(); x.arc(s[0],s[1],on?20:14,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=on?4:2; x.stroke(); x.fillStyle='#fff'; x.font=`bold ${on?24:17}px sans-serif`; x.textAlign='center'; x.textBaseline='middle'; x.fillText(l,s[0],s[1]+1); }
-  x.fillStyle='#fff'; x.font='bold 18px sans-serif'; x.textAlign='center'; x.fillText('北↑',W/2,14); }
+  x.fillStyle='#fff'; x.font='bold 18px '+FHM_FONT; x.textAlign='center'; x.fillText('北↑',W/2,14); }
 function arMiniBase(){   // ミニマップの土台（北が上。マスの色・輪郭・角1・角2）。arPaint のたびに作り直す
   const M=ar.model, W=192, P=M.P, xs=P.map(p=>p[0]), ys=P.map(p=>p[1]), cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2, sc=(W-48)/Math.max(10,Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
   const S=p=>[W/2+(p[0]-cx)*sc,W/2-(p[1]-cy)*sc], b=document.createElement('canvas'); b.width=b.height=W; const x=b.getContext('2d');
   for(const c of M.cells){ x.fillStyle=`rgba(${c.rgb.join(',')},.55)`; for(const q of c.pieces){ x.beginPath(); q.forEach((v,i)=>{ const t=S(v); x[i?'lineTo':'moveTo'](t[0],t[1]); }); x.closePath(); x.fill(); } }
   for(const [lw,col] of [[7,'rgba(0,0,0,.8)'],[3.5,'#ffffff']]){ x.lineWidth=lw; x.strokeStyle=col; x.lineJoin='round'; for(const p of M.parts.concat(...(M.holes||[]))){ x.beginPath(); p.forEach((v,i)=>{ const t=S(v); x[i?'lineTo':'moveTo'](t[0],t[1]); }); x.closePath(); x.stroke(); } }   // 枠は白＋黒ぶち（どんな背景でも目立つ）
-  for(const [i,c,l] of [[M.c1,'#ff5a1f','1'],[M.c2,'#1e88e5','2']]){ const t=S(P[i]); x.fillStyle=c; x.beginPath(); x.arc(t[0],t[1],10,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=2; x.stroke(); x.fillStyle='#fff'; x.font='bold 13px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(l,t[0],t[1]+1); }
-  x.font='bold 16px sans-serif'; x.textAlign='center'; x.textBaseline='alphabetic'; x.lineWidth=4; x.strokeStyle='rgba(0,0,0,.8)'; x.strokeText('北↑',W/2,15); x.fillStyle='#fff'; x.fillText('北↑',W/2,15);
+  for(const [i,c,l] of [[M.c1,'#ff5a1f','1'],[M.c2,'#1e88e5','2']]){ const t=S(P[i]); x.fillStyle=c; x.beginPath(); x.arc(t[0],t[1],10,0,7); x.fill(); x.strokeStyle='#fff'; x.lineWidth=2; x.stroke(); x.fillStyle='#fff'; x.font='bold 13px '+FHM_FONT; x.textAlign='center'; x.textBaseline='middle'; x.fillText(l,t[0],t[1]+1); }
+  x.font='bold 16px '+FHM_FONT; x.textAlign='center'; x.textBaseline='alphabetic'; x.lineWidth=4; x.strokeStyle='rgba(0,0,0,.8)'; x.strokeText('北↑',W/2,15); x.fillStyle='#fff'; x.fillText('北↑',W/2,15);
   ar.mm={b,S}; }
 function arMiniDraw(pt){   // pt: リングの所（筆の中の座標 [x,y]。なければ null）。地面の白いリングと同じ所に ◎ を出す
   const cv=document.getElementById('arSk'); if(!cv||!ar.model) return; if(!ar.mm) arMiniBase(); const x=cv.getContext('2d'); x.clearRect(0,0,192,192); x.drawImage(ar.mm.b,0,0);
