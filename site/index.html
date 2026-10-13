@@ -1152,7 +1152,7 @@ const RAIN=(function(){
   const LV=[{c:[242,242,255],lo:0,hi:1},{c:[160,210,255],lo:1,hi:5},{c:[33,140,255],lo:5,hi:10},{c:[0,65,255],lo:10,hi:20,w:'やや強い雨'},{c:[250,245,0],lo:20,hi:30,w:'強い雨'},
             {c:[255,153,0],lo:30,hi:50,w:'激しい雨'},{c:[255,40,0],lo:50,hi:80,w:'非常に激しい雨'},{c:[180,0,104],lo:80,hi:null,w:'猛烈な雨'}];
   const TH=[{c:[250,245,0],w:'雷可能性あり'},{c:[255,170,0],w:'雷あり'},{c:[255,40,0],w:'やや激しい雷'},{c:[200,0,255],w:'激しい雷'}];   // 雷ナウキャストの活動度1〜4
-  const OP=.78, R=1;   // 雨雲・雷の濃さ・地点の雨を見るときの、まわりの点（R=1 で 3×3 点＝ズーム10 で約370m四方。いちばん強い色をとる）
+  const OP=.78, OPTH=.58, R=1;   // 雨雲の濃さ・雷の濃さ（雷は広い所が黄色になるので、地図が透けるよう薄め）・地点の雨を見るときの、まわりの点（R=1 で 3×3 点＝ズーム10 で約370m四方。いちばん強い色をとる）
   const pad=n=>String(n).padStart(2,'0'), ms=s=>Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12));
   const jst=t=>{ const d=new Date(t+9*36e5); return {mo:d.getUTCMonth()+1,d:d.getUTCDate(),h:d.getUTCHours(),mi:d.getUTCMinutes(),w:'日月火水木金土'[d.getUTCDay()]}; };
   const hm=t=>{ const j=jst(t); return `${j.h}:${pad(j.mi)}`; }, day=t=>{ const j=jst(t); return `${j.mo}/${j.d}(${j.w})`; }, sameDay=(a,b)=>day(a)===day(b);
@@ -1228,7 +1228,7 @@ const RAIN=(function(){
   function show(i){ if(!frames.length) return; idx=Math.max(0,Math.min(frames.length-1,i)); const cur=frames[idx];
     const want=new Set(all?frames.map(f=>f.k):[idx-1,idx,idx+1].filter(k=>k>=0&&k<frames.length).map(k=>frames[k].k));
     for(const [k,l] of layers){ if(!want.has(k)&&map.hasLayer(l)) map.removeLayer(l); }
-    for(const f of frames) if(want.has(f.k)) layerOf(f).setOpacity(f===cur?OP:0);
+    for(const f of frames) if(want.has(f.k)) layerOf(f).setOpacity(f===cur?(f.el==='thns'?OPTH:OP):0);
     if(!all){ const l=layers.get(cur.k), go=()=>{ if(on&&!all&&frames[idx]===cur){ all=true; show(idx); } };   // 今のこまがそろったら、残りのこまも裏で読み込む（再生とスライダーをなめらかに）
       if(l.isLoading&&l.isLoading()) l.once('load',()=>setTimeout(go,300)); else setTimeout(go,300); }
     showLi(mode==='th'&&cur.kind==='obs'?cur.t:null); label(); paintCells(); }
