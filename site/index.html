@@ -977,8 +977,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
-    <h2>推移</h2>
-    <div class="ctl chartctl"><span id="modeCtl">
+    <div class="ctl chartctl" style="margin-top:12px"><span id="modeCtl">
       <select id="mode">
         <option value="date">今年（5/10〜9/30）</option>
         <option value="doy">前年と重ねる（5/10〜9/30）</option>
@@ -1554,7 +1553,7 @@ const MODE_DESC={   // 表示モードごとのひとこと説明
   trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。'};
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
 const MODE_HEAD={
-  abs:{t:'絶対表示',d:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。',how:['地図を拡大して、田をタップ（最大10枚）','右に、その田の推移のグラフと数字が出ます','日付は地図の左下で変えられます（晴れた日だけ）']},
+  abs:{t:'絶対表示',d:'生育量(NDVI)を色で表示。他圃場との比較に。',how:['地図を拡大して、田をタップ（最大10枚）','右に、その田の推移のグラフと数字が出ます','日付は地図の左下で変えられます（晴れた日だけ）']},
   rel:{t:'相対表示',d:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',how:['地図を拡大して、田をタップ','色の見方は、地図の左下の凡例','右に、その田の推移のグラフと数字が出ます']},
   trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った田','田をタップすると、その田の数字が右に出ます']}};
 function renderModeHead(){ const el=document.getElementById('modeHead'), k=fillRaw(), m=MODE_HEAD[k]; if(!el||el.dataset.k===k) return; el.dataset.k=k;
