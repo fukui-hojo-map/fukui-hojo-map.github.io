@@ -936,7 +936,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   @media (max-width:860px){
     .layout{grid-template-columns:1fr;height:auto;grid-template-rows:56vh auto}
     #map{height:56vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
-    header{padding:8px 12px} .side{padding:10px 12px 30px}
+    header{padding:8px 12px;gap:4px 6px} .side{padding:10px 12px 30px} header h1.fukui-logo{--s:17px}
+    /* スマホ幅: 「ふくい圃場マップ」の右に、「現在地へ」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
+    header h1{order:0} header .spacer{order:1} header #btnGeo,header #myOpen{order:2} header .meta{order:3;flex:0 0 100%;font-size:13px;line-height:1.35}
+    header .btn{min-height:30px;padding:3px 8px;font-size:13.5px;border-radius:6px}
   }
 </style>
 
@@ -1999,9 +2002,8 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   geoLayer=L.geoJSON([], {style:()=>({color:'#fff',weight:1,opacity:.8,fillColor:'#888',fillOpacity:.35}),
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
       l._pid=pid; l.on('click',()=>onParcelTap(pid)); } }).addTo(map);
-  const jst=iso=>{ if(!iso) return ''; const d=new Date(Date.parse(iso)+9*3600e3); return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`; };
   const md=x=>x?`${+x.slice(5,7)}/${+x.slice(8,10)}`:'', LT=index.latest||{}, chk=index.checked||index.updated||'';
-  document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+` / 更新 ${jst(index.updated)}${index.checked?'・確認 '+jst(index.checked):''}`;
+  document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+``;
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
   document.getElementById('foot').textContent='データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高: 国土地理院 標高タイルを加工。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。';
   const h=parseHash();
