@@ -796,6 +796,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .sx .sxy{grid-column:1/-1;font-weight:700;font-size:14px;padding:4px 6px;border-radius:5px;margin-top:2px} .sx .sxy.now{background:#2f7d4f;color:#fff} .sx .sxy.old{background:#777;color:#fff} .sx .sxy:not(:first-child){margin-top:8px} .sx .sxb{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .sx .sxm{font-size:13px;color:var(--ink2);min-height:1.5em}
   .btn:hover{background:var(--panel)} .btn.primary{background:var(--ink);color:#fff} .btn.small{padding:3px 9px;min-height:28px;font-size:14px}
   .btn:disabled{opacity:.45;cursor:default}
+  /* 上の段の「現在地へ」「マイ圃場」: 白地（マイ圃場は淡い緑）に、濃い緑→黄緑→黄色のグラデーションの枠のピル（見本41） */
+  header #btnGeo,header #myOpen{border:2px solid transparent;border-radius:999px;font-weight:700;color:var(--ink);padding-left:13px;padding-right:13px;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
+  header #myOpen{background:linear-gradient(#e4efe6,#e4efe6) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
+  header #btnGeo:hover,header #myOpen:hover{filter:brightness(.96)} header #btnGeo:active,header #myOpen:active{filter:brightness(.92)}
   input[type=file]{display:none}
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 7px var(--sideW,440px);height:calc(100vh - 56px);height:calc(100dvh - 56px)}
   #map{height:100%;min-height:320px;background:#dfe6d8}
@@ -940,6 +944,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     /* スマホ幅: 「ふくい圃場マップ」の右に、「現在地へ」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
     header h1{order:0} header .spacer{order:1} header #btnGeo,header #myOpen{order:2} header .meta{order:3;flex:0 0 100%;font-size:13px;line-height:1.35}
     header .btn{min-height:30px;padding:3px 8px;font-size:13.5px;border-radius:6px}
+    header #btnGeo,header #myOpen{padding:3px 8px;border-width:1.5px}   /* 360px幅でも、題字と同じ行に収まる幅 */
   }
 </style>
 
