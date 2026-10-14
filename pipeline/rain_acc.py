@@ -66,6 +66,17 @@ TL, TIX, PXS, PYS = _mesh_pix()
 CELLI = (np.arange(P0, P1) // 5 - CI0)[None, :].repeat(NY, 0)
 CELLJ = (np.arange(Q0, Q1) // 6 - CJ0)[:, None].repeat(NX, 1)
 
+ND_PTS = [(lat, lon) for lat in (35.45, 35.65, 35.85, 36.05, 36.25) for lon in (135.6, 135.9, 136.2, 136.5, 136.75)]   # 福井の陸のあたりの点
+def _in_rings(lat, lon, rings):
+    """多角形（外周と穴）の中か（偶奇の規則）"""
+    inside = False
+    for ring in rings:
+        n = len(ring)
+        for i in range(n):
+            x1, y1 = ring[i][0], ring[i][1]; x2, y2 = ring[(i + 1) % n][0], ring[(i + 1) % n][1]
+            if (y1 > lat) != (y2 > lat) and lon < (x2 - x1) * (lat - y1) / (y2 - y1 + 1e-15) + x1: inside = not inside
+    return inside
+
 def png_classes(b):
     a = np.array(Image.open(io.BytesIO(b)).convert("RGBA"))
     cl = np.full(a.shape[:2], -1, np.int8); rgb = a[..., :3].astype(int); op = a[..., 3] > 0
@@ -111,11 +122,34 @@ def fetch_time(ts, mem="none"):
             if t is None: continue
             m = TIX == k
             grid[m] = t[PYS[m], PXS[m]]
+        # つじつまの確かめ: 5km 四方に雨の値があるのに、その中の 1km 格子がどれも「雨なし」→ 画像がまだ出そろっていない（あとでもう一度）
+        bad = 0
+        for jj in range(cm.shape[0]):
+            for ii in range(cm.shape[1]):
+                if cm[jj, ii] <= 0: continue
+                q0, p0 = (CJ0 + jj) * 6 - Q0, (CI0 + ii) * 5 - P0
+                if q0 < 0 or p0 < 0 or q0 + 6 > NY or p0 + 5 > NX: continue
+                if (grid[q0:q0 + 6, p0:p0 + 5] < 0).all(): bad += 1
+        if bad:
+            if el == "rasrf": return None, f"{el} tiles not ready ({bad} cells)"
+            out[el] = None; out[el + "_m"] = None; continue
         out[el] = grid; out[el + "_m"] = cm
+    # 解析のない所（レーダーの止まった所など）: 福井の陸にかかっていたら、この時間は「欠け」とする
+    st, b = get(f"{D}{ts}/{mem}/{ts}/surf/rasrf_nd/data.geojson")
+    out["nd"] = False
+    if st == 200 and b:
+        try:
+            for f in json.loads(b).get("features", []):
+                g = f.get("geometry") or {}
+                polys = [g["coordinates"]] if g.get("type") == "Polygon" else g.get("coordinates", []) if g.get("type") == "MultiPolygon" else []
+                for poly in polys:
+                    if any(_in_rings(lat, lon, poly) for lat, lon in ND_PTS): out["nd"] = True
+        except Exception as e:
+            log("  nd parse", ts, e)
     return out, ""
 
 def save_state(d, rec):
-    kw = {"c1": rec["rasrf"], "m1": rec["rasrf_m"]}
+    kw = {"c1": rec["rasrf"], "m1": rec["rasrf_m"], "nd": np.array(bool(rec.get("nd")))}
     if rec.get("rasrf03h") is not None: kw.update(c3=rec["rasrf03h"], m3=rec["rasrf03h_m"])
     if rec.get("rasrf24h") is not None: kw.update(c24=rec["rasrf24h"], m24=rec["rasrf24h_m"])
     np.savez_compressed(os.path.join(d, rec["ts"] + ".npz"), **kw)
@@ -134,6 +168,7 @@ def estimate(recs):
     N0 = np.zeros((H, NY, NX), np.float32); miss = np.zeros(H, bool)
     for h, r in enumerate(recs):
         if r is None: miss[h] = True; continue
+        if "nd" in r and bool(r["nd"]): miss[h] = True   # 解析のない時間（値は使うが、欠けとして数える）
         c = r["c1"]; M = mesh_max(r["m1"])
         lo = np.zeros((NY, NX), np.float32); hi = np.zeros((NY, NX), np.float32); x = np.zeros((NY, NX), np.float32)
         for k, (a, b) in enumerate(B1):
@@ -245,12 +280,23 @@ def main():
     todo = [ts for ts in reversed(series) if ts not in have][:a.max_new]   # 新しい時刻から
     log("latest", an[-1], "use", T.strftime("%Y%m%d%H%M"), "need", len([s for s in series if s not in have]), "fetch now", len(todo))
     failed = []
+    ff = os.path.join(a.state, "fail.json")
+    try: fails = json.load(open(ff))
+    except Exception: fails = {}
+    newest = series[-1]
     for ts in todo:
         if time.time() - t0 > a.budget: log("budget over"); break
+        if fails.get(ts, 0) >= 3 and ts != newest: continue   # 3回読めなかった時間は、欠けのまま（毎回は読みに行かない）
         rec, why = fetch_time(ts)
-        if rec is None: failed.append((ts, why)); log("  fail", ts, why); continue
-        save_state(a.state, rec)
+        if rec is None:
+            failed.append((ts, why)); log("  fail", ts, why)
+            if "not ready" not in why: fails[ts] = fails.get(ts, 0) + 1
+            continue
+        save_state(a.state, rec); fails.pop(ts, None)
         if rec["odd"]: log("  odd colors", ts, rec["odd"])
+        if rec.get("nd"): log("  no-data area over Fukui", ts)
+    lim0 = (T - timedelta(hours=KEEP_H + 2)).strftime("%Y%m%d%H%M00")
+    json.dump({k: v for k, v in fails.items() if k >= lim0}, open(ff, "w"))
     # 古い記録を消す（ほかの時刻の並び（:00 と :30）も、それぞれ KEEP_H 時間）
     lim = (T - timedelta(hours=KEEP_H + 2)).strftime("%Y%m%d%H%M00")
     for f in os.listdir(a.state):
