@@ -1,21 +1,25 @@
-# 圃場ごとの雨量（12・24・48時間）を、気象庁の解析雨量から 1km 四方ごとに組み立てて、30分ごとに rain-data ブランチに置く
+# 圃場ごとの雨量（12・24・48時間）を、気象庁の解析雨量から 1km 四方ごとに組み立てて、rain-data ブランチに置く
 #   画面（site/index.html）は https://raw.githubusercontent.com/<このリポジトリ>/rain-data/acc.json を読む
-#   rain-data には、いまの結果（acc.json）・アメダスとの答え合わせ（check.jsonl）・作りかけの記録（cache/）だけを置く（毎回、1つのコミットに置きかえる）
+#   rain-data には、いまの結果（acc.json）・アメダスとの答え合わせ（check.jsonl）・作りかけの記録（cache/）だけを置く（変わるたびに、1つのコミットに置きかえる）
+# 動かし方: GitHub の定時（schedule）は、このリポジトリでは3〜4時間も遅れる（weekly-ndvi で確認）。そこで、1回の実行を約5時間半つづけ、
+#   その間 5分ごとに気象庁の新しい解析を見に行って（新しいものがなければ、すぐ次の待ちに入る）、終わりに自分で次の実行を起こす（workflow_dispatch は、GITHUB_TOKEN からでも起こせる）。
+#   定時（schedule）と push は、つながりが切れたときの立て直し用。
 name: rain
 on:
   schedule:
-    - cron: '3-59/10 * * * *'   # 10分ごとに起こす（GitHub の定時は遅れたり、とばされたりするので多めに）。新しい解析がなければ、すぐ終わって何も置かない
+    - cron: '7,37 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
     paths: ['pipeline/rain_acc.py', '.github/workflows/rain.yml']
 permissions:
   contents: write
+  actions: write
 concurrency: { group: rain, cancel-in-progress: false }
 jobs:
   acc:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
         with: { path: main, sparse-checkout: pipeline }
@@ -25,18 +29,29 @@ jobs:
           U="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git clone -q --depth 1 --branch rain-data "$U" data 2>/dev/null; then echo "前回あり: $(cat data/t.txt 2>/dev/null)"; else mkdir data && cd data && git init -q && git remote add origin "$U" && echo "はじめて"; fi
       - run: pip install -q numpy pillow
-      - name: 雨量を作る
+      - name: 雨量を作りつづける（5分ごと・約5時間半）
         run: |
-          set -o pipefail
+          START=$(date +%s); N=0; FAILS=0
           export RAIN_NOCHANGE_FILE="$RUNNER_TEMP/nochange"
-          python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 1300 --max-new 80 2>&1 | tee "$RUNNER_TEMP/log_now.txt"
-          if [ ! -f "$RUNNER_TEMP/nochange" ]; then tail -n 400 "$RUNNER_TEMP/log_now.txt" > data/log.txt; fi
-      - name: 置く（1つのコミットに置きかえ）
+          while :; do
+            rm -f "$RAIN_NOCHANGE_FILE"
+            if python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 1300 --max-new 80 > "$RUNNER_TEMP/log_now.txt" 2>&1; then FAILS=0; else FAILS=$((FAILS+1)); echo "失敗 ($FAILS)"; tail -n 20 "$RUNNER_TEMP/log_now.txt"; fi
+            if [ ! -f "$RAIN_NOCHANGE_FILE" ] && [ "$FAILS" = 0 ]; then
+              cat "$RUNNER_TEMP/log_now.txt"
+              tail -n 400 "$RUNNER_TEMP/log_now.txt" > data/log.txt
+              N=$((N+1))
+              ( cd data
+                git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+                git checkout -q --orphan "next$N" && git add -A && git commit -qm "rain: $(cat t.txt)" && git push -qf origin "next$N:rain-data" ) || { echo "置くのに失敗"; FAILS=$((FAILS+1)); }
+            fi
+            echo $(( $(date +%s) - START )) > "$RUNNER_TEMP/elapsed"
+            [ "$FAILS" -ge 6 ] && { echo "6回つづけて失敗。この実行は終わる"; break; }
+            [ $(( $(date +%s) - START )) -gt 19800 ] && break
+            sleep 300
+          done
+      - name: つぎの実行を起こす（つながりをつづける）
+        if: always()
+        env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          if [ -f "$RUNNER_TEMP/nochange" ]; then echo "新しい解析なし（置きかえない）"; exit 0; fi
-          cd data
-          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
-          git checkout -q --orphan next
-          git add -A
-          git commit -qm "rain: $(cat t.txt)"
-          git push -qf origin next:rain-data
+          E=$(cat "$RUNNER_TEMP/elapsed" 2>/dev/null || echo 0)
+          if [ "$E" -ge 900 ]; then gh workflow run rain.yml --repo "$GITHUB_REPOSITORY" && echo "つぎの実行を起こした"; else echo "短く終わったので、起こさない（定時で立て直す）: ${E}秒"; fi
