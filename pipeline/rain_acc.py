@@ -286,6 +286,11 @@ def main():
     files = set(os.listdir(a.state))
     full = set(f[:-4] for f in files if f.endswith(".npz") and not f.endswith("_p.npz"))
     part = set(f[:-6] for f in files if f.endswith("_p.npz"))
+    for ts in list(full):   # 前の版で 3・24時間なしのまま「そろった」名前で置いた記録は、読み直す
+        try:
+            ks = set(np.load(os.path.join(a.state, ts + ".npz")).files)
+            if not {"c3", "c24"} <= ks: full.discard(ts); part.add(ts)
+        except Exception: full.discard(ts)
     ff = os.path.join(a.state, "fail.json")
     try: fails = json.load(open(ff))
     except Exception: fails = {}
