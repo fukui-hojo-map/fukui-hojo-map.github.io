@@ -1,0 +1,40 @@
+# 圃場ごとの雨量（12・24・48時間）を、気象庁の解析雨量から 1km 四方ごとに組み立てて、30分ごとに rain-data ブランチに置く
+#   画面（site/index.html）は https://raw.githubusercontent.com/<このリポジトリ>/rain-data/acc.json を読む
+#   rain-data には、いまの結果（acc.json）・アメダスとの答え合わせ（check.jsonl）・作りかけの記録（cache/）だけを置く（毎回、1つのコミットに置きかえる）
+name: rain
+on:
+  schedule:
+    - cron: '21,51 * * * *'    # 気象庁の30分ごとの解析が出るのは、その時刻の15〜20分あと
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['pipeline/rain_acc.py', '.github/workflows/rain.yml']
+permissions:
+  contents: write
+concurrency: { group: rain, cancel-in-progress: false }
+jobs:
+  acc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: main, sparse-checkout: pipeline }
+      - name: 前回のデータ（rain-data）
+        env: { TOKEN: '${{ github.token }}' }
+        run: |
+          U="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git clone -q --depth 1 --branch rain-data "$U" data 2>/dev/null; then echo "前回あり: $(cat data/t.txt 2>/dev/null)"; else mkdir data && cd data && git init -q && git remote add origin "$U" && echo "はじめて"; fi
+      - run: pip install -q numpy pillow
+      - name: 雨量を作る
+        run: |
+          set -o pipefail
+          python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 1300 --max-new 80 2>&1 | tee data/log_now.txt
+          tail -n 400 data/log_now.txt > data/log.txt; rm -f data/log_now.txt
+      - name: 置く（1つのコミットに置きかえ）
+        run: |
+          cd data
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git checkout -q --orphan next
+          git add -A
+          git commit -qm "rain: $(cat t.txt)"
+          git push -qf origin next:rain-data
