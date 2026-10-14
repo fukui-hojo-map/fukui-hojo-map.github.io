@@ -123,10 +123,10 @@ def fetch_time(ts, mem="none"):
             m = TIX == k
             grid[m] = t[PYS[m], PXS[m]]
         # つじつまの確かめ: 5km 四方に雨の値があるのに、その中の 1km 格子がどれも「雨なし」→ 画像がまだ出そろっていない（あとでもう一度）
-        bad = 0
+        bad = 0; thr = 0.0 if el == "rasrf" else 1.0   # 3・24時間の色は 1mm から（それより少ない 5km 四方は、色がなくて当たり前）
         for jj in range(cm.shape[0]):
             for ii in range(cm.shape[1]):
-                if cm[jj, ii] <= 0: continue
+                if cm[jj, ii] <= thr: continue
                 q0, p0 = (CJ0 + jj) * 6 - Q0, (CI0 + ii) * 5 - P0
                 if q0 < 0 or p0 < 0 or q0 + 6 > NY or p0 + 5 > NX: continue
                 if (grid[q0:q0 + 6, p0:p0 + 5] < 0).all(): bad += 1
@@ -149,16 +149,23 @@ def fetch_time(ts, mem="none"):
     return out, ""
 
 def save_state(d, rec):
+    """そろった記録は {ts}.npz、3・24時間が読めなかった記録は {ts}_p.npz（あとで読み直す）"""
     kw = {"c1": rec["rasrf"], "m1": rec["rasrf_m"], "nd": np.array(bool(rec.get("nd")))}
+    full = True
     if rec.get("rasrf03h") is not None: kw.update(c3=rec["rasrf03h"], m3=rec["rasrf03h_m"])
+    else: full = False
     if rec.get("rasrf24h") is not None: kw.update(c24=rec["rasrf24h"], m24=rec["rasrf24h_m"])
-    np.savez_compressed(os.path.join(d, rec["ts"] + ".npz"), **kw)
+    else: full = False
+    np.savez_compressed(os.path.join(d, rec["ts"] + ("" if full else "_p") + ".npz"), **kw)
+    if full and os.path.exists(os.path.join(d, rec["ts"] + "_p.npz")): os.remove(os.path.join(d, rec["ts"] + "_p.npz"))
+    return full
 def load_state(d, ts):
-    f = os.path.join(d, ts + ".npz")
-    if not os.path.exists(f): return None
-    try: z = np.load(f)
-    except Exception: return None
-    return {k: z[k] for k in z.files}
+    for f in (os.path.join(d, ts + ".npz"), os.path.join(d, ts + "_p.npz")):
+        if not os.path.exists(f): continue
+        try: z = np.load(f)
+        except Exception: continue
+        return {k: z[k] for k in z.files}
+    return None
 
 def mesh_max(cm): return cm[CELLJ, CELLI]
 
@@ -276,27 +283,45 @@ def main():
     if not an: log("no analysis"); sys.exit(1)
     T = datetime.strptime(a.at or an[-1], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
     series = [(T - timedelta(hours=k)).strftime("%Y%m%d%H%M00") for k in range(KEEP_H - 1, -1, -1)]   # 古い→新しい
-    have = set(f[:-4] for f in os.listdir(a.state) if f.endswith(".npz"))
-    todo = [ts for ts in reversed(series) if ts not in have][:a.max_new]   # 新しい時刻から
-    log("latest", an[-1], "use", T.strftime("%Y%m%d%H%M"), "need", len([s for s in series if s not in have]), "fetch now", len(todo))
-    failed = []
+    files = set(os.listdir(a.state))
+    full = set(f[:-4] for f in files if f.endswith(".npz") and not f.endswith("_p.npz"))
+    part = set(f[:-6] for f in files if f.endswith("_p.npz"))
     ff = os.path.join(a.state, "fail.json")
     try: fails = json.load(open(ff))
     except Exception: fails = {}
-    newest = series[-1]
+    recent = (T - timedelta(hours=2)).strftime("%Y%m%d%H%M00")
+    MAXF = 8   # 2時間より前の時刻は、8回（その時刻の並びは1時間ごとなので、およそ8時間）読めなかったら、欠けのまま
+    def want(ts):
+        if ts in full: return False
+        if ts >= recent: return True   # 新しい時刻は、出そろうまで毎回読む
+        return fails.get(ts, 0) < MAXF
+    todo = [ts for ts in reversed(series) if want(ts)][:a.max_new]   # 新しい時刻から
+    log("latest", an[-1], "use", T.strftime("%Y%m%d%H%M"), "need", len([s for s in series if s not in full]), "partial", len([s for s in series if s in part]), "fetch now", len(todo))
+    failed = []
     for ts in todo:
         if time.time() - t0 > a.budget: log("budget over"); break
-        if fails.get(ts, 0) >= 3 and ts != newest: continue   # 3回読めなかった時間は、欠けのまま（毎回は読みに行かない）
         rec, why = fetch_time(ts)
         if rec is None:
             failed.append((ts, why)); log("  fail", ts, why)
-            if "not ready" not in why: fails[ts] = fails.get(ts, 0) + 1
+            if ts < recent: fails[ts] = fails.get(ts, 0) + 1
             continue
-        save_state(a.state, rec); fails.pop(ts, None)
+        ok_full = save_state(a.state, rec)
+        if ok_full: fails.pop(ts, None)
+        elif ts < recent: fails[ts] = fails.get(ts, 0) + 1   # 3・24時間だけ読めなかった: 1時間の分は使い、あとで読み直す
         if rec["odd"]: log("  odd colors", ts, rec["odd"])
         if rec.get("nd"): log("  no-data area over Fukui", ts)
+        if not ok_full: log("  partial (3h/24h missing)", ts)
     lim0 = (T - timedelta(hours=KEEP_H + 2)).strftime("%Y%m%d%H%M00")
     json.dump({k: v for k, v in fails.items() if k >= lim0}, open(ff, "w"))
+    # いちばん新しい時刻が読めなかったら、その30分前（もう1つの並び）にさかのぼる（読めない時間を 0mm として出さない）
+    for k in range(0, 5):
+        t2 = T - timedelta(minutes=30 * k)
+        if load_state(a.state, t2.strftime("%Y%m%d%H%M00")) is not None: break
+    else:
+        log("no recent data; keep the previous acc.json"); return
+    if t2 != T:
+        log("newest not ready; use", t2.strftime("%Y%m%d%H%M")); T = t2
+        series = [(T - timedelta(hours=k)).strftime("%Y%m%d%H%M00") for k in range(KEEP_H - 1, -1, -1)]
     # 古い記録を消す（ほかの時刻の並び（:00 と :30）も、それぞれ KEEP_H 時間）
     lim = (T - timedelta(hours=KEEP_H + 2)).strftime("%Y%m%d%H%M00")
     for f in os.listdir(a.state):
@@ -307,7 +332,9 @@ def main():
            "src": "気象庁ホームページ（解析雨量）を加工して作成", "grid": {"p0": P0, "q0": Q0, "nx": NX, "ny": NY, "lon0": 118, "lat0": 48, "dlon": 0.0125, "dlat": 1 / 120},
            "w": list(WINS), "unit": 0.1, "a": {}, "miss": {}}
     for W in WINS:
-        out["a"][str(W)] = b64u16(X[-W:].sum(0)); out["miss"][str(W)] = int(miss[-W:].sum())
+        mW = int(miss[-W:].sum()); out["miss"][str(W)] = mW
+        # 欠けた時間が多いときは、その長さの雨量は「分からない」（0mm と見せない）。少しだけなら出す（画面で「一部欠け」と出す）
+        out["a"][str(W)] = None if mW > max(1, W // 10) else b64u16(X[-W:].sum(0))
     # 答え合わせ（3時間ごとの正時）
     chk = None
     if T.minute == 0 and T.hour % 3 == 0:
@@ -319,9 +346,16 @@ def main():
             lines = open(os.path.join(a.out, "check.jsonl")).read().splitlines()[-3000:]
             open(os.path.join(a.out, "check.jsonl"), "w").write("\n".join(lines) + "\n")
             log("check", json.dumps(chk["summary"], ensure_ascii=False))
+    # 画面に出すのは、いちばん新しい答え合わせ（3時間ごと）
+    if not chk:
+        try:
+            last = json.loads(open(os.path.join(a.out, "check.jsonl")).read().strip().splitlines()[-1])
+            out["chk"] = last["summary"]; out["chk_t"] = last["t"]
+        except Exception: pass
+    else: out["chk_t"] = chk["t"]
     json.dump(out, open(os.path.join(a.out, "acc.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     open(os.path.join(a.out, "t.txt"), "w").write(out["t"] + "\n")
-    log("done", out["t"], {W: out["miss"][str(W)] for W in WINS}, "max mm", {W: round(float(X[-W:].sum(0).max()), 1) for W in WINS}, "failed", len(failed), round(time.time() - t0), "s")
+    log("done", out["t"], {W: out["miss"][str(W)] for W in WINS}, "max mm", {W: round(float(X[-W:].sum(0).max()), 1) for W in WINS}, "unknown", [W for W in WINS if out["a"][str(W)] is None], "failed", len(failed), round(time.time() - t0), "s")
 
 if __name__ == "__main__":
     main()
