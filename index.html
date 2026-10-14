@@ -974,6 +974,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #rainBar .rlg{display:inline-flex;align-items:flex-start;padding-bottom:11px;white-space:nowrap} #rainBar .rlg .u{font-size:10.5px;font-weight:700;margin-right:4px;line-height:10px}
   #rainBar .rlg i{position:relative;display:inline-block;width:17px;height:10px;border-top:1px solid rgba(0,0,0,.15);border-bottom:1px solid rgba(0,0,0,.15)} #rainBar .rlg i:first-of-type{border-left:1px solid rgba(0,0,0,.15)}
   #rainBar .rlg i b{position:absolute;left:0;top:10px;transform:translateX(-50%);font-size:9.5px;font-weight:400;line-height:11px;color:#33433b}
+  #rainBar .robs{margin-top:2px;font-size:10.5px;line-height:1.3;color:#7a4300}
   #rainBar .rsrc{font-size:10.5px;line-height:1.3;color:#5b6b63;text-align:right} #rainBar .rsrc a{color:#0d47a1}
   .rainX{display:none;position:absolute;z-index:640;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;pointer-events:none}
   body.rainCtr .rainX{display:block}
@@ -1161,7 +1162,7 @@ const RAIN=(function(){
   const $=id=>document.getElementById(id);
   const mem=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem('rain_'+k); localStorage.setItem('rain_'+k,v); }catch(e){ return null; } };   // 前後1時間／15時間先／雷のどれを見ていたかは、この端末に覚えておく
   const MODES=['1h','15h'];
-  let on=false, mode=MODES.includes(mem('mode'))?mem('mode'):'1h', frames=[], idx=0, nowIdx=0, th=[], liT=[], playing=false, playT=null, wait=0, refT=null, busy=false, err='', lastKey='', stamp=0, all=false, rsCache=null;
+  let on=false, mode=MODES.includes(mem('mode'))?mem('mode'):'1h', frames=[], idx=0, nowIdx=0, th=[], liT=[], playing=false, playT=null, wait=0, refT=null, busy=false, err='', lastKey='', stamp=0, all=false, rsCache=null, obsT=0;   // obsT = 気象庁の最新の実況の時刻
   let pt=null, ptKind='center', ptMk=null, ptShown=false;   // 地点の雨を見る場所（center=地図の真ん中／tap=タップした所／geo=現在地）
   const layers=new Map();   // こまの鍵 → タイルの層
     function ft(u,o,read,ms){ const c=typeof AbortController==='function'?new AbortController():null, t=c?setTimeout(()=>c.abort(),ms||15000):0;   // 読み込みに上限15秒（止まった通信で、ほかの操作が待たされないように）
@@ -1194,6 +1195,17 @@ const RAIN=(function(){
     const no=pick('none').filter(e=>e.validtime>lim), t0=ms(a.validtime);
     return [fr('rasrf','rasrf',a,'an'),...im.map(e=>fr('rasrf','rasrf',e,'fc')),...no.map(e=>fr('rasrf','rasrf',e,'fc'))].filter(f=>f.t-t0<=15.6*36e5);
   }
+  const nowMs=()=>typeof window.__rainNow==='function'?window.__rainNow():Date.now();   // 現在の時刻（試験で、時計を固定するための入り口）
+  // 「いま」＝実際の時刻にいちばん近い5分のこま。気象庁の実況は5分刻みで、出るまでにも数分かかるので、最新の実況は実際の時刻より最大10分ほど古い。
+  // 古いときは、気象庁が実況につづけて出している5分先・10分先の予報のこまを「いま」にして、時刻の表示を実際の時刻に合わせる（予報のこまは「予報」と表示する）。
+  // 実際の時刻が最新の実況より15分より先（気象庁の更新が止まっている）・手前（端末の時計が遅れている）のときは、予報では補わず、最新の実況を「いま」にする。
+  function nowWin(d){ const s5=3e5, T=Math.floor((nowMs()+s5/2-1)/s5)*s5, lag=T-d.last.t;   // 5分の区切りに丸める（ちょうど真ん中は、古いほうの実況）
+    const pick=lag>0&&lag<=15*6e4?(d.fc.find(f=>f.t===T)||d.last):d.last, fl=[...d.obs,...d.fc].filter(f=>f.t>=pick.t-36e5);
+    return {fl,ni:fl.indexOf(pick)}; }
+  // 次に気象庁の一覧を見に行くまで: ふだんは90秒。実況の次の5分が出るころ（最新の実況から5分たったあと）は30秒ごと。「いま」のこまが替わる時刻にも合わせる
+  function pollIn(){ const s5=3e5, now=nowMs(), toSlot=s5-((now+s5/2-1)%s5), due=mode==='1h'&&obsT&&now-obsT>=s5&&now-obsT<=20*6e4;
+    return Math.max(5e3,Math.min(9e4,toSlot+1500,due?3e4:9e4)); }
+  function arm(){ clearTimeout(refT); refT=setTimeout(()=>{ if(!on) return; if(!document.hidden) refresh(true); arm(); },pollIn()); }
   let again=false;
   async function refresh(keep){
     if(!on) return; if(busy){ again=true; return; } busy=true; const md=mode;   // 読み込み中に見るものを変えたら、終わってから読み直す
@@ -1201,9 +1213,9 @@ const RAIN=(function(){
       const d=await loadNow();
       let fl, ni0;
       if(mode==='15h'){ if(!rsCache||Date.now()-rsCache.at>3e5) rsCache={at:Date.now(),f:await loadRs()}; fl=rsCache.f; ni0=0; }
-      else { fl=[...d.obs.slice(-13),...d.fc]; ni0=Math.min(12,d.obs.slice(-13).length-1); }
+      else { const w=nowWin(d); fl=w.fl; ni0=w.ni; }
       if(!on||md!==mode) return;
-      err=''; th=d.th; liT=d.li;
+      err=''; th=d.th; liT=d.li; obsT=d.last.t;
       const key=md+'|'+fl.map(f=>f.k).join(',');
       if(key!==lastKey){
         const curT=frames[idx]&&frames[idx].t, wasNow=idx===nowIdx;
@@ -1258,6 +1270,7 @@ const RAIN=(function(){
     b.innerHTML=barHtml(); if(playing) setPlayBtn(true);
     if(fk){ const e=b.querySelector(fk); if(e) e.focus(); }
     placeX(); }
+  const nowFc=()=>mode==='1h'&&frames[nowIdx]&&frames[nowIdx].kind==='fc';   // 「いま」が、実況でなく予報のこま
   function barHtml(){
     const sb=(m,t,a)=>`<button type="button" data-r="m:${m}" aria-pressed="${mode===m}"${mode===m?' class="on"':''}${a?` aria-label="${a}"`:''}>${t}</button>`;
     const seg=`<span class="rseg" role="group" aria-label="見るもの">${sb('1h','<b class="wd">前後</b>1時間','前後1時間の雨雲')}${sb('15h','15時間<b class="wd">先</b>','15時間先までの雨')}</span>`;
@@ -1266,7 +1279,7 @@ const RAIN=(function(){
     return `<div class="rhd"><button type="button" class="rplay" data-r="play" aria-label="再生">▶</button><span class="rt" id="rainT" aria-live="off"></span><span class="sp"></span>${seg}${x}</div>`
       +`<div class="rsl"><input type="range" id="rainS" min="0" max="${frames.length-1}" step="1" value="${idx}" aria-label="時刻"><div class="rticks">${ticks()}</div></div>`
       +`<div class="rpt" id="rainPt"></div>`
-      +`<div class="rlgbox">${legend()}</div><div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a>（地点の文は加工して作成）</div>`; }
+      +`<div class="rlgbox">${legend()}</div>${nowFc()?`<div class="robs">実況は ${hm(obsT)} まで。「いま」は、気象庁の予報で補っています。</div>`:''}<div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a>（地点の文は加工して作成）</div>`; }
   // 地図の真ん中（＋）は、帯にかくれない「見えている所」の真ん中（帯の上の部分の真ん中）。帯を作り直したとき・画面の大きさが変わったときに決める
   // ＋が動くときは、地図も同じだけずらして、＋の下の場所を変えない（開く前に見ていた所が、そのまま＋の所に来る）。共有リンクの位置も、＋の所
   let ctrY=null;
@@ -1309,7 +1322,7 @@ const RAIN=(function(){
   const km=(a,b)=>{ const R6=6371, p1=a.lat*Math.PI/180, p2=b.lat*Math.PI/180, dp=p2-p1, dl=(b.lng-a.lng)*Math.PI/180, h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2; return 2*R6*Math.asin(Math.sqrt(h)); };
   let ptSeq=0, ptT=null;
   async function point(){ const box=$('rainPt'); if(!box||!frames.length) return;
-    const seq=++ptSeq, md=mode, fr0=frames, ni=nowIdx, n0=fr0[ni].t, th0=th, li0=liT, pal=LV;
+    const seq=++ptSeq, md=mode, fr0=frames, ni=nowIdx, n0=fr0[ni].t, oT=md==='15h'?n0:obsT, th0=th, li0=liT, pal=LV;
     const live=()=>seq===ptSeq&&on&&md===mode&&frames===fr0;   // 読む間に、閉じた・見るものを変えた・新しいデータになったときは、何もしない
     const c=pt||ctrLL(), lat=c.lat, lon=c.lng, where=ptKind==='geo'?'現在地':ptKind==='tap'?'タップした所':'地図の真ん中（＋）';
     if(!ptShown) box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="rmsg">雨の見込みを調べています…</span></div>`;
@@ -1319,7 +1332,7 @@ const RAIN=(function(){
     const geoB=`<button type="button" class="rgeo" data-r="geo">現在地で見る</button>`;
     const reB=' <button type="button" class="rre" data-r="re">もう一度</button>';
     ptShown=true;
-    const old=Date.now()-n0>(md==='15h'?45:20)*6e4?`<div class="rold">※ 気象庁のデータが ${hm(n0)} のまま新しくなっていません（通信を確かめてください）。</div>`:'';
+    const old=nowMs()-oT>(md==='15h'?45:20)*6e4?`<div class="rold">※ 気象庁のデータが ${hm(oT)} のまま新しくなっていません（通信を確かめてください）。</div>`:'';
     if(ks.every(k=>k===null)){ box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="sp"></span>${geoB}</div><div class="rsay rmsg">この場所の雨のようすを読み込めませんでした。${reB}</div>${old}`; return; }
     const ok=k=>k!=null&&k>=0, mins=i=>Math.round((fl[i].t-fl[0].t)/6e4), k0=ks[0], r=ks.slice(1), mx=Math.max(-1,...r.map(k=>k??-1));
     const part=!r.length?'none':r.some(k=>k==null)?'some':'';   // 予報が出ていない・一部読めない → 結論を言わない
@@ -1358,8 +1371,8 @@ const RAIN=(function(){
       if(!document.querySelector('.rainX')){ const xh=document.createElement('div'); xh.className='rainX'; xh.setAttribute('aria-hidden','true'); document.querySelector('.mapwrap').appendChild(xh); }
       setPoint(pt,ptKind);
       buildBar(); await refresh(false); if(!on) return;
-      clearInterval(refT); refT=setInterval(()=>{ if(!document.hidden) refresh(true); },9e4);
-    } else { play(false); clearInterval(refT); refT=null; clearLayers(); frames=[]; lastKey=''; all=false; ptShown=false; ptSeq++; ctrY=null;
+      arm();
+    } else { play(false); clearTimeout(refT); refT=null; clearLayers(); frames=[]; lastKey=''; all=false; ptShown=false; ptSeq++; ctrY=null;
       if(ptMk){ map.removeLayer(ptMk); ptMk=null; } document.body.classList.remove('rainCtr');
       const b=$('rainBar'); if(b) b.remove();
       }
@@ -1384,7 +1397,7 @@ const RAIN=(function(){
     d.innerHTML='<button type="button" class="rainBtn" aria-pressed="false" title="雨雲レーダー（気象庁）"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15.5a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 7.6a3.9 3.9 0 0 1-.6 7.9z" fill="currentColor"/><path d="M8.5 18l-1 2.5M12.5 18l-1 2.5M16.5 18l-1 2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg><span>雨雲</span></button>';
     L.DomEvent.disableClickPropagation(d); d.querySelector('button').onclick=()=>toggle(); return d; };
   ctl.addTo(map);
-  return {toggle, isOn:()=>on, mode:()=>mode, viewCenter:ctrLL, _flush:()=>{ pxCache.clear(); liCache.clear(); }, setPoint, showAt, refresh, setMode, play, show, _state:()=>({on,mode,idx,nowIdx,n:frames.length,all,playing,frames:frames.map(f=>f.k),th:th.length,li:liT.length,pt:pt&&[pt.lat,pt.lng],ptKind,err,layers:layers.size,ref:!!refT,ctrY,vis:frames[idx]&&frames[idx].k,tz:(()=>{ const l=frames[idx]&&layers.get(frames[idx].k); return l?l._tileZoom:null; })(),onMap:[...layers.values()].filter(l=>map.hasLayer(l)).length}), _at:at, _cls:cls, LV, TH};
+  return {toggle, isOn:()=>on, mode:()=>mode, viewCenter:ctrLL, _flush:()=>{ pxCache.clear(); liCache.clear(); }, setPoint, showAt, refresh, setMode, play, show, _pollIn:pollIn, _state:()=>({on,mode,idx,nowIdx,n:frames.length,all,playing,frames:frames.map(f=>f.k),th:th.length,li:liT.length,pt:pt&&[pt.lat,pt.lng],ptKind,err,layers:layers.size,ref:!!refT,ctrY,vis:frames[idx]&&frames[idx].k,tz:(()=>{ const l=frames[idx]&&layers.get(frames[idx].k); return l?l._tileZoom:null; })(),onMap:[...layers.values()].filter(l=>map.hasLayer(l)).length}), _at:at, _cls:cls, LV, TH};
 })();
 let geoLayer=null;
 
