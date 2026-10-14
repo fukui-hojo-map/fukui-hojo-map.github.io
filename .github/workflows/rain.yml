@@ -4,7 +4,7 @@
 name: rain
 on:
   schedule:
-    - cron: '21,51 * * * *'    # 気象庁の30分ごとの解析が出るのは、その時刻の15〜20分あと
+    - cron: '3-59/10 * * * *'   # 10分ごとに起こす（GitHub の定時は遅れたり、とばされたりするので多めに）。新しい解析がなければ、すぐ終わって何も置かない
   workflow_dispatch:
   push:
     branches: [main]
@@ -28,10 +28,12 @@ jobs:
       - name: 雨量を作る
         run: |
           set -o pipefail
-          python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 1300 --max-new 80 2>&1 | tee data/log_now.txt
-          tail -n 400 data/log_now.txt > data/log.txt; rm -f data/log_now.txt
+          export RAIN_NOCHANGE_FILE="$RUNNER_TEMP/nochange"
+          python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 1300 --max-new 80 2>&1 | tee "$RUNNER_TEMP/log_now.txt"
+          if [ ! -f "$RUNNER_TEMP/nochange" ]; then tail -n 400 "$RUNNER_TEMP/log_now.txt" > data/log.txt; fi
       - name: 置く（1つのコミットに置きかえ）
         run: |
+          if [ -f "$RUNNER_TEMP/nochange" ]; then echo "新しい解析なし（置きかえない）"; exit 0; fi
           cd data
           git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
           git checkout -q --orphan next
