@@ -301,6 +301,14 @@ def main():
         if ts >= recent: return True   # 新しい時刻は、出そろうまで毎回読む
         return fails.get(ts, 0) < MAXF
     todo = [ts for ts in reversed(series) if want(ts)][:a.max_new]   # 新しい時刻から
+    # 前の回と同じ時刻で、読むものもないときは、何もしない（10分ごとに起こしても、変わったときだけ置きかえる）
+    try: prev_t = open(os.path.join(a.out, "t.txt")).read().strip()
+    except Exception: prev_t = ""
+    if not a.at and prev_t == T.strftime("%Y-%m-%dT%H:%M:%SZ") and not todo:
+        log("no change", prev_t)
+        nf = os.environ.get("RAIN_NOCHANGE_FILE")
+        if nf: open(nf, "w").write(prev_t)
+        return
     log("latest", an[-1], "use", T.strftime("%Y%m%d%H%M"), "need", len([s for s in series if s not in full]), "partial", len([s for s in series if s in part]), "fetch now", len(todo))
     failed = []
     for ts in todo:
