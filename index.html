@@ -964,12 +964,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #rainBar .rtick:first-child{transform:none} #rainBar .rtick:last-child{transform:translateX(-100%)}
   #rainBar .rpt{margin-top:2px;padding:3px 8px;border-radius:9px;background:#f2f6fb;min-height:26px}
   #rainBar .rwl{display:flex;align-items:center;gap:8px;min-height:24px} #rainBar .rwh{font-weight:700;font-size:12.5px;color:#0d47a1;white-space:nowrap}
-  #rainBar .rcells{display:flex;flex:1;gap:2px;min-width:60px;max-width:260px} #rainBar .rcells i{flex:1;height:13px;border-radius:2px;border:1px solid #b9c6d6;cursor:pointer}
-  #rainBar .rcells i.on{outline:2px solid #0d47a1;outline-offset:1px}
+  #rainBar .rstrip{position:relative;height:14px;margin:0 8px 1px} #rainBar .rstrip i{position:absolute;top:0;height:13px;box-sizing:border-box;border-radius:2px;border:1px solid #b9c6d6;cursor:pointer;transform:translateX(-50%)}   /* この場所の雨の強さ。スライダーの、それぞれの時刻の真上に並べる */
+  #rainBar .rstrip i.on{outline:2px solid #0d47a1;outline-offset:1px;z-index:1} #rainBar .rstrip .cap{position:absolute;left:0;top:0;font-size:11px;line-height:13px;color:#5b6b63;white-space:nowrap;pointer-events:none}
   #rainBar .rgeo{flex:none;font-size:12px;border:1px solid #9fb3cc;background:#fff;color:#0d47a1;border-radius:8px;padding:2px 7px;min-height:24px}
   #rainBar .rsay{margin-top:1px} #rainBar .rthw{margin-top:2px;color:#7a4300;font-weight:700}
-  #rainBar .racc{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;margin-top:3px;padding-top:3px;border-top:1px dashed #c9d6e6;font-size:12.5px;line-height:1.45;color:#22313a} #rainBar .racc span{white-space:nowrap}
-  #rainBar .racc .rl{font-weight:700;color:#0d47a1} #rainBar .racc b{font-size:14.5px;color:#0d47a1} #rainBar .racc .rt2{color:#5b6b63;font-size:11.5px}
+  #rainBar .racc{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:6px;margin-top:3px;padding-top:3px;border-top:1px dashed #c9d6e6;font-size:12px;line-height:1.45;color:#22313a} #rainBar .racc span{white-space:nowrap}
+  #rainBar .racc .rl{font-weight:700;color:#0d47a1} #rainBar .racc b{font-size:13.5px;color:#0d47a1} #rainBar .racc .rt2{color:#5b6b63;font-size:11.5px}
   .raccbox{margin:8px 0 2px;padding:7px 10px;border:1px solid #cfdcec;border-radius:10px;background:#f4f8fd;font-size:13.5px} .raccbox[hidden]{display:none}
   .raccbox .rh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:700;color:#0d47a1} .raccbox .rh .hint{font-weight:400}
   .raccbox table{border-collapse:collapse;margin-top:4px;width:100%} .raccbox th{font-size:12px;font-weight:400;color:#4c5a52;text-align:right;padding:1px 6px} .raccbox th:first-child{text-align:left}
@@ -1032,7 +1032,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div id="selArea">
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
-    <div class="raccbox" id="raccSel" hidden></div>
     <div class="ctl">
       <button class="btn small" id="btnClear">すべて解除</button>
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
@@ -1047,6 +1046,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="hint" id="trendHint" style="display:none">生育傾向マップのときは、グラフは稲の年ごとに、いちばん茂った時の NDVI を「近くの、同じころに植えて同じころに刈った田」の平均とくらべた差を表示します（上ほど、その年よく育った）</div>
     <div class="status" id="status"></div>
     <div class="svgwrap"><svg class="chart" id="chart" viewBox="0 0 560 340" role="img" aria-label="NDVI推移"></svg><div class="tip" id="tip"></div></div>
+    <div class="raccbox" id="raccSel" hidden></div>
     <div class="btnrow3"><button class="btn small" id="btnPng"><span>グラフを</span><span>画像で保存</span></button><button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button><button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）"><span>日付を選んで</span><span>地図を出力</span></button></div>
     <div class="ctl"><span class="hint" id="note"></span></div>
     </div>
@@ -1164,7 +1164,7 @@ const RAINACC=(function(){
   function decode(o){ const a={};
     for(const w of o.w){ const b=o.a[String(w)]; if(!b){ a[w]=null; continue; }   // null＝データの欠けが多くて、その長さの雨量は分からない
       const s=atob(b), n=s.length>>1, v=new Float32Array(n); for(let i=0;i<n;i++) v[i]=(s.charCodeAt(2*i)|s.charCodeAt(2*i+1)<<8)/10; a[w]=v; }
-    return {t:Date.parse(o.t), made:Date.parse(o.made), g:o.grid, w:o.w, a, miss:o.miss||{}, chk:o.chk||null, chkT:o.chk_t?Date.parse(o.chk_t):null}; }
+    return {t:Date.parse(o.t), made:Date.parse(o.made), g:o.grid, w:o.w, a, miss:o.miss||{}}; }
   function load(force){ if(data&&!force&&Date.now()-at<10*6e4) return Promise.resolve(data); if(pend) return pend;
     const c=typeof AbortController==='function'?new AbortController():null, tm=c?setTimeout(()=>c.abort(),12000):0;
     pend=fetch(URL,{cache:'no-cache',credentials:'omit',signal:c?c.signal:undefined}).then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.json(); })
@@ -1179,12 +1179,12 @@ const RAINACC=(function(){
   const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const jst=t=>{ const d=new Date(t+9*36e5); return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2,'0')}`; };
   const until=d=>`${jst(d.t)}まで`+(Date.now()-d.t>3*36e5?'（更新が遅れています）':'');
-  const chkNote=d=>{ const c=d.chk&&d.chk['24']; return c&&c.n>=5&&c.med_rel!=null?`雨量計のある所（アメダス${c.n}か所）で比べたずれは、24時間で中央値 ${Math.round(c.med_rel*100)}%（${jst(d.chkT||d.t)}）。雨量計のない所では、もう少し大きいことがあります。`:'雨量計のある所で比べたずれは1割ほど（雨量計のない所では、もう少し大きいことがあります）。'; };
+  const fmtMm=v=>v==null||!isFinite(v)?'—':v<0.3?'0mm':v<1?'1mm未満':Math.round(v)+'mm';
   const anyMiss=d=>Object.values(d.miss||{}).some(n=>n>0);
-  const missNote=d=>Object.values(d.miss||{}).some(n=>n>0)?'（気象庁のデータが一部欠けた時間があり、少なめに出ていることがあります）':'';
+  const missNote=d=>anyMiss(d)?'気象庁のデータに欠けた時間があります（—は分からない、ほかは少なめのことがあります）。':'';
   // 雨雲の帯の、地点の雨の下に出す1行
   function line(r){ if(!r) return ''; const v=r.v;
-    return `<div class="racc" title="気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとにした推定"><span class="rl">降った雨</span>${[12,24,48].map(w=>`<span>${w}時間 <b>${fmt(v[w])}</b>${w===48&&v[w]!=null?'mm':''}</span>`).join('')}<span class="rt2">推定・${until(r)}${anyMiss(r)?'・気象庁のデータに欠けあり（—は分からない、ほかは少なめのことがある）':''}</span></div>`; }
+    return `<div class="racc" title="気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとにした推定"><span class="rl">降った雨</span>${[12,24,48].map(w=>`<span>${w}時間 <b>${fmtMm(v[w])}</b></span>`).join('')}<span class="rt2">推定・${until(r)}${anyMiss(r)?'・気象庁のデータに欠けあり（—は分からない、ほかは少なめのことがある）':''}</span></div>`; }
   // 選んだ圃場の表（右の欄）
   let selSeq=0;
   async function renderSel(){ const box=document.getElementById('raccSel'); if(!box) return; const seq=++selSeq;
@@ -1195,8 +1195,8 @@ const RAINACC=(function(){
     const rows=list.map(s=>{ const [lon,lat]=parcels[s.pid].centroid, v=val(d,lat,lon); return v?{s,v}:null; }).filter(Boolean);
     if(!rows.length){ box.hidden=true; return; }
     box.innerHTML=`<div class="rh">この圃場に降った雨（推定） <span class="hint">${until(d)}</span></div>`
-      +`<table><tr><th></th><th>12時間</th><th>24時間</th><th>48時間</th></tr>${rows.map(({s,v})=>`<tr><td style="color:${s.color}">${esc(selLabel(s.pid))}</td>${d.w.map(w=>`<td><b>${fmt(v[w])}</b></td>`).join('')}</tr>`).join('')}</table>`
-      +`<div class="rf">単位 mm。気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとに、1km四方ごとに組み立てた値です。${chkNote(d)}${missNote(d)}出典：気象庁ホームページ（加工して作成）</div>`;
+      +`<table><tr><th></th><th>12時間</th><th>24時間</th><th>48時間</th></tr>${rows.map(({s,v})=>`<tr><td style="color:${s.color}">${esc(selLabel(s.pid))}</td>${d.w.map(w=>`<td><b>${fmtMm(v[w])}</b></td>`).join('')}</tr>`).join('')}</table>`
+      +`<div class="rf">${missNote(d)}出典：気象庁ホームページ（加工して作成）</div>`;
     box.hidden=false; }
   return {load, at:atLL, fmt, line, renderSel, until, anyMiss, URL, _data:()=>data, _err:()=>err, _val:val};
 })();
@@ -1330,7 +1330,7 @@ const RAIN=(function(){
     const x=`<button type="button" class="rx" data-r="x" aria-label="雨雲レーダーを閉じる">×</button>`;
     if(!frames.length) return `<div class="rhd"><span class="rtl">雨雲レーダー</span><span class="sp"></span>${seg}${x}</div><div class="rpt"><span class="rmsg">${err||'気象庁のデータを読み込んでいます…'}</span>${err?' <button type="button" class="rre" data-r="re">もう一度</button>':''}</div>`;
     return `<div class="rhd"><button type="button" class="rplay" data-r="play" aria-label="再生">▶</button><span class="rt" id="rainT" aria-live="off"></span><span class="sp"></span>${seg}${x}</div>`
-      +`<div class="rsl"><input type="range" id="rainS" min="0" max="${frames.length-1}" step="1" value="${idx}" aria-label="時刻"><div class="rticks">${ticks()}</div></div>`
+      +`<div class="rsl"><div class="rstrip" id="rainStrip" aria-hidden="true"></div><input type="range" id="rainS" min="0" max="${frames.length-1}" step="1" value="${idx}" aria-label="時刻"><div class="rticks">${ticks()}</div></div>`
       +`<div class="rpt" id="rainPt"></div>`
       +`<div class="rlgbox">${legend()}</div>${nowFc()?`<div class="robs">実況は ${hm(obsT)} まで。「いま」は、気象庁の予報で補っています。</div>`:''}<div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a>（地点の文は加工して作成）</div>`; }
   // 地図の真ん中（＋）は、帯にかくれない「見えている所」の真ん中（帯の上の部分の真ん中）。帯を作り直したとき・画面の大きさが変わったときに決める
@@ -1379,7 +1379,8 @@ const RAIN=(function(){
     const live=()=>seq===ptSeq&&on&&md===mode&&frames===fr0;   // 読む間に、閉じた・見るものを変えた・新しいデータになったときは、何もしない
     const c=pt||ctrLL(), lat=c.lat, lon=c.lng, where=ptKind==='geo'?'現在地':ptKind==='tap'?'タップした所':'地図の真ん中（＋）';
     const accP=RAINACC.at(lat,lon).catch(()=>null);   // 降った雨（12・24・48時間）も、同じ場所で
-    if(!ptShown) box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="rmsg">雨の見込みを調べています…</span></div>`;
+    const setStrip=h=>{ const e=$('rainStrip'); if(e) e.innerHTML=h; };   // 帯が作り直されても、いまの帯に入れる
+    if(!ptShown){ setStrip(''); box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="rmsg">雨の見込みを調べています…</span></div>`; }
     const fl=fr0.slice(ni), ks=await Promise.all(fl.map(f=>at(f,lat,lon,pal))); if(!live()) return;
     const thk=md==='1h'?await Promise.all(th0.filter(f=>f.t>=n0-6e4).map(f=>at(f,lat,lon,TH).then(k=>[f,k]))):[]; if(!live()) return;
     const lis=md!=='15h'&&li0.length?await liFor(li0[li0.length-1].t,li0):[]; if(!live()) return;
@@ -1387,7 +1388,7 @@ const RAIN=(function(){
     const reB=' <button type="button" class="rre" data-r="re">もう一度</button>';
     ptShown=true;
     const old=nowMs()-oT>(md==='15h'?45:20)*6e4?`<div class="rold">※ 気象庁のデータが ${hm(oT)} のまま新しくなっていません（通信を確かめてください）。</div>`:'';
-    if(ks.every(k=>k===null)){ box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="sp"></span>${geoB}</div><div class="rsay rmsg">この場所の雨のようすを読み込めませんでした。${reB}</div>${old}`; return; }
+    if(ks.every(k=>k===null)){ setStrip(''); box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="sp"></span>${geoB}</div><div class="rsay rmsg">この場所の雨のようすを読み込めませんでした。${reB}</div>${old}`; return; }
     const ok=k=>k!=null&&k>=0, mins=i=>Math.round((fl[i].t-fl[0].t)/6e4), k0=ks[0], r=ks.slice(1), mx=Math.max(-1,...r.map(k=>k??-1));
     const part=!r.length?'none':r.some(k=>k==null)?'some':'';   // 予報が出ていない・一部読めない → 結論を言わない
     const w=k=>`「${TH[k].w}」（活動度${k+1}）`, rng=i=>`${hm(fl[i].t-36e5)}〜${hm(fl[i].t)}`;
@@ -1408,11 +1409,13 @@ const RAIN=(function(){
     const near=lis.map(g=>km(c,L.latLng(g.geometry.coordinates[1],g.geometry.coordinates[0]))).filter(d=>d<=20).sort((a,b)=>a-b);
     if(near.length) thS+=`${thS?' ':'⚡ '}気象庁の雷の観測では、この10分間に、ここから約${Math.max(1,Math.round(near[0]))}kmの所で雷がありました${near.length>1?`（20km以内で${near.length}回）`:''}。`;
     const acc=await Promise.race([accP,new Promise(r=>setTimeout(()=>r(undefined),400))]); if(!live()) return;   // 降った雨は待たない（読めたら、あとで足す）
-    const cells=ks.map((k,i)=>`<i data-i="${ni+i}" title="${md==='15h'?(i?rng(i):'直前1時間'):(i?mins(i)+'分後':'いま')}：${k==null?'読めません':nm(k)}" style="background:${ok(k)?`rgb(${pal[k].c})`:k==null?'repeating-linear-gradient(45deg,#c9ced6 0 2px,#fff 2px 4px)':'#fff'}"></i>`).join('');
-    box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="rcells" aria-hidden="true">${cells}</span>${geoB}</div><div class="rsay">${s}${part==='some'?reB:''}</div>${thS?`<div class="rthw">${thS}</div>`:''}${old}${acc?RAINACC.line(acc):''}`;
+    const nF=fr0.length, atF=j=>nF>1?j/(nF-1)*100:0;
+    const cells=ks.map((k,i)=>`<i data-i="${ni+i}" style="left:${atF(ni+i)}%;width:calc(${100/Math.max(1,nF-1)}% - 2px);background:${ok(k)?`rgb(${pal[k].c})`:k==null?'repeating-linear-gradient(45deg,#c9ced6 0 2px,#fff 2px 4px)':'#fff'}" title="${md==='15h'?(i?rng(i):'直前1時間'):(i?mins(i)+'分後':'いま')}：${k==null?'読めません':nm(k)}"></i>`).join('');
+    setStrip((md==='1h'&&ni>=6?'<span class="cap">この場所の雨</span>':'')+cells);
+    box.innerHTML=`<div class="rwl"><span class="rwh">${where}</span><span class="sp"></span>${geoB}</div><div class="rsay">${s}${part==='some'?reB:''}</div>${thS?`<div class="rthw">${thS}</div>`:''}${old}${acc?RAINACC.line(acc):''}`;
     if(acc===undefined) accP.then(r=>{ if(r&&live()&&!box.querySelector('.racc')) box.insertAdjacentHTML('beforeend',RAINACC.line(r)); });
     paintCells(); }
-  function paintCells(){ document.querySelectorAll('#rainPt .rcells i').forEach(x=>x.classList.toggle('on',+x.dataset.i===idx)); }
+  function paintCells(){ document.querySelectorAll('#rainStrip i').forEach(x=>x.classList.toggle('on',+x.dataset.i===idx)); }
   function showAt(ll){ setPoint(ll,'geo'); panVis(L.latLng(ll)); }   // 現在地: 印をつけて、見えている所の真ん中へ
   function setPoint(ll,kind){ pt=ll?L.latLng(ll):null; ptKind=ll?(kind||'tap'):'center'; ptShown=false;
     if(ptMk){ map.removeLayer(ptMk); ptMk=null; }
@@ -1436,7 +1439,7 @@ const RAIN=(function(){
   async function setMode(m){ if(m===mode||!on||!MODES.includes(m)) return; mode=m; mem('mode',m); play(false); clearLayers(); frames=[]; lastKey=''; all=false; ptShown=false; buildBar(); await refresh(false); if(typeof writeHash==='function'&&index) writeHash(); }
   document.addEventListener('visibilitychange',()=>{ if(!on) return; if(document.hidden) play(false); else if(Date.now()-stamp>6e4) refresh(true); });
   // 帯の中の操作
-  document.addEventListener('click',e=>{ const a=e.target.closest&&e.target.closest('#rainBar [data-r],#rainBar .rcells i'); if(!a) return;
+  document.addEventListener('click',e=>{ const a=e.target.closest&&e.target.closest('#rainBar [data-r],#rainBar .rstrip i'); if(!a) return;
     if(a.tagName==='I'){ play(false); show(+a.dataset.i); return; }
     const r=a.dataset.r;
     if(r==='x') toggle(false); else if(r==='play') play(); else if(r.startsWith('m:')) setMode(r.slice(2)); else if(r==='re'){ err=''; ptShown=false; if(!frames.length) buildBar(); refresh(true); }
