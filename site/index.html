@@ -947,42 +947,42 @@ svg.leaflet-image-layer.leaflet-interactive path {
   body.rainOn .leaflet-tile-pane{filter:saturate(.55) brightness(.8)}   /* 背景の写真を少し暗く。雨の色が見やすい */
   body.rainOn .leaflet-px-pane,body.rainOn .leaflet-overlay-pane{opacity:.35}   /* 区画の色（NDVI）を薄く。雨の色とまぎれない */
   body.rainOn .mapbar,body.rainOn #maphint{display:none!important}
-  #rainBar{position:absolute;z-index:700;left:8px;right:8px;bottom:24px;max-width:680px;margin:0 auto;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.24);padding:5px 9px 4px;font-size:13.5px;line-height:1.35;color:var(--ink);touch-action:manipulation}
+  #rainBar{position:absolute;z-index:700;left:8px;right:8px;bottom:24px;max-width:680px;margin:0 auto;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.24);padding:6px 9px 5px;font-size:13.5px;line-height:1.35;color:var(--ink);touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
   #rainBar button{font:inherit;cursor:pointer}
   #rainBar .sp{flex:1}
   #rainBar .rhd{display:flex;align-items:center;gap:8px;min-height:34px}
   #rainBar .rtl{font-weight:700;font-size:15px}
   #rainBar .rplay{flex:none;width:42px;height:34px;border-radius:10px;border:0;background:#0d47a1;color:#fff;font-size:15px}
-  #rainBar .rt{display:flex;flex-direction:column;min-width:0;line-height:1.15} #rainBar .rt b{font-size:16px;font-weight:700;white-space:nowrap} #rainBar .rk{font-size:11.5px;color:#4c5a52;white-space:nowrap} #rainBar .rk.fc{color:#b8442c;font-weight:700}
+  #rainBar .rt{display:flex;flex-direction:column;min-width:0;line-height:1.2} #rainBar .rt b{font-size:17px;font-weight:700;white-space:nowrap} #rainBar .rk{font-size:11.5px;color:#4c5a52;white-space:nowrap} #rainBar .rk.fc{color:#b8442c;font-weight:700}
   #rainBar .rseg{display:inline-flex;border:1.5px solid #0d47a1;border-radius:9px;overflow:hidden;flex:none}
-  #rainBar .rseg button{border:0;background:#fff;color:#0d47a1;font-size:13px;font-weight:700;padding:5px 9px;white-space:nowrap;min-height:30px;min-width:38px} #rainBar .rseg button+button{border-left:1.5px solid #0d47a1} #rainBar .rseg button.on{background:#0d47a1;color:#fff} #rainBar .rseg b{font-weight:inherit}
+  #rainBar .rseg button{border:0;background:#fff;color:#0d47a1;font-size:12.5px;font-weight:700;padding:5px 9px;white-space:nowrap;min-height:30px;min-width:38px} #rainBar .rseg button+button{border-left:1.5px solid #0d47a1} #rainBar .rseg button.on{background:#0d47a1;color:#fff} #rainBar .rseg b{font-weight:inherit}
   #rainBar .rx{flex:none;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;font-size:19px;line-height:1;color:#4c5a52}
-  #rainBar .rsl{position:relative;padding:0 2px 13px}
-  #rainBar input[type=range]{display:block;width:100%;margin:1px 0 0;height:24px;accent-color:#0d47a1;cursor:pointer}
-  #rainBar .rticks{position:absolute;left:10px;right:10px;bottom:0;height:13px;pointer-events:none}
-  #rainBar .rtick{position:absolute;transform:translateX(-50%);font-size:11px;line-height:13px;color:#4c5a52;white-space:nowrap} #rainBar .rtick.on{color:#0d47a1;font-weight:700}
+  #rainBar .rsl{position:relative;padding:0 2px 14px}
+  #rainBar input[type=range]{display:block;width:100%;margin:0;height:22px;accent-color:#0d47a1;cursor:pointer}
+  #rainBar .rticks{position:absolute;left:10px;right:10px;bottom:0;height:14px;pointer-events:none}
+  #rainBar .rtick{position:absolute;transform:translateX(-50%);font-size:11.5px;line-height:14px;color:#4c5a52;white-space:nowrap} #rainBar .rtick.on{color:#0d47a1}
   #rainBar .rtick:first-child{transform:none} #rainBar .rtick:last-child{transform:translateX(-100%)}
-  #rainBar .rpt{margin-top:2px;padding:3px 8px;border-radius:9px;background:#f2f6fb;min-height:26px}
-  #rainBar .rwl{display:flex;align-items:center;gap:8px;min-height:24px} #rainBar .rwh{font-weight:700;font-size:12.5px;color:#0d47a1;white-space:nowrap}
-  #rainBar .rstrip{position:relative;height:14px;margin:0 8px 1px} #rainBar .rstrip i{position:absolute;top:0;height:13px;box-sizing:border-box;border-radius:2px;border:1px solid #b9c6d6;cursor:pointer;transform:translateX(-50%)}   /* この場所の雨の強さ。スライダーの、それぞれの時刻の真上に並べる */
-  #rainBar .rstrip i.on{outline:2px solid #0d47a1;outline-offset:1px;z-index:1} #rainBar .rstrip .cap{position:absolute;left:0;top:0;font-size:11px;line-height:13px;color:#5b6b63;white-space:nowrap;pointer-events:none}
-  #rainBar .rgeo{flex:none;font-size:12px;border:1px solid #9fb3cc;background:#fff;color:#0d47a1;border-radius:8px;padding:2px 7px;min-height:24px}
-  #rainBar .rsay{margin-top:1px} #rainBar .rthw{margin-top:2px;color:#7a4300;font-weight:700}
-  #rainBar .racc{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:6px;margin-top:3px;padding-top:3px;border-top:1px dashed #c9d6e6;font-size:12px;line-height:1.45;color:#22313a} #rainBar .racc span{white-space:nowrap}
-  #rainBar .racc .rl{font-weight:700;color:#0d47a1} #rainBar .racc b{font-size:13.5px;color:#0d47a1} #rainBar .racc .rt2{color:#5b6b63;font-size:11.5px}
+  #rainBar .rpt{margin-top:2px;padding:4px 9px 5px;border-radius:10px;background:#f2f6fb;min-height:26px}
+  #rainBar .rwl{display:flex;align-items:center;gap:8px;min-height:24px} #rainBar .rwh{font-weight:700;font-size:13.5px;color:#0d47a1;white-space:nowrap}
+  #rainBar .rstrip{position:relative;height:15px;margin:5px 8px 2px} #rainBar .rstrip i{position:absolute;top:0;height:14px;max-width:26px;box-sizing:border-box;border-radius:3px;border:1px solid #9aabbd;cursor:pointer;transform:translateX(-50%)}   /* この場所の雨の強さ。スライダーの、それぞれの時刻の真上に並べる */
+  #rainBar .rstrip i.on{outline:2px solid #0d47a1;outline-offset:1px;z-index:1} #rainBar .rstrip .cap{position:absolute;left:0;top:0;font-size:11.5px;line-height:14px;color:#4c5a52;white-space:nowrap;pointer-events:none}
+  #rainBar .rgeo{flex:none;font-size:12.5px;border:1px solid #9fb3cc;background:#fff;color:#0d47a1;border-radius:8px;padding:2px 8px;min-height:24px}
+  #rainBar .rsay{margin-top:2px} #rainBar .rthw{margin-top:3px;color:#7a4300;font-weight:700}
+  #rainBar .racc{display:flex;align-items:stretch;gap:6px;margin-top:4px;padding-top:5px;border-top:1px dashed #c9d6e6;color:#22313a}
+  #rainBar .racc .rah{flex:none;display:flex;flex-direction:column;justify-content:center;gap:1px;padding-right:2px;min-width:0} #rainBar .racc .rl{font-weight:700;font-size:12.5px;line-height:1.25;color:#0d47a1;white-space:nowrap} #rainBar .racc .rt2{font-size:11.5px;line-height:1.25;color:#5b6b63;white-space:nowrap}
+  #rainBar .racc .rav{flex:1;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px} #rainBar .racc .rv{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 2px 3px;border-radius:8px;background:#e6eef8;line-height:1.2;white-space:nowrap} #rainBar .racc .rv small{font-size:11.5px;color:#4c5a52} #rainBar .racc .rv b{font-size:15px;font-weight:700;color:#0d47a1} #rainBar .racc .rv b.na{color:#8a96a3}
   .raccbox{margin:8px 0 2px;padding:7px 10px;border:1px solid #cfdcec;border-radius:10px;background:#f4f8fd;font-size:13.5px} .raccbox[hidden]{display:none}
   .raccbox .rh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:700;color:#0d47a1} .raccbox .rh .hint{font-weight:400}
   .raccbox table{border-collapse:collapse;margin-top:4px;width:100%} .raccbox th{font-size:12px;font-weight:400;color:#4c5a52;text-align:right;padding:1px 6px} .raccbox th:first-child{text-align:left}
   .raccbox td{text-align:right;padding:2px 6px;border-top:1px solid #e1e9f3;font-variant-numeric:tabular-nums} .raccbox td:first-child{text-align:left;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12em} .raccbox td b{font-size:15px}
   .raccbox .rf{margin-top:4px;font-size:11.5px;color:#5b6b63;line-height:1.4}
-  #rainBar .rmsg{color:#4c5a52} #rainBar .rold{margin-top:2px;font-size:12px;color:#8a4b00} #rainBar .rre{font-size:12.5px;border:1px solid #0d47a1;background:#fff;color:#0d47a1;border-radius:8px;padding:3px 9px;margin-left:4px}
+  #rainBar .rmsg{color:#4c5a52} #rainBar .rold{margin-top:3px;font-size:11.5px;color:#8a4b00} #rainBar .rre{font-size:12.5px;border:1px solid #0d47a1;background:#fff;color:#0d47a1;border-radius:8px;padding:3px 9px;margin-left:4px}
   /* 雨の強さの色の凡例: 帯のすぐ上、地図の左下 */
-  #rainBar .rlgbox{position:absolute;left:0;bottom:calc(100% + 6px);background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:9px;padding:3px 7px 0;box-shadow:0 1px 5px rgba(0,0,0,.2);font-size:12px;color:#4c5a52}
-  #rainBar .rlg{display:inline-flex;align-items:flex-start;padding-bottom:11px;white-space:nowrap} #rainBar .rlg .u{font-size:10.5px;font-weight:700;margin-right:4px;line-height:10px}
+  #rainBar .rlgbox{position:absolute;left:0;bottom:calc(100% + 6px);background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:9px;padding:3px 7px 0;box-shadow:0 1px 5px rgba(0,0,0,.2);font-size:10.5px;color:#4c5a52}
+  #rainBar .rlg{display:inline-flex;align-items:flex-start;padding-bottom:12px;white-space:nowrap} #rainBar .rlg .u{font-size:10.5px;font-weight:700;margin-right:5px;line-height:10px}
   #rainBar .rlg i{position:relative;display:inline-block;width:17px;height:10px;border-top:1px solid rgba(0,0,0,.15);border-bottom:1px solid rgba(0,0,0,.15)} #rainBar .rlg i:first-of-type{border-left:1px solid rgba(0,0,0,.15)}
-  #rainBar .rlg i b{position:absolute;left:0;top:10px;transform:translateX(-50%);font-size:9.5px;font-weight:400;line-height:11px;color:#33433b}
-  #rainBar .robs{margin-top:2px;font-size:10.5px;line-height:1.3;color:#7a4300}
-  #rainBar .rsrc{font-size:10.5px;line-height:1.3;color:#5b6b63;text-align:right} #rainBar .rsrc a{color:#0d47a1}
+  #rainBar .rlg i b{position:absolute;left:0;top:11px;transform:translateX(-50%);font-size:10.5px;font-weight:400;line-height:11px;color:#33433b}
+  #rainBar .rfoot{margin-top:3px;font-size:11.5px;line-height:1.4;text-align:left} #rainBar .robs{color:#7a4300} #rainBar .rsrc{color:#5b6b63} #rainBar .rsrc a{color:#0d47a1}
   .rainX{display:none;position:absolute;z-index:640;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;pointer-events:none}
   body.rainCtr .rainX{display:block}
   .rainX::before,.rainX::after{content:'';position:absolute;background:#0d47a1;box-shadow:0 0 0 1.5px #fff}
@@ -990,12 +990,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .rainPin span{display:block;width:22px;height:22px;border-radius:50%;background:#0d47a1;border:3px solid #fff;box-shadow:0 0 0 2px #0d47a1,0 2px 6px rgba(0,0,0,.4)}
   @media (max-width:860px){
     body.rainOn .layout{grid-template-rows:76vh auto} body.rainOn #map{height:76vh}   /* スマホ: 雨雲の間は地図を縦に広く */
-    #rainBar{left:4px;right:4px;bottom:20px;padding:4px 8px 3px;font-size:13px}
-    #rainBar .rseg button{padding:5px 7px;font-size:12.5px}
+    #rainBar{left:4px;right:4px;bottom:20px;padding:5px 8px 4px}
+    #rainBar .rseg button{padding:5px 7px}
   }
-  @media (max-height:560px){ #rainBar{padding:3px 8px} #rainBar .rhd{min-height:30px} #rainBar .rplay{height:30px} #rainBar .rx{width:30px;height:30px} #rainBar input[type=range]{height:22px;margin-top:0} #rainBar .rpt{margin-top:2px;padding:2px 6px;font-size:12.5px} #rainBar .rsrc{display:none} }   /* 横向きのスマホなど、背の低い画面: 帯を低く */
+  @media (max-height:560px){ #rainBar{padding:3px 8px} #rainBar .rhd{min-height:30px} #rainBar .rplay{height:30px} #rainBar .rx{width:30px;height:30px} #rainBar input[type=range]{height:22px;margin-top:0} #rainBar .rpt{margin-top:2px;padding:2px 6px} #rainBar .rfoot{margin-top:2px} }   /* 横向きのスマホなど、背の低い画面: 帯を低く */
   @media (max-width:440px){ #rainBar .rseg .wd{display:none} }   /* 狭い画面は「1時間」「15時間」 */
-  @media (max-width:400px){ #rainBar .rt b{font-size:16px} #rainBar .rseg button{padding:6px 5px;font-size:12px} #rainBar .rhd{gap:6px} }
+  @media (max-width:400px){ #rainBar .rseg button{padding:6px 5px} #rainBar .rhd{gap:6px} }
+  @media (max-width:359px){ #rainBar .rplay{width:36px} #rainBar .rx{width:30px;height:30px} #rainBar .rseg button{padding:6px 4px;min-width:34px} #rainBar .racc .rah{display:none} }
   .drop-over::after{content:"ここに離すと読み込みます";position:fixed;inset:0;background:rgba(47,125,79,.85);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;z-index:9999}
   @media (max-width:860px){
     .layout{grid-template-columns:1fr;height:auto;grid-template-rows:56vh auto}
@@ -1179,12 +1180,15 @@ const RAINACC=(function(){
   const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const jst=t=>{ const d=new Date(t+9*36e5); return `${d.getUTCMonth()+1}/${d.getUTCDate()} ${d.getUTCHours()}:${String(d.getUTCMinutes()).padStart(2,'0')}`; };
   const until=d=>`${jst(d.t)}まで`+(Date.now()-d.t>3*36e5?'（更新が遅れています）':'');
+  const jstDay=t=>{ const d=new Date(t+9*36e5); return d.getUTCFullYear()*10000+(d.getUTCMonth()+1)*100+d.getUTCDate(); };
+  const untilS=d=>{ const s=jstDay(d.t)===jstDay(Date.now())?jst(d.t).split(' ')[1]:jst(d.t); return s+'まで'; };   // 帯の中は短く（今日なら時刻だけ）
   const fmtMm=v=>v==null||!isFinite(v)?'—':v<0.3?'0mm':v<1?'1mm未満':Math.round(v)+'mm';
   const anyMiss=d=>Object.values(d.miss||{}).some(n=>n>0);
   const missNote=d=>anyMiss(d)?'気象庁のデータに欠けた時間があります（—は分からない、ほかは少なめのことがあります）。':'';
   // 雨雲の帯の、地点の雨の下に出す1行
   function line(r){ if(!r) return ''; const v=r.v;
-    return `<div class="racc" title="気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとにした推定"><span class="rl">降った雨</span>${[12,24,48].map(w=>`<span>${w}時間 <b>${fmtMm(v[w])}</b></span>`).join('')}<span class="rt2">推定・${until(r)}${anyMiss(r)?'・気象庁のデータに欠けあり（—は分からない、ほかは少なめのことがある）':''}</span></div>`; }
+    const stale=Date.now()-r.t>3*36e5, tm=untilS(r);
+    return `<div class="racc" title="気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとにした推定${anyMiss(r)?'。気象庁のデータに欠けた時間があります（—は分からない、ほかは少なめのことがあります）':''}"><div class="rah"><span class="rl">降った雨</span><span class="rt2"${stale?' style="color:#8a4b00" title="気象庁の解析の更新が遅れています"':''}>推定 ${tm}${anyMiss(r)?'・欠けあり':''}</span></div><div class="rav">${[12,24,48].map(w=>`<span class="rv"><small>${w}時間</small><b${v[w]==null?' class="na"':''}>${fmtMm(v[w])}</b></span>`).join('')}</div></div>`; }
   // 選んだ圃場の表（右の欄）
   let selSeq=0;
   async function renderSel(){ const box=document.getElementById('raccSel'); if(!box) return; const seq=++selSeq;
@@ -1332,7 +1336,7 @@ const RAIN=(function(){
     return `<div class="rhd"><button type="button" class="rplay" data-r="play" aria-label="再生">▶</button><span class="rt" id="rainT" aria-live="off"></span><span class="sp"></span>${seg}${x}</div>`
       +`<div class="rsl"><div class="rstrip" id="rainStrip" aria-hidden="true"></div><input type="range" id="rainS" min="0" max="${frames.length-1}" step="1" value="${idx}" aria-label="時刻"><div class="rticks">${ticks()}</div></div>`
       +`<div class="rpt" id="rainPt"></div>`
-      +`<div class="rlgbox">${legend()}</div>${nowFc()?`<div class="robs">実況は ${hm(obsT)} まで。「いま」は、気象庁の予報で補っています。</div>`:''}<div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a>（地点の文は加工して作成）</div>`; }
+      +`<div class="rlgbox">${legend()}</div><div class="rfoot">${nowFc()?`<div class="robs">実況は ${hm(obsT)} まで。「いま」は、気象庁の予報で補っています。</div>`:''}<div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a>（地点の文は加工して作成）</div></div>`; }
   // 地図の真ん中（＋）は、帯にかくれない「見えている所」の真ん中（帯の上の部分の真ん中）。帯を作り直したとき・画面の大きさが変わったときに決める
   // ＋が動くときは、地図も同じだけずらして、＋の下の場所を変えない（開く前に見ていた所が、そのまま＋の所に来る）。共有リンクの位置も、＋の所
   let ctrY=null;
