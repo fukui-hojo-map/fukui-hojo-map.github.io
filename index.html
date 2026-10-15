@@ -809,7 +809,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .splitter:hover,.splitter.drag{background:var(--accent)}
   .mapbar{position:absolute;z-index:500;left:6px;bottom:6px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:13px;width:250px;max-width:calc(100% - 12px);box-shadow:0 1px 5px rgba(0,0,0,.12)}
   .mapbar select{font:inherit;font-size:13.5px;padding:1px 2px;border:1px solid var(--line);border-radius:4px;max-width:165px}
-  .mapbar .ctl{gap:4px;flex-wrap:nowrap} .mapbar .ib{border:0;background:none;color:var(--ink2);font-size:15px;cursor:pointer;padding:0 2px;line-height:1} .mapbar .more{display:none} .mapbar.open .more{display:block}
+  .mapbar .ctl{gap:4px;flex-wrap:nowrap} .mapbar .ib{border:0;background:none;color:var(--ink2);font-size:15px;cursor:pointer;padding:0 2px;line-height:1} .mapbar .more{display:none} .mapbar.open .more{display:block;max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .mapbar .bar{height:7px;border-radius:3px;background:linear-gradient(90deg,#a0522d,#f5e663,#7fc41c,#0b6b1e);margin:5px 0 2px}
   .mapbar .lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink2);gap:4px}
   .mapbar .bar.rel{background:linear-gradient(90deg,#a0522d,#f5e663,#0b6b1e)}
@@ -1022,8 +1022,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div id="map"></div>
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
-      <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません"></select><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><span id="elevCtl" style="display:none;gap:4px;align-items:center"><span style="white-space:nowrap">比べる範囲</span><select id="elevR" title="周りの田の範囲（その田から何m以内の田とくらべるか）"><option value="300">300m</option><option value="1000" selected>1km</option><option value="2000">2km</option></select></span><input type="checkbox" id="colorOn" checked hidden></div>
+      <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません"></select><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><input type="checkbox" id="colorOn" checked hidden></div>
       <div class="ctl" style="margin:2px 0 0"><span>表示モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ（絶対表示）</option><option value="elevr">高低差マップ（相対表示）</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      <div class="ctl" id="elevCtl" style="margin:3px 0 0;display:none"><span style="white-space:nowrap">比べる範囲</span><select id="elevR" title="その圃場から何m以内の、ほかの圃場とくらべるか"><option value="300">半径300m</option><option value="1000" selected>半径1km</option><option value="2000">半径2km</option></select></div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
     </div>
@@ -1815,19 +1816,21 @@ function drawElev(pid,e){   // 田の中の高低差を地図に描く。戻り�
   for(let i=0;i<isEdge.length;i++) if(isEdge[i]) val[i]=NaN;   // 縁は畦畔・水路の高さが混ざるので、周りの値でうめる（pxOverlay）
   pxOverlay(R,M15,val,v=>elevColor((v-med)/span),med,bandOn()?{kind:'elev',t:v=>(v-med)/span}:null);
   const info={med,span,rng:Math.round(100*(q(0.95)-q(0.05)))}; elevInfo.set(pid,info); return info; }
-function renderElevSel(){   // 右の欄: 選んだ圃場の標高・周りの田との差（絶対表示）・田の中の高低差（相対表示）
+function renderElevSel(){   // 右の欄: 選んだ圃場の標高・半径Rの圃場との差（絶対表示）・圃場内の高低差（相対表示）
   const box=document.getElementById('elevSel'); if(!box) return; const list=selected.filter(s=>parcels[s.pid]);
   const fm=fillMode(), rel=fm==='elevr'; if((fm!=='elev'&&!rel)||!list.length){ box.hidden=true; box.innerHTML=''; return; }
   const cm=v=>v==null?'—':(v>0?'+':v<0?'−':'±')+Math.abs(v)+'cm';
   const R=elevR(), rows=list.map(s=>{ const a=elevRow(s.pid), f=elevInfo.get(s.pid), q=elevRel(s.pid);
     return `<tr><td style="color:${s.color}">${escH(selLabel(s.pid))}</td><td><b>${a?(a[0]/100).toFixed(1)+'m':'—'}</b></td><td><b>${cm(q?q.v:null)}</b></td>${rel?`<td><b>${f?f.rng+'cm':'—'}</b></td>`:''}</tr>`; }).join('');
   box.hidden=false;
-  box.innerHTML=`<div class="rh"><b>この圃場の高さ</b><span class="hint">国土地理院の5m標高</span></div><table><tr><th></th><th>標高</th><th>周り${elevRlabel(R)}の田との差</th>${rel?'<th>田の中の差</th>':''}</tr>${rows}</table>`
-    +`<div class="rf">周りの田との差は、プラスが高く、マイナスが低い（周り${elevRlabel(R)}以内の田の標高の中央値とくらべた値）。${rel?'田の中の差は、色が出ている範囲（傾きもふくむ）。':''}標高の誤差は±数十cmで、数cmの差は目安です。出典：国土地理院（数値標高モデルを加工して作成）</div>`; }
+  box.innerHTML=`<div class="rh"><b>この圃場の高さ</b><span class="hint">国土地理院の5m標高</span></div><table><tr><th></th><th>標高</th><th>半径${elevRlabel(R)}の圃場との差</th>${rel?'<th>圃場内の高低差</th>':''}</tr>${rows}</table>`
+    +`<div class="rf"><b>半径${elevRlabel(R)}の圃場との差</b>：この圃場の標高から、半径${elevRlabel(R)}以内にあるほかの圃場の標高の中央値（真ん中の値）を引いた値です。<b>＋</b>は周りの圃場より高く、<b>−</b>は低く、0は周りと同じ高さです（例：＋50cm＝周りの圃場より50cm高い）。高い所は水が抜けやすく、低い所は水が溜まりやすい目安になります。`
+    +`${rel?'<br><b>圃場内の高低差</b>：圃場内の最も低いところと高いところの差です（傾きも含みます。上下5%ずつの極端な所と、縁5mは除きます）。':''}`
+    +`<br>標高の誤差は±数十cmで、数cmの差は目安です。出典：国土地理院（数値標高モデルを加工して作成）</div>`; }
 async function renderElev(gen,note,bar,lbl,rel){   // 高低差マップ。絶対表示（周りの田との比べ）: 田ごとの色は paintMap、ここは凡例と右の欄だけ。相対表示（田の中のばらつき）: 選んだ圃場の中・拡大したときの見えている圃場の中を描く
   const on=document.getElementById('colorOn').checked;
-  bar.classList.add('rel'); bar.style.background=bandBar('elev'); lbl.innerHTML=rel?'<span>その田の中で低い</span><span>田の中央値</span><span>高い</span>':'<span>低い</span><span>周りと同じ</span><span>高い</span>';
-  if(!on||!rel){ const R=elevR(), sc=ELEV_SCALE[R]||100; note.textContent=on?[`色は、周り${elevRlabel(R)}以内の田の標高の中央値との差（±${sc}cmが色の端）。田の中のばらつきは「相対表示」で`,R!==300&&elevNoFar()?'※ 1km・2kmのデータがまだない所は、300mでくらべています':''].filter(Boolean).join(' / '):''; renderElevSel(); return; }
+  bar.classList.add('rel'); bar.style.background=bandBar('elev'); lbl.innerHTML=rel?'<span>その圃場内で低い</span><span>圃場の中央値</span><span>高い</span>':'<span>低い</span><span>周りと同じ</span><span>高い</span>';
+  if(!on||!rel){ const R=elevR(), sc=ELEV_SCALE[R]||100; note.textContent=on?[`色の端は ±${sc}cm。圃場内のばらつきは「相対表示」で`,R!==300&&elevNoFar()?'※ 1km・2kmのデータがまだない所は、300mでくらべています':''].filter(Boolean).join(' / '):''; renderElevSel(); return; }
   const spans=[]; let none=0, err=0;
   for(const s of selected){ const P=parcels[s.pid]; if(!P) continue; note.textContent='読み込み中…';
     const e=await elevLoad(s.pid); if(gen!==pxGen) return;
@@ -1836,8 +1839,8 @@ async function renderElev(gen,note,bar,lbl,rel){   // 高低差マップ。絶�
     if(r){ spans.push(r.span); elevInfo.set(s.pid,r); P.layer.setStyle({fillOpacity:0}); P.layer._stk=''; } else none++; }
   renderElevSel();
   const f=x=>Math.round(x*100), a=spans.length?f(Math.min(...spans)):0, b=spans.length?f(Math.max(...spans)):0;
-  note.textContent=[spans.length?`田の中の色の幅は、その田の中央値から ±${a===b?a:a+'〜'+b}cm（${spans.length>1?'田ごとに自動':'この田に合わせる'}）`:'',
-    none?`田の中の高さが出せない圃場 ${none}枚（5mレーザーの標高がない・小さい）`:'',err?`標高タイルを読めなかった圃場 ${err}枚（通信を確かめてください）`:'',
+  note.textContent=[spans.length?`圃場内の色の幅は、その圃場の中央値から ±${a===b?a:a+'〜'+b}cm（${spans.length>1?'圃場ごとに自動':'この圃場に合わせる'}）`:'',
+    none?`圃場内の高さが出せない圃場 ${none}枚（5mレーザーの標高がない・小さい）`:'',err?`標高タイルを読めなかった圃場 ${err}枚（通信を確かめてください）`:'',
     !selected.length&&map.getZoom()<BULK_ZOOM?'拡大すると、圃場の中の高さのちがいも色分けします':''].filter(Boolean).join(' / ');
   return renderBulk(gen,'elevr',note); }
 
@@ -2032,23 +2035,23 @@ const MODE_DESC={   // 表示モードごとのひとこと説明
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
   rel:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',
   trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
-  elev:'圃場の高さを、周りの田とくらべて色にします（青＝周りより低い・赤＝高い）。周りの田との比較に。',
-  elevr:'一枚の圃場の中の高低差（傾きも）を、田ごとに色の幅を合わせて7段階に色分けします。圃場内のばらつきの確認に。'};
+  elev:()=>{ const R=elevRlabel(elevR()); return `青＝周りより低い・赤＝高い。【半径${R}の圃場との差】この圃場の標高から、半径${R}以内のほかの全圃場の標高の中央値（真ん中の値）を引いた値。＋は周りより高く、−は低い（例：＋50cm＝周りより50cm高い）。高い所は水が抜けやすく、低い所は水が溜まりやすい目安です。`; },
+  elevr:'一枚の圃場の中の高低差を、圃場ごとに色の幅を合わせて7段階に塗ります。【圃場内の高低差】圃場内の最も低いところと高いところの差（傾きも含む。上下5%ずつの極端な所と縁5mは除く）。色は、その圃場の中央値（真ん中の高さ）との差で、最低±10cm。'};
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
 const MODE_HEAD={
   abs:{t:'絶対表示',d:'生育量(NDVI)を色で表示。他圃場との比較に。',how:['地図を拡大して、田をタップ（最大10枚）','右に、その田の推移のグラフと数字が出ます','日付は地図の左下で変えられます（晴れた日だけ）']},
   rel:{t:'相対表示',d:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',how:['地図を拡大して、田をタップ','色の見方は、地図の左下の凡例','右に、その田の推移のグラフと数字が出ます']},
   trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った田','田をタップすると、その田の数字が右に出ます']},
-  elev:{t:'高低差マップ（絶対表示）',d:'圃場の高さを、周りの田とくらべて色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの田との比較に。',how:['色は「周りの田との高さの差」（国土地理院の5m標高）。比べる範囲は、左下の「比べる範囲」で 300m・1km・2km から選べます','田をタップすると、標高と周りの田との差が右に出ます','標高の誤差は±数十cm。数cmの差は目安です']},
-  elevr:{t:'高低差マップ（相対表示）',d:'一枚の圃場の中の高低差（傾きも）を、田ごとに色の幅を合わせて7段階に色分けします。圃場内のばらつきの確認に。',how:['地図を拡大（見えている圃場の中）、または田をタップ','色の幅は、その田の中央値から田ごとに自動（最低±10cm）。縁5mは除く','標高の誤差は±数十cm。数cmの差は目安です']}};
+  elev:{t:'高低差マップ（絶対表示）',d:'圃場の高さを、周りの圃場とくらべて色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの圃場との比較に。',how:['色は「半径○km以内のほかの圃場の標高（中央値）との差」（国土地理院の5m標高）。半径は、左下の「比べる範囲」で 300m・1km・2km から選べます','圃場をタップすると、標高と周りの圃場との差が右に出ます','標高の誤差は±数十cm。数cmの差は目安です']},
+  elevr:{t:'高低差マップ（相対表示）',d:'一枚の圃場の中の高低差（傾きも）を、圃場ごとに色の幅を合わせて7段階に色分けします。圃場内のばらつきの確認に。',how:['地図を拡大（見えている圃場の中）、または圃場をタップ','色の幅は、その圃場の中央値から圃場ごとに自動（最低±10cm）。縁5mは除く','標高の誤差は±数十cm。数cmの差は目安です']}};
 function renderModeHead(){ const el=document.getElementById('modeHead'), k=fillRaw(), m=MODE_HEAD[k]; if(!el||el.dataset.k===k) return; el.dataset.k=k;
   el.innerHTML=m?`<div class="topbox"><div class="tbhead"><h2>${m.t}</h2><div class="tbsub">${m.d}</div>${m.how?`<ol class="mhow">${m.how.map(x=>`<li>${x}</li>`).join('')}</ol>`:''}${m.extra||''}</div></div>`:''; }
 let relRange='';   // 相対表示の色の幅（説明の欄に出す）
 async function renderPx(){ relRange='';
   const gen=++pxGen, fm=fillMode(), mode=fm==='top'?'abs':fm, on=document.getElementById('colorOn').checked, note=document.getElementById('pxNote');
-  { const ec=document.getElementById('elevCtl'); if(ec) ec.style.display=fm==='elev'?'inline-flex':'none'; }   // 高低差マップ（絶対表示）だけ「比べる範囲」を出す   // 追肥マップは今は絶対表示で塗る
+  { const ec=document.getElementById('elevCtl'); if(ec) ec.style.display=fm==='elev'?'flex':'none'; }   // 高低差マップ（絶対表示）だけ「比べる範囲」を出す   // 追肥マップは今は絶対表示で塗る
   const bar=document.getElementById('lgBar'), lbl=document.getElementById('lgLbl');
-  document.getElementById('modeDesc').textContent=MODE_DESC[fillRaw()]||''; renderModeHead();
+  { const dsc=MODE_DESC[fillRaw()]; document.getElementById('modeDesc').textContent=typeof dsc==='function'?dsc():dsc||''; } renderModeHead();
   bar.classList.toggle('rel',mode!=='abs');
   bar.style.background=bandOn()&&(selected.length||map.getZoom()>=BULK_ZOOM)&&document.getElementById('colorOn').checked?bandBar(mode==='abs'?'abs':isTrend(mode)?'vig':'rel'):isTrend(mode)?VIG_GRAD:'';
   lbl.innerHTML=mode==='rel'?'<span>その田の平均より低い</span><span>田の中の差</span><span>高い</span>':isTrend(mode)?VIG_LBL:'<span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span>';
