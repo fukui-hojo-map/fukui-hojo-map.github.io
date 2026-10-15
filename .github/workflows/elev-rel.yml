@@ -1,0 +1,31 @@
+# 高低差マップ（絶対表示）の「周りの田との高さの差」（半径1km・2km）を、公開中のデータ（gh-pages）から作って、すぐ公開する。
+# 毎週の更新（weekly-ndvi）にも同じ計算が入っているので、これは「いますぐ出したいとき」用（手で実行・.github/elev-rel.txt を書きかえて push）。
+# 毎週の更新と同時に公開しないよう、同じ順番待ち（ndvi-update）に入れる。
+name: elev-rel
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/elev-rel.txt"]
+permissions:
+  contents: write
+concurrency:
+  group: ndvi-update
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: main }
+      - uses: actions/checkout@v4
+        with: { ref: gh-pages, path: pages }
+      - run: pip install -q numpy scipy
+      - name: 周りの田との高さの差を計算する
+        run: python main/pipeline/elev_rel.py --data pages/data
+      - name: 公開する（変わった cells/*/elev.json だけ）
+        run: |
+          cd pages
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add -A data/cells
+          if git diff --cached --quiet; then echo "変わりなし"; else git commit -qm "elev-rel: 周りの田との高さの差（半径1km・2km）" && for i in 1 2 3; do git pull -q --rebase origin gh-pages && git push -q origin HEAD:gh-pages && break; sleep 5; done; fi
