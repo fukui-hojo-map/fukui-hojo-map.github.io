@@ -990,7 +990,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .rainX::before{left:13px;top:0;width:2.5px;height:28px} .rainX::after{top:13px;left:0;height:2.5px;width:28px}
   .rainPin span{display:block;width:22px;height:22px;border-radius:50%;background:#0d47a1;border:3px solid #fff;box-shadow:0 0 0 2px #0d47a1,0 2px 6px rgba(0,0,0,.4)}
   @media (max-width:860px){
-    body.rainOn .layout{grid-template-rows:76vh auto} body.rainOn #map{height:76vh}   /* スマホ: 雨雲の間は地図を縦に広く */
+    body.rainOn #map{height:76vh}   /* スマホ: 雨雲の間は地図を縦に広く（行の高さは地図に合わせる＝auto） */
     #rainBar{left:4px;right:4px;bottom:20px;padding:5px 8px 4px}
     #rainBar .rseg button{padding:5px 7px}
   }
@@ -1002,7 +1002,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   @media (max-width:359px){ #rainBar .rplay{width:36px} #rainBar .rx{width:30px;height:30px} #rainBar .rseg button{padding:6px 4px;min-width:34px} #rainBar .racc .rah{display:none} }
   .drop-over::after{content:"ここに離すと読み込みます";position:fixed;inset:0;background:rgba(47,125,79,.85);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;z-index:9999}
   @media (max-width:860px){
-    .layout{grid-template-columns:1fr;height:auto;grid-template-rows:56vh auto}
+    .layout{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}   /* 地図の行の高さは、地図（#map の 56vh）にまかせる。行と地図を別々に vh で決めると、スマホの Chrome で片方だけ古い高さのまま残ることがあり、左下の欄が地図の下にはみ出した（2026-10-16 実機） */
     #map{height:56vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
     header{padding:8px 12px;gap:4px 6px} .side{padding:10px 12px 30px} header h1.fukui-logo{--s:17px}
     /* スマホ幅: 「ふくい圃場マップ」の右に、「現在地へ」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
@@ -2657,7 +2657,7 @@ function arCss(){ if(document.getElementById('arCss')) return; const st=document
 .arV.sm{width:14px;height:14px;margin:-7px 0 0 -7px;font-size:0;line-height:0} .arV.rec{border-color:#f9a825;box-shadow:0 0 0 3px rgba(249,168,37,.55)}
 .arV.c1{background:#ff5a1f;border-color:#fff;color:#fff;width:34px;height:34px;margin:-17px 0 0 -17px;line-height:30px;font-size:12px} .arV.c2{background:#1e88e5;border-color:#fff;color:#fff;width:34px;height:34px;margin:-17px 0 0 -17px;line-height:30px;font-size:12px}
 #arView{position:fixed;inset:0;z-index:5000;background:#000;touch-action:none} #arView[hidden]{display:none}
-@media (max-width:860px){ body.arPrepOn .layout{grid-template-rows:80vh auto} body.arPrepOn #map{height:80vh} }
+@media (max-width:860px){ body.arPrepOn #map{height:80vh} }
 #arHud{position:absolute;inset:0;font:16px/1.45 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;color:#fff;pointer-events:none;-webkit-user-select:none;user-select:none}
 #arHud button{pointer-events:auto;font:inherit;font-weight:700;font-size:15px;line-height:1.2;min-height:52px;min-width:48px;padding:4px 12px;border:0;border-radius:12px;background:rgba(255,255,255,.94);color:#17372a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 #arSk{position:absolute;left:8px;top:calc(8px + env(safe-area-inset-top));width:128px;height:128px;pointer-events:none}
