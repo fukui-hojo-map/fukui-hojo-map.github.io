@@ -975,6 +975,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .raccbox .rh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-weight:700;color:#0d47a1} .raccbox .rh .hint{font-weight:400}
   .raccbox table{border-collapse:collapse;margin-top:4px;width:100%} .raccbox th{font-size:12px;font-weight:400;color:#4c5a52;text-align:right;padding:1px 6px} .raccbox th:first-child{text-align:left}
   .raccbox td{text-align:right;padding:2px 6px;border-top:1px solid #e1e9f3;font-variant-numeric:tabular-nums} .raccbox td:first-child{text-align:left;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12em} .raccbox td b{font-size:15px}
+  .raccbox th,.raccbox .ysub{white-space:normal} .raccbox .ysub{font-size:11px;font-weight:400;color:#5b6b63;line-height:1.25}
   .raccbox .rf{margin-top:4px;font-size:11.5px;color:#5b6b63;line-height:1.4}
   #rainBar .rmsg{color:#4c5a52} #rainBar .rold{margin-top:3px;font-size:11.5px;color:#8a4b00} #rainBar .rre{font-size:12.5px;border:1px solid #0d47a1;background:#fff;color:#0d47a1;border-radius:8px;padding:3px 9px;margin-left:4px}
   /* 雨の強さの色の凡例: 帯のすぐ上、地図の左下 */
@@ -1771,6 +1772,14 @@ function elevRel(pid,R){   // 周り R m の田との差（cm）。elev.json が
   R=R||elevR(); const P=parcels[pid], w=P&&P.cell?elReady[P.cell]:null, a=elevRow(pid); if(!a) return null;
   if(R!==300&&w&&w.__elev){ const k=w.__elev.r.indexOf(R), q=w.__elev.p[pid]; if(k>=0&&q) return {v:q[k],R}; }
   return {v:a[1],R:300}; }
+// 標高の測量年度: 国土地理院「5mメッシュDEM（航空レーザ測量）」の原典資料の作業年度。場所ごとに違う（pipeline/elev_rel.py が elev.json の y に入れる）。月は公開データにない。'H25'→平成25年度・'R01'→令和元年度・'H31'→令和元年度
+function surveyEra(code){ const m=/^([HR])(\d{2})/.exec(code||''); if(!m) return ''; const yr=(m[1]==='H'?1988:2018)+ +m[2];   // 西暦
+  return yr>=2019?'令和'+(yr===2019?'元':yr-2018)+'年度':'平成'+(yr-1988)+'年度'; }
+function elevYear(pid){ const P=parcels[pid], w=P&&P.cell?elReady[P.cell]:null, e=w&&w.__elev, q=e&&e.y&&e.p&&e.p[pid]; return q&&q.length>2&&q[2]!=null?e.y[q[2]]||null:null; }
+function elevSrcNote(pid,a){   // 標高の出どころ・測量年度（右の欄の標高の下に小さく）。年度がわかるのは5mレーザー測量の所だけ
+  if(!a) return ''; const P=parcels[pid], w=P&&P.cell?elReady[P.cell]:null, hasY=!!(w&&w.__elev&&w.__elev.y);
+  if(a[8]===0){ const y=elevYear(pid); return y?surveyEra(y)+'測量':hasY?'測量年度は不明':''; }
+  return a[8]===1?'写真測量':a[8]===2?'地形図の等高線':a[8]===3?'衛星の標高(30m)':''; }
 const elevNoFar=()=>Object.values(elReady).some(w=>w&&!w.__elev);   // elev.json（1km・2km）がまだないセルがある
 const elevFill=pid=>{ const r=elevRel(pid); return r&&r.v!=null?r.v:null; };   // 周りの田との差（cm）
 // 標高タイル（dem5a_png, z15）。画素ごとの標高（m, 欠測 NaN）。404（5mレーザーがない所）は null、読めなかったときは undefined（覚えない）
@@ -1821,11 +1830,12 @@ function renderElevSel(){   // 右の欄: 選んだ圃場の標高・半径Rの�
   const fm=fillMode(), rel=fm==='elevr'; if((fm!=='elev'&&!rel)||!list.length){ box.hidden=true; box.innerHTML=''; return; }
   const cm=v=>v==null?'—':(v>0?'+':v<0?'−':'±')+Math.abs(v)+'cm';
   const R=elevR(), rows=list.map(s=>{ const a=elevRow(s.pid), f=elevInfo.get(s.pid), q=elevRel(s.pid);
-    return `<tr><td style="color:${s.color}">${escH(selLabel(s.pid))}</td><td><b>${a?(a[0]/100).toFixed(1)+'m':'—'}</b></td><td><b>${cm(q?q.v:null)}</b></td>${rel?`<td><b>${f?f.rng+'cm':'—'}</b></td>`:''}</tr>`; }).join('');
+    return `<tr><td style="color:${s.color}">${escH(selLabel(s.pid))}</td><td><b>${a?(a[0]/100).toFixed(1)+'m':'—'}</b>${elevSrcNote(s.pid,a)?`<div class="ysub">${elevSrcNote(s.pid,a)}</div>`:''}</td><td><b>${cm(q?q.v:null)}</b></td>${rel?`<td><b>${f?f.rng+'cm':'—'}</b></td>`:''}</tr>`; }).join('');
   box.hidden=false;
   box.innerHTML=`<div class="rh"><b>この圃場の高さ</b><span class="hint">国土地理院の5m標高</span></div><table><tr><th></th><th>標高</th><th>半径${elevRlabel(R)}の圃場との差</th>${rel?'<th>圃場内の高低差</th>':''}</tr>${rows}</table>`
     +`<div class="rf"><b>半径${elevRlabel(R)}の圃場との差</b>：この圃場の標高から、半径${elevRlabel(R)}以内にあるほかの圃場の標高の中央値（真ん中の値）を引いた値です。<b>＋</b>は周りの圃場より高く、<b>−</b>は低く、0は周りと同じ高さです（例：＋50cm＝周りの圃場より50cm高い）。高い所は水が抜けやすく、低い所は水が溜まりやすい目安になります。`
     +`${rel?'<br><b>圃場内の高低差</b>：圃場内の最も低いところと高いところの差です（傾きも含みます。上下5%ずつの極端な所と、縁5mは除きます）。':''}`
+    +`<br><b>測量年度</b>：標高を測った年度です（国土地理院の航空レーザ測量。場所によって違います）。`
     +`<br>標高の誤差は±数十cmで、数cmの差は目安です。出典：国土地理院（数値標高モデルを加工して作成）</div>`; }
 async function renderElev(gen,note,bar,lbl,rel){   // 高低差マップ。絶対表示（周りの田との比べ）: 田ごとの色は paintMap、ここは凡例と右の欄だけ。相対表示（田の中のばらつき）: 選んだ圃場の中・拡大したときの見えている圃場の中を描く
   const on=document.getElementById('colorOn').checked;
@@ -2035,8 +2045,8 @@ const MODE_DESC={   // 表示モードごとのひとこと説明
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
   rel:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',
   trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
-  elev:()=>{ const R=elevRlabel(elevR()); return `青＝周りより低い・赤＝高い。【半径${R}の圃場との差】この圃場の標高から、半径${R}以内のほかの全圃場の標高の中央値（真ん中の値）を引いた値です。`; },
-  elevr:'一枚の圃場の中の高低差を、圃場ごとに色の幅を合わせて7段階に塗ります。色は、その圃場の中央値（真ん中の高さ）との差で、最低±10cm。'};
+  elev:()=>{ const R=elevRlabel(elevR()); return `青＝周りより低い・赤＝高い。【半径${R}の圃場との差】この圃場の標高から、半径${R}以内のほかの全圃場の標高の中央値（真ん中の値）を引いた値です。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと右の表に出ます。`; },
+  elevr:'一枚の圃場の中の高低差を、圃場ごとに色の幅を合わせて7段階に塗ります。色は、その圃場の中央値（真ん中の高さ）との差で、最低±10cm。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと右の表に出ます。'};
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
 const MODE_HEAD={
   abs:{t:'絶対表示',d:'生育量(NDVI)を色で表示。他圃場との比較に。',how:['地図を拡大して、田をタップ（最大10枚）','右に、その田の推移のグラフと数字が出ます','日付は地図の左下で変えられます（晴れた日だけ）']},
