@@ -20,7 +20,7 @@ jobs:
         with: { path: main }
       - uses: actions/checkout@v4
         with: { ref: gh-pages, path: pages }
-      - run: pip install -q numpy scipy
+      - run: pip install -q numpy scipy shapely
       - name: 周りの田との高さの差を計算する
         run: python main/pipeline/elev_rel.py --data pages/data
       - name: 公開する（変わった cells/*/elev.json だけ）
