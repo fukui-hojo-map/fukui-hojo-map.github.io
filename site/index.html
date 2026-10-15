@@ -1023,7 +1023,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
       <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません"></select><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><input type="checkbox" id="colorOn" checked hidden></div>
-      <div class="ctl" style="margin:2px 0 0"><span>表示モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      <div class="ctl" style="margin:2px 0 0"><span>表示モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
     </div>
@@ -1051,6 +1051,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="svgwrap"><svg class="chart" id="chart" viewBox="0 0 560 340" role="img" aria-label="NDVI推移"></svg><div class="tip" id="tip"></div></div>
     <div class="btnrow3"><button class="btn small" id="btnPng"><span>グラフを</span><span>画像で保存</span></button><button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button><button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）"><span>日付を選んで</span><span>地図を出力</span></button></div>
     <div class="raccbox" id="raccSel" hidden></div>
+    <div class="raccbox" id="elevSel" hidden></div>
     <div class="ctl"><span class="hint" id="note"></span></div>
     </div>
     <!-- 詳細設定は画面に出さない（初期値のまま自動で働く） -->
@@ -1618,7 +1619,7 @@ function syncPlanLabels(on){ const want=new Map();
   for(const [pid,x] of want){ const man=planManual(x), key=x.no+'|'+man, c=planLblM[pid]; if(c&&c.k===key) continue; if(c) planLbl.removeLayer(c.m);
     const pt=labelPt(parcels[pid].feature.geometry), m=L.marker([pt[1],pt[0]],{icon:L.divIcon({className:'plno'+(man?' man':''),html:`<span>${x.no}</span>`,iconSize:null}),interactive:false,keyboard:false}).addTo(planLbl); planLblM[pid]={m,k:key}; } }
 function paintMap(){
-  const d=document.getElementById('colorDate').value, mode=fillMode(), tr=isTrend(mode), pm=mode==='plan', on=document.getElementById('colorOn').checked&&mode!=='rel'&&!pm, vb=tr?map.getBounds().pad(0.2):null, PS=SHOW_PLAN?planSet():null, PI=pm?new Map(plan.items.map(x=>[x.pid,x])):null;
+  const d=document.getElementById('colorDate').value, mode=fillMode(), tr=isTrend(mode), el=mode==='elev', pm=mode==='plan', on=document.getElementById('colorOn').checked&&mode!=='rel'&&!pm, vb=tr||el?map.getBounds().pad(0.2):null, PS=SHOW_PLAN?planSet():null, PI=pm?new Map(plan.items.map(x=>[x.pid,x])):null;
   if(geoLayer&&!map.hasLayer(geoLayer)){ syncHalos(false); if(SHOW_PLAN) syncPlanLabels(false); pxGen++; pxLayer.clearLayers(); return; }   // 圃場の中の絵も消す   // 引いているときは区画を出さない
   syncHalos(!pm); if(SHOW_PLAN) syncPlanLabels(pm);
   const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null;   // 生育予測: 田ごとの予測日で塗る
@@ -1627,6 +1628,7 @@ function paintMap(){
     let fc,fo;
     if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); }
     else if(gm){ const t=GM.get(pid); fc=t!=null&&gpRange?gpFill(t):'#888'; fo=t!=null?(soilOn?.45:.8):(soilOn?0:.12); }
+    else if(el){ const v=!on?null:vb.intersects(l.getBounds())?elevFill(pid):null; fc=v==null?'#888':`rgb(${elevColor(elevBand(v/ELEV_REL_CM)).join(',')})`; fo=soilOn?(v!=null?.35:0):v==null?.15:.65; }   // 高低差マップ: 周りの田との差（cm）
     else { const v=!on?null:tr?(vb.intersects(l.getBounds())?trendFill(pid):null):val(pid,d); fc=!on?'#888':tr?(v==null?'#888':`rgb(${vigColor(v).join(',')})`):ndviColor(v);
       fo=soilOn?(on&&v!=null?.35:0):on?(v==null?.15:.65):.3; if(on&&!tr&&mode==='top'&&v==null&&!s&&pkg.series&&pkg.series[pid]) nd.push(pid); }   // 追肥モード: 田の色は区画の値で塗るので、値がない田＝その日の画像がない
    // 土壌図のときは薄く塗る（土壌の色が透けて見えるように）
@@ -1689,7 +1691,8 @@ function pxRegion(pid,m){   // 区画の形を格子の座標（列, 行）に�
 const BANDS={abs:{edges:[0.3,0.4,0.5,0.6,0.7,0.8],mid:[0.25,0.35,0.45,0.55,0.65,0.75,0.85]},rel:{edges:[-0.75,-0.45,-0.15,0.15,0.45,0.75],mid:[-0.9,-0.6,-0.3,0,0.3,0.6,0.9]},
   vig:{edges:[-0.045,-0.025,-0.01,0.005,0.018,0.03],mid:[-0.055,-0.035,-0.018,-0.002,0.012,0.024,0.037]}};   // vig: 生育傾向マップ（NDVI の差）
 function bandOn(){ return document.getElementById('bandOn').checked; }
-function bandCols(kind){ return BANDS[kind].mid.map(v=>kind==='abs'?rgbOf(ndviColor(v)):kind==='vig'?vigColor(v):relColor(v)); }
+BANDS.elev=BANDS.rel;   // 高低差マップ: 田の中も田ごとの色も、相対表示と同じ7段（中央 ±15%・±45%・±75%）
+function bandCols(kind){ return BANDS[kind].mid.map(v=>kind==='abs'?rgbOf(ndviColor(v)):kind==='vig'?vigColor(v):kind==='elev'?elevColor(v):relColor(v)); }
 function bandBar(kind){   // 凡例の段階の帯（絶対表示は 0.2〜0.9 の目盛りに合わせる）
   const cols=bandCols(kind).map(c=>`rgb(${c.join(',')})`), E=BANDS[kind].edges, pos=kind==='abs'?E.map(e=>(e-0.2)/0.7*100):kind==='vig'?E.map(VIG_POS):E.map(e=>(e+1)/2*100), st=[0,...pos,100];
   return `linear-gradient(90deg,${cols.map((c,i)=>`${c} ${st[i].toFixed(1)}% ${st[i+1].toFixed(1)}%`).join(',')})`; }
@@ -1739,6 +1742,94 @@ function drawPx(pid,r,k,mode){
     bandOn()?(mode==='rel'?{kind:'rel',t:v=>(v-mean)/base/span}:{kind:'abs',t:v=>v}):null);
   return mode==='rel'?span:1;
 }
+
+// ---------- 高低差マップ（国土地理院の標高） ----------
+// 田ごとの色: cells/<id>/wet.json（pipeline/wet.py）の terr.p[pid] = [標高cm, 周りの田との差cm, 周りの中の低さ%, 低い所%, 低い所の向き(8方位), 田の中の凹凸cm, 山際%, TWI×10, 元(0=5mレーザー,1=5b/5c,2=10m,3=30m)]
+//   「周りの田との差」= その田の標高の中央値 − 周り300mの田の標高の中央値（プラスが高い）。±ELEV_REL_CM を色の端にして7段階
+// 田の中: 国土地理院の標高タイル dem5a_png（5m レーザー測量, z15, 1画素 約4.8m）をその場で読み、傾きを残したまま、田の中央値との差を色にする。
+//   縁 ELEV_EDGE_M（畦畔・水路）は除く。色の幅は田ごとに自動（最低 ±ELEV_MIN_SPAN）。福井の田の5〜95%の高さの差は、中央値で約8cm・95%の田で14cm以内で、平らな田でも傾きを除いた残りは標準偏差 約2cm。
+//   → 最低 ±10cm にすると、標高の雑音（約±5cm）までは薄い色のまま、本当に高低差のある田（7.5cm 以上）だけが濃く出る。標高の誤差は ±数十cm なので、数cmの差は目安
+const ELEV_ANC=[[-1,[49,104,172]],[-0.6,[116,173,209]],[-0.3,[196,225,238]],[0,[255,255,191]],[0.3,[253,200,130]],[0.6,[244,125,80]],[1,[196,48,43]]];   // 低い=青 → 高い=赤
+const ELEV_REL_CM=100, ELEV_EDGE_M=5, ELEV_MIN_SPAN=0.10, ELEV_MIN_PX=12, ELEV_COVER=0.7, DEM_MAX_TILES=9;
+function elevColor(t){ t=Math.max(-1,Math.min(1,t)); const A=ELEV_ANC;
+  for(let i=1;i<A.length;i++){ const [b,cb]=A[i]; if(t<=b){ const [a,ca]=A[i-1], u=(t-a)/(b-a); return ca.map((c,k)=>Math.round(c+(cb[k]-c)*u)); } }
+  return A[A.length-1][1].slice(); }
+const elevBand=t=>{ const E=BANDS.rel.edges; let k=0; while(k<E.length&&t>=E[k]) k++; return BANDS.rel.mid[k]; };   // 段の真ん中の値
+const elCache={}, elReady={};
+function elLoad(cell){ return elCache[cell]||(elCache[cell]=fetch(`${DATA}cells/${cell}/wet.json`).then(r=>r.ok?r.json():null).catch(()=>null)); }
+function elevRow(pid){   // wet.json の terr.p[pid]。読み込み前は読み込みを始めて null（読めたら塗り直す）
+  const P=parcels[pid]; if(!P||!P.cell) return null;
+  const r=elReady[P.cell]; if(r===undefined){ elReady[P.cell]=null; elLoad(P.cell).then(x=>{ elReady[P.cell]=x||false; clearTimeout(paintT); paintT=setTimeout(paintMap,60); }); }
+  const a=r&&r.terr&&r.terr.p&&r.terr.p[pid]; return a||null; }
+const elevFill=pid=>{ const a=elevRow(pid); return a&&a[1]!=null?a[1]:null; };   // 周りの田との差（cm）
+// 標高タイル（dem5a_png, z15）。画素ごとの標高（m, 欠測 NaN）。404（5mレーザーがない所）は null、読めなかったときは undefined（覚えない）
+const demCache=new Map(), M15={x0:-20037508.342789244,y1:20037508.342789244,px:40075016.68557849/(256*2**15),w:256*2**15,h:256*2**15};   // z15 の画素を格子にして pxRegion・pxOverlay を使う
+function demDecode(bm){ const c=document.createElement('canvas'); c.width=256; c.height=256; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(bm,0,0);
+  const d=x.getImageData(0,0,256,256).data, h=new Float32Array(65536);
+  for(let i=0;i<65536;i++){ const v=d[i*4]*65536+d[i*4+1]*256+d[i*4+2]; h[i]=v<8388608?v*0.01:v===8388608?NaN:(v-16777216)*0.01; }   // x=R·2^16+G·2^8+B: x<2^23 → 0.01x、2^23 は欠測、それより大きいと 0.01(x−2^24)
+  return h; }
+async function demBitmap(b){   // 色の変換をしない（値がずれないように）。使えない端末は ふつうに
+  if(typeof createImageBitmap==='function'){ try{ return await createImageBitmap(b,{colorSpaceConversion:'none',premultiplyAlpha:'none'}); }catch(e){ try{ return await createImageBitmap(b); }catch(e2){} } }
+  return await new Promise((res,rej)=>{ const u=URL.createObjectURL(b), im=new Image(); im.onload=()=>{ URL.revokeObjectURL(u); res(im); }; im.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('img')); }; im.src=u; }); }
+function demTile(x,y){ const k=x+'/'+y, c=demCache.get(k); if(c){ demCache.delete(k); demCache.set(k,c); return c; }
+  const p=(async()=>{ for(let n=0;n<2;n++){ try{ const ac=new AbortController(), to=setTimeout(()=>ac.abort(),15000);
+      const r=await fetch(`https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/${x}/${y}.png`,{credentials:'omit',signal:ac.signal}); clearTimeout(to);
+      if(r.status===404) return null; if(!r.ok) continue;
+      const bm=await demBitmap(await r.blob()), h=demDecode(bm); if(bm.close) bm.close(); return h; }catch(e){} }
+    return undefined; })();
+  demCache.set(k,p); p.then(v=>{ if(v===undefined&&demCache.get(k)===p) demCache.delete(k); }); while(demCache.size>60) demCache.delete(demCache.keys().next().value);
+  return p; }
+async function elevLoad(pid){   // {R, T（タイルの行列）, tx0, ty0} / null=標高タイルがない・広すぎる / undefined=読めなかった
+  const R=pxRegion(pid,M15); if(!R) return null;
+  const tx0=Math.floor(R.c0/256), tx1=Math.floor((R.c1-1)/256), ty0=Math.floor(R.r0/256), ty1=Math.floor((R.r1-1)/256);
+  if((tx1-tx0+1)*(ty1-ty0+1)>DEM_MAX_TILES) return null;
+  const T=[]; for(let ty=ty0;ty<=ty1;ty++) T.push(await Promise.all(Array.from({length:tx1-tx0+1},(_,i)=>demTile(tx0+i,ty))));
+  if(T.some(r=>r.some(t=>t===undefined))) return undefined;
+  if(T.every(r=>r.every(t=>t===null))) return null;
+  return {R,T,tx0,ty0}; }
+function distToRings(rings,x,y){ let d=1e18; for(const poly of rings) for(const ring of poly) for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const [x1,y1]=ring[j],[x2,y2]=ring[i], dx=x2-x1, dy=y2-y1, L=dx*dx+dy*dy; let t=L?((x-x1)*dx+(y-y1)*dy)/L:0; t=Math.max(0,Math.min(1,t));
+    const ex=x1+t*dx-x, ey=y1+t*dy-y, q=ex*ex+ey*ey; if(q<d) d=q; }
+  return Math.sqrt(d); }
+const elevInfo=new Map();   // pid → {med: 田の標高の中央値(m), span: 色の幅(m), rng: 田の中の高低差(5〜95%, cm)}
+function drawElev(pid,e){   // 田の中の高低差を地図に描く。戻り値 {med, span, rng}。5mレーザーの標高が足りない・田が小さいときは false
+  const {R,T,tx0,ty0}=e, {c0,r0,cw,ch,inside,rings}=R, gpx=M15.px*Math.cos(parcels[pid].centroid[1]*Math.PI/180), edge=ELEV_EDGE_M/gpx;   // gpx = 1画素の実際の長さ（m）
+  const val=new Float32Array(cw*ch).fill(NaN), isEdge=new Uint8Array(cw*ch), core=[]; let nin=0;
+  for(let y=0;y<ch;y++) for(let x=0;x<cw;x++){ const gc=c0+x, gr=r0+y; if(!inside(gc+.5,gr+.5)) continue;
+    const t=T[Math.floor(gr/256)-ty0][Math.floor(gc/256)-tx0], h=t?t[(gr&255)*256+(gc&255)]:NaN; val[y*cw+x]=h;
+    if(distToRings(rings,gc+.5,gr+.5)<edge){ isEdge[y*cw+x]=1; continue; }
+    nin++; if(!isNaN(h)) core.push(h); }
+  if(nin<ELEV_MIN_PX||core.length<ELEV_MIN_PX||core.length<nin*ELEV_COVER) return false;
+  const s=core.slice().sort((a,b)=>a-b), q=p=>s[Math.min(s.length-1,Math.round(p*(s.length-1)))], med=q(0.5);
+  const dev=core.map(h=>Math.abs(h-med)).sort((a,b)=>a-b), span=Math.max(ELEV_MIN_SPAN,dev[Math.min(dev.length-1,Math.floor(0.95*(dev.length-1)))]);
+  for(let i=0;i<isEdge.length;i++) if(isEdge[i]) val[i]=NaN;   // 縁は畦畔・水路の高さが混ざるので、周りの値でうめる（pxOverlay）
+  pxOverlay(R,M15,val,v=>elevColor((v-med)/span),med,bandOn()?{kind:'elev',t:v=>(v-med)/span}:null);
+  const info={med,span,rng:Math.round(100*(q(0.95)-q(0.05)))}; elevInfo.set(pid,info); return info; }
+function renderElevSel(){   // 右の欄: 選んだ圃場の標高・周りの田との差・田の中の高低差
+  const box=document.getElementById('elevSel'); if(!box) return; const list=selected.filter(s=>parcels[s.pid]);
+  if(fillMode()!=='elev'||!list.length){ box.hidden=true; box.innerHTML=''; return; }
+  const cm=v=>v==null?'—':(v>0?'+':v<0?'−':'±')+Math.abs(v)+'cm';
+  const rows=list.map(s=>{ const a=elevRow(s.pid), f=elevInfo.get(s.pid);
+    return `<tr><td style="color:${s.color}">${escH(selLabel(s.pid))}</td><td><b>${a?(a[0]/100).toFixed(1)+'m':'—'}</b></td><td><b>${cm(a?a[1]:null)}</b></td><td><b>${f?f.rng+'cm':'—'}</b></td></tr>`; }).join('');
+  box.hidden=false;
+  box.innerHTML=`<div class="rh"><b>この圃場の高さ</b><span class="hint">国土地理院の5m標高</span></div><table><tr><th></th><th>標高</th><th>周りの田との差</th><th>田の中の差</th></tr>${rows}</table>`
+    +`<div class="rf">周りの田との差は、プラスが高く、マイナスが低い（周り300mの田とくらべた値）。田の中の差は、色が出ている範囲（傾きもふくむ）。標高の誤差は±数十cmで、数cmの差は目安です。出典：国土地理院（数値標高モデルを加工して作成）</div>`; }
+async function renderElev(gen,note,bar,lbl){   // 表示モード「高低差マップ」: 田ごとの色は paintMap。ここは凡例・選んだ圃場の中・右の欄・拡大したときの見えている圃場の中
+  const on=document.getElementById('colorOn').checked;
+  bar.classList.add('rel'); bar.style.background=bandBar('elev'); lbl.innerHTML='<span>低い</span><span>周りと同じ</span><span>高い</span>';
+  if(!on){ note.textContent=''; renderElevSel(); return; }
+  const spans=[]; let none=0, err=0;
+  for(const s of selected){ const P=parcels[s.pid]; if(!P) continue; note.textContent='読み込み中…';
+    const e=await elevLoad(s.pid); if(gen!==pxGen) return;
+    if(e===undefined){ err++; continue; }
+    const r=e?ovDraw(`${s.pid}|elev`,()=>drawElev(s.pid,e)):ovDraw(`${s.pid}|elev`,()=>false);
+    if(r){ spans.push(r.span); elevInfo.set(s.pid,r); P.layer.setStyle({fillOpacity:0}); P.layer._stk=''; } else none++; }
+  renderElevSel();
+  const f=x=>Math.round(x*100), a=spans.length?f(Math.min(...spans)):0, b=spans.length?f(Math.max(...spans)):0;
+  note.textContent=[spans.length?`田の中の色の幅は、その田の中央値から ±${a===b?a:a+'〜'+b}cm（${spans.length>1?'田ごとに自動':'この田に合わせる'}）`:'',
+    none?`田の中の高さが出せない圃場 ${none}枚（5mレーザーの標高がない・小さい）`:'',err?`標高タイルを読めなかった圃場 ${err}枚（通信を確かめてください）`:'',
+    !selected.length&&map.getZoom()<BULK_ZOOM?'拡大すると、圃場の中の高さのちがいも色分けします':''].filter(Boolean).join(' / ');
+  return renderBulk(gen,'elev',note); }
 
 // ---------- 生育傾向マップ（稲の年だけを重ねた、田の中の毎年の強い・弱い） ----------
 // cells/<id>/trend.png: 年・時期（e=6月ごろ, l=8月ごろ）ごとに「晴れた日のその田の中央値との差」の中央値（0=なし, 1〜255=差 -0.3〜+0.3）
@@ -1930,12 +2021,14 @@ async function renderTrend(gen,mode,note,lbl){
 const MODE_DESC={   // 表示モードごとのひとこと説明
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
   rel:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',
-  trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。'};
+  trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
+  elev:'圃場の高さを、周りの田とくらべて色にします（青＝周りより低い・赤＝高い）。拡大すると、圃場の中の高低差（傾きも）が見えます。'};
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
 const MODE_HEAD={
   abs:{t:'絶対表示',d:'生育量(NDVI)を色で表示。他圃場との比較に。',how:['地図を拡大して、田をタップ（最大10枚）','右に、その田の推移のグラフと数字が出ます','日付は地図の左下で変えられます（晴れた日だけ）']},
   rel:{t:'相対表示',d:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',how:['地図を拡大して、田をタップ','色の見方は、地図の左下の凡例','右に、その田の推移のグラフと数字が出ます']},
-  trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った田','田をタップすると、その田の数字が右に出ます']}};
+  trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った田','田をタップすると、その田の数字が右に出ます']},
+  elev:{t:'高低差マップ',d:'圃場の高さを、周りの田とくらべて色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。',how:['色は「周りの田との高さの差」（国土地理院の5m標高）','拡大して田をタップすると、その田の中の高さのちがい（傾きも）が出ます','標高の誤差は±数十cm。数cmの差は目安です']}};
 function renderModeHead(){ const el=document.getElementById('modeHead'), k=fillRaw(), m=MODE_HEAD[k]; if(!el||el.dataset.k===k) return; el.dataset.k=k;
   el.innerHTML=m?`<div class="topbox"><div class="tbhead"><h2>${m.t}</h2><div class="tbsub">${m.d}</div>${m.how?`<ol class="mhow">${m.how.map(x=>`<li>${x}</li>`).join('')}</ol>`:''}${m.extra||''}</div></div>`:''; }
 let relRange='';   // 相対表示の色の幅（説明の欄に出す）
@@ -1948,6 +2041,8 @@ async function renderPx(){ relRange='';
   lbl.innerHTML=mode==='rel'?'<span>その田の平均より低い</span><span>田の中の差</span><span>高い</span>':isTrend(mode)?VIG_LBL:'<span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span>';
   if(fm==='top'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderTop(gen,note,bar,lbl); }
   if(fm==='gp'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderGp(note,bar,lbl); }
+  if(fm==='elev'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderElev(gen,note,bar,lbl); }
+  renderElevSel();   // 高低差マップでないときは、右の欄の箱を隠す
   if(mode==='plan'){ pxLayer.clearLayers(); bar.style.background='#fff'; lbl.innerHTML='<span>黄色の枠＝計画用リスト、オレンジ＝手で入力した圃場（番号は右の表）</span>'; note.textContent=''; const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return; }
   pxLayer.clearLayers(); if(!isTrend(mode)||!selected.length||!on){ const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; }
   if(!on){ note.textContent=''; return; }
@@ -1964,15 +2059,16 @@ async function renderPx(){ relRange='';
   return renderBulk(gen,mode,note);
 }
 async function renderBulk(gen,mode,note){   // 選んでいない、見えている圃場の中も塗る（絶対表示・相対表示・生育傾向。拡大したときだけ）
-  if(!(mode==='abs'||mode==='rel'||isTrend(mode))||map.getZoom()<BULK_ZOOM) return; const px=mode==='abs'||mode==='rel';
+  if(!(mode==='abs'||mode==='rel'||mode==='elev'||isTrend(mode))||map.getZoom()<BULK_ZOOM) return; const px=mode==='abs'||mode==='rel', ev=mode==='elev';
   const b=map.getBounds().pad(0.1), c=map.getCenter(), d=document.getElementById('colorDate').value, sel=new Set(selected.map(s=>s.pid));
   const pids=Object.keys(parcels).filter(pid=>!sel.has(pid)&&parcels[pid].cell&&b.intersects(parcels[pid].layer.getBounds()));
   const dist=pid=>{ const q=parcels[pid].centroid; return (q[1]-c.lat)**2+(q[0]-c.lng)**2; };
   if(pids.length>BULK_MAX) pids.sort((x,y)=>dist(x)-dist(y));
   let t0=performance.now(); const noPhoto=[];
-  for(const pid of pids.slice(0,BULK_MAX)){ const P=parcels[pid], key=px?`${pid}|${mode}|${d}`:pid+'|v';
+  for(const pid of pids.slice(0,BULK_MAX)){ const P=parcels[pid], key=ev?pid+'|elev':px?`${pid}|${mode}|${d}`:pid+'|v';
     let o;
     if(ovCache.has(key)) o=ovDraw(key,null);
+    else if(ev){ const e=await elevLoad(pid); if(gen!==pxGen) return; o=e===undefined?false:e?ovDraw(key,()=>drawElev(pid,e)):ovDraw(key,()=>false); }
     else { const r=px?await pxLoad(P.cell,d.slice(0,4)):await trLoad(P.cell); if(gen!==pxGen) return;
       if(px){ const k=r&&r.g?r.m.dates.indexOf(d):-1; o=k>=0?ovDraw(key,()=>drawPx(pid,r,k,mode)):null; }
       else o=r?ovDraw(key,()=>drawVig(pid,r)):null; }
@@ -1984,7 +2080,7 @@ async function renderBulk(gen,mode,note){   // 選んでいない、見えてい
 let toLatest=false;   // 追肥マップに切りかえたときは最新の日にする
 async function buildPxDates(){   // 圃場内モードでは、選んだ圃場の画素がある日だけを並べる
   const sel=document.getElementById('colorDate'), keep=toLatest?'':sel.value; toLatest=false;
-  const noDate=isTrend(fillMode())||fillMode()==='plan'||fillMode()==='gp';   // 生育予測は日付によらない
+  const noDate=isTrend(fillMode())||fillMode()==='plan'||fillMode()==='gp'||fillMode()==='elev';   // 生育予測は日付によらない
   document.getElementById('dateCtl').style.display=noDate?'none':'inline-flex';
   if(noDate){ paintMap(); return; }
   if(!selected.length){ buildColorDates(); if([...sel.options].some(o=>o.value===keep)) sel.value=keep; paintMap(); return; }
