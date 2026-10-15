@@ -1485,7 +1485,7 @@ function loadPackage(p, label){
   allDates=[...new Set(Object.values(p.series||{}).flat().map(r=>r[0]))].sort();
   detectOutliers();
   document.getElementById('meta').textContent=`${label||p.meta?.name||''}：${feats.length}区画 / ${allDates.length}観測日${allDates.length?'（'+allDates[0]+'〜'+allDates[allDates.length-1]+'）':''}`;
-  document.getElementById('foot').textContent=(p.meta?.source?'データ: '+p.meta.source+'。':'')+(p.meta?.attribution||'Contains modified Copernicus Sentinel data')+'。地図: 国土地理院。雨雲・雷: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・雷ナウキャスト・雷の観測。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高: 国土地理院 標高タイルを加工。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。';
+  document.getElementById('foot').textContent=(p.meta?.source?'データ: '+p.meta.source+'。':'')+(p.meta?.attribution||'Contains modified Copernicus Sentinel data')+'。地図: 国土地理院。雨雲・雷: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・雷ナウキャスト・雷の観測。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。';
   buildColorDates(); refresh();
 }
 
@@ -2486,7 +2486,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   const md=x=>x?`${+x.slice(5,7)}/${+x.slice(8,10)}`:'', LT=index.latest||{}, chk=index.checked||index.updated||'';
   document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+``;
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
-  document.getElementById('foot').textContent='データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院。雨雲・雷: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・雷ナウキャスト・雷の観測。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高: 国土地理院 標高タイルを加工。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。';
+  document.getElementById('foot').textContent='データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院。雨雲・雷: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・雷ナウキャスト・雷の観測。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。';
   const h=parseHash();
   if(h.c) map.setView(h.c,h.z||15); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]]);
   if(h.rain) RAIN.toggle(true,{mode:h.rain==='15'?'15h':'1h'});   // 共有された「雨雲」のリンク（#…&rain=1）は、雨雲を開いた形で始める
