@@ -1024,7 +1024,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
       <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません"></select><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><input type="checkbox" id="colorOn" checked hidden></div>
-      <div class="ctl" style="margin:2px 0 0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ（絶対表示）</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      <div class="ctl" style="margin:2px 0 0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
     </div>
@@ -2057,7 +2057,7 @@ const MODE_HEAD={
   abs:{t:'絶対表示',d:'生育量(NDVI)を色で表示。他圃場との比較に。',how:['地図を拡大して、田をタップ（最大10枚）','右に、その田の推移のグラフと数字が出ます','日付は地図の左下で変えられます（晴れた日だけ）']},
   rel:{t:'相対表示',d:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',how:['地図を拡大して、田をタップ','色の見方は、地図の左下の凡例','右に、その田の推移のグラフと数字が出ます']},
   trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った田','田をタップすると、その田の数字が右に出ます']},
-  elev:{t:'高低差マップ（絶対表示）',d:'圃場の標高を色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの圃場との比較に。',how:['色は、いま画面に見えている圃場どうしの高さのくらべ（同じ物差し。高い圃場ほど赤い）。色の高さ（m）は左下の凡例に出ます','広くくらべるときは地図を縮小、近所だけなら拡大','圃場をタップすると標高が右に出ます（2枚以上なら1枚目との差も）','標高の誤差は±数十cm。数cmの差は目安です']},
+  elev:{t:'高低差マップ',d:'圃場の標高を色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの圃場との比較に。',how:['色は、いま画面に見えている圃場どうしの高さのくらべ（同じ物差し。高い圃場ほど赤い）。色の高さ（m）は左下の凡例に出ます','広くくらべるときは地図を縮小、近所だけなら拡大','圃場をタップすると標高が右に出ます（2枚以上なら1枚目との差も）','標高の誤差は±数十cm。数cmの差は目安です']},
   elevr:{t:'高低差マップ（相対表示）',d:'一枚の圃場の中の高低差（傾きも）を、圃場ごとに色の幅を合わせて7段階に色分けします。圃場内のばらつきの確認に。',how:['地図を拡大（見えている圃場の中）、または圃場をタップ','色の幅は、その圃場の中央値から圃場ごとに自動（最低±10cm）。縁5mは除く','標高の誤差は±数十cm。数cmの差は目安です']}};
 function renderModeHead(){ const el=document.getElementById('modeHead'), k=fillRaw(), m=MODE_HEAD[k]; if(!el||el.dataset.k===k) return; el.dataset.k=k;
   el.innerHTML=m?`<div class="topbox"><div class="tbhead"><h2>${m.t}</h2><div class="tbsub">${m.d}</div>${m.how?`<ol class="mhow">${m.how.map(x=>`<li>${x}</li>`).join('')}</ol>`:''}${m.extra||''}</div></div>`:''; }
