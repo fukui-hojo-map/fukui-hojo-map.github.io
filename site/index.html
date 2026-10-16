@@ -1192,7 +1192,7 @@ const RAINACC=(function(){
   // 雨雲の帯の、地点の雨の下に出す1行
   function line(r){ if(!r) return ''; const v=r.v;
     const stale=Date.now()-r.t>3*36e5, tm=untilS(r);
-    return `<div class="racc" title="気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとにした推定${anyMiss(r)?'。気象庁のデータに欠けた時間があります（—は分からない、ほかは少なめのことがあります）':''}"><div class="rah"><span class="rl">降った雨</span><span class="rt2"${stale?' style="color:#8a4b00" title="気象庁の解析の更新が遅れています"':''}>推定 ${tm}${anyMiss(r)?'・欠けあり':''}</span></div><div class="rav">${[12,24,48].map(w=>`<span class="rv"><small>${w}時間以内</small><b${v[w]==null?' class="na"':''}>${fmtMm(v[w])}</b></span>`).join('')}</div></div>`; }
+    return `<div class="racc" title="気象庁の解析雨量（レーダーと雨量計による1km四方の雨量）をもとにした推定${anyMiss(r)?'。気象庁のデータに欠けた時間があります（—は分からない、ほかは少なめのことがあります）':''}"><div class="rah"><span class="rl">過去降った雨</span><span class="rt2"${stale?' style="color:#8a4b00" title="気象庁の解析の更新が遅れています"':''}>推定 ${tm}${anyMiss(r)?'・欠けあり':''}</span></div><div class="rav">${[12,24,48].map(w=>`<span class="rv"><small>${w}時間以内</small><b${v[w]==null?' class="na"':''}>${fmtMm(v[w])}</b></span>`).join('')}</div></div>`; }
   // 選んだ圃場の表（右の欄）
   let selSeq=0;
   async function renderSel(){ const box=document.getElementById('raccSel'); if(!box) return; const seq=++selSeq;
@@ -1202,7 +1202,7 @@ const RAINACC=(function(){
     if(!d){ box.hidden=true; return; }
     const rows=list.map(s=>{ const [lon,lat]=parcels[s.pid].centroid, v=val(d,lat,lon); return v?{s,v}:null; }).filter(Boolean);
     if(!rows.length){ box.hidden=true; return; }
-    box.innerHTML=`<div class="rh">この圃場に降った雨（推定） <span class="hint">${until(d)}</span></div>`
+    box.innerHTML=`<div class="rh">この圃場に過去降った雨 <span class="hint">推定・${until(d)}</span></div>`
       +`<table><tr><th></th><th>12時間以内</th><th>24時間以内</th><th>48時間以内</th></tr>${rows.map(({s,v})=>`<tr><td style="color:${s.color}">${esc(selLabel(s.pid))}</td>${d.w.map(w=>`<td><b>${fmtMm(v[w])}</b></td>`).join('')}</tr>`).join('')}</table>`
       +`<div class="rf">${missNote(d)}出典：気象庁ホームページ（加工して作成）</div>`;
     box.hidden=false; }
