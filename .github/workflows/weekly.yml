@@ -76,6 +76,22 @@ jobs:
       - run: pip install -r requirements.txt
         if: steps.gate.outputs.run == '1'
 
+      # レーダー（ndvi.json の rp・rdates・rmask と、過去の年の radar.json。約230MB）は、公開サイトの1GB の上限に収めるため、別のブランチ radar-data に置く（pipeline/radar_store.py）。
+      # 計算（NDVI の更新・作物の見分け）は、これまでどおりレーダーを含む形で行い、公開のときだけ外す。最初の1回は公開中のデータにレーダーが入っているので、そのまま radar-data に置く
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == '1'
+        with:
+          ref: radar-data
+          path: radar
+        continue-on-error: true
+      - name: レーダーのデータを公開前のデータに戻す
+        if: steps.gate.outputs.run == '1'
+        run: |
+          rc=0; git ls-remote --exit-code --heads origin radar-data >/dev/null 2>&1 || rc=$?      # 0=ある, 2=ない
+          if [ "$rc" != 0 ] && [ "$rc" != 2 ]; then echo "::error::radar-data ブランチの有無を確かめられませんでした。中止します"; exit 1; fi
+          if [ "$rc" = 0 ] && [ ! -d radar/cells ]; then echo "::error::radar-data ブランチはあるのに取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
+          python pipeline/radar_store.py restore --data site/data --store radar
+
       - name: 区画グリッドを作成（初回 or 指定時）
         if: ${{ steps.gate.outputs.run == '1' && (inputs.rebuild_cells == true || hashFiles('site/data/index.json') == '') }}
         run: python pipeline/build_cells.py
@@ -104,11 +120,24 @@ jobs:
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
         run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -E '\.(html|svg|png|ico|webmanifest)$')
+      - name: レーダーのデータを radar-data ブランチに置く
+        id: radar1
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash pipeline/radar_push.sh
+      - name: 公開するデータをそろえる（radar-data に置けたときだけ、レーダーを外す。置けなかったときは入れたまま公開する）
+        if: steps.gate.outputs.run == '1'
+        run: |
+          rm -rf site_pub && cp -al site site_pub
+          if [ "${{ steps.radar1.outcome }}" = success ]; then python pipeline/radar_store.py strip --data site_pub/data
+          else echo "::warning::radar-data に置けなかったので、今回はレーダーを入れたまま公開します"; fi
       - uses: peaceiris/actions-gh-pages@v4
         if: steps.gate.outputs.run == '1'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+          publish_dir: ./site_pub
           force_orphan: true
           commit_message: 'update ndvi data'
 
@@ -167,11 +196,24 @@ jobs:
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
         run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -E '\.(html|svg|png|ico|webmanifest)$')
+      - name: レーダーのデータを radar-data ブランチに置く（作物の見分けのあとの分）
+        id: radar2
+        if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || steps.vig.outcome == 'success' || steps.elev.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash pipeline/radar_push.sh
+      - name: 公開するデータをそろえる（radar-data に置けたときだけ、レーダーを外す）
+        if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || steps.vig.outcome == 'success' || steps.elev.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))
+        run: |
+          rm -rf site_pub && cp -al site site_pub
+          if [ "${{ steps.radar2.outcome }}" = success ]; then python pipeline/radar_store.py strip --data site_pub/data
+          else echo "::warning::radar-data に置けなかったので、今回はレーダーを入れたまま公開します"; fi
       - uses: peaceiris/actions-gh-pages@v4
         if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || steps.vig.outcome == 'success' || steps.elev.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+          publish_dir: ./site_pub
           force_orphan: true
           commit_message: 'update trend, crop and vigor data'
 
