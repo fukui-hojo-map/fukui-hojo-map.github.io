@@ -1002,8 +1002,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
   @media (max-width:359px){ #rainBar .rplay{width:36px} #rainBar .rx{width:30px;height:30px} #rainBar .rseg button{padding:6px 4px;min-width:34px} #rainBar .racc .rah{display:none} }
   .drop-over::after{content:"ここに離すと読み込みます";position:fixed;inset:0;background:rgba(47,125,79,.85);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;z-index:9999}
   @media (max-width:860px){
-    .layout{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}   /* 地図の行の高さは、地図（#map の 56vh）にまかせる。行と地図を別々に vh で決めると、スマホの Chrome で片方だけ古い高さのまま残ることがあり、左下の欄が地図の下にはみ出した（2026-10-16 実機） */
-    #map{height:56vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
+    .layout{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}   /* 地図の行の高さは、地図（#map の 64vh）にまかせる。行と地図を別々に vh で決めると、スマホの Chrome で片方だけ古い高さのまま残ることがあり、左下の欄が地図の下にはみ出した（2026-10-16 実機） */
+    #map{height:64vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
     header{padding:8px 12px;gap:4px 6px} .side{padding:10px 12px 30px} header h1.fukui-logo{--s:17px}
     /* スマホ幅: 「ふくい圃場マップ」の右に、「現在地へ」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
     header h1{order:0} header .spacer{order:1} header #btnGeo,header #myOpen{order:2} header .meta{order:3;flex:0 0 100%;font-size:13px;line-height:1.35}
