@@ -1668,10 +1668,13 @@ function ovDraw(key,fn){   // 描いた絵と結果を覚えておき、同じ�
 const REL_MIN=0.02;   // 相対表示の目盛りの最低幅（平均との差 ±2%）。これより小さい差はノイズと区別しにくい
 function fillMode(){ const v=document.getElementById('fillMode').value; return v==='ar'?'top':v; }   // AR追肥モード（開発者の端末だけ）は、地図の上では追肥マップと同じに塗る
 function fillRaw(){ return document.getElementById('fillMode').value; }
-function pxLoad(cell,year){ const key=cell+'|'+year;
-  if(!(key in pxCache)) pxCache[key]=fetch(`${DATA}cells/${cell}/px_${year}.json`).then(r=>r.ok?r.json():null).then(async m=>{
+// 古い年の画素データは、公開サイトの外（px-archive ブランチ。pipeline/px_archive.py）に置いてある。公開サイトにあるのは今年と昨年だけ（5/10 から新しい年）
+const PXARC='https://raw.githubusercontent.com/fukui-hojo-map/fukui-hojo-map.github.io/px-archive/';
+function pxOnSite(year){ const t=new Date(), y=t.getFullYear(), cur=(t.getMonth()>4||(t.getMonth()===4&&t.getDate()>=10))?y:y-1; return +year>=cur-1; }
+function pxLoad(cell,year,old){ const base=old&&!pxOnSite(year)?PXARC:DATA, key=(base===DATA?'':'a|')+cell+'|'+year;   // old=true のときだけ、古い年を置き場から読む（マイ圃場の年度）
+  if(!(key in pxCache)) pxCache[key]=fetch(`${base}cells/${cell}/px_${year}.json`).then(r=>r.ok?r.json():null).then(async m=>{
     if(!m||!m.dates.length) return m?{m,g:null}:null;
-    const img=new Image(); img.src=`${DATA}cells/${cell}/px_${year}.png`; await img.decode();
+    const img=new Image(); img.crossOrigin='anonymous'; img.src=`${base}cells/${cell}/px_${year}.png`; await img.decode();
     const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(img,0,0);
     const d=x.getImageData(0,0,c.width,c.height).data, g=new Uint8Array(c.width*c.height); for(let i=0;i<g.length;i++) g[i]=d[i*4];
     return {m,g}; }).catch(()=>null);

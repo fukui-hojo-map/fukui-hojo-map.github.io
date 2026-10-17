@@ -1,0 +1,84 @@
+# 圃場内マップの古い年の画素データ（px_<年>.png / .json）を、公開サイトの外（px-archive ブランチ）に作って置く（pipeline/px_archive.py）。
+# 公開サイト（GitHub Pages）は約1GB の上限に近いので、今年と昨年の分だけを置き、それより古い年は画面が raw.githubusercontent.com の px-archive から読む。
+# 毎週1回（と手で）動かし、置き場にない年（2022年〜）を、公開中のものを写す／Earth Engine で作る。全部そろうと、すぐ終わる。
+# 時間切れで残りがあるときは、進んだ場合だけ続きを自分で起こす。weekly-ndvi とは順番待ちを分けてある（待ち行列で定期の更新を押しのけないため）
+name: px-archive
+on:
+  schedule:
+    - cron: '41 20 * * 2'
+  workflow_dispatch:
+    inputs:
+      years:
+        description: '作る年（例 2022-2025）。空なら、確定した年すべて'
+        default: ''
+      max_minutes:
+        description: '使う時間の上限（分）'
+        default: '300'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: px-archive
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - id: gate
+        run: echo "t0=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+
+      # 公開中のデータのうち、区画の形・目次・画素データだけ（約130MB。全部は取らない）
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: pages
+          sparse-checkout: |
+            data/index.json
+            data/cells/*/parcels.geojson
+            data/cells/*/px_*
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/checkout@v4
+        with:
+          ref: px-archive
+          path: arc
+        continue-on-error: true
+      - name: 置き場の確認（あるのに取り出せなかったときは、空で上書きしないよう中止）
+        run: |
+          rc=0; git ls-remote --exit-code --heads origin px-archive >/dev/null 2>&1 || rc=$?      # 0=ある, 2=ない
+          if [ "$rc" != 0 ] && [ "$rc" != 2 ]; then echo "::error::px-archive ブランチの有無を確かめられませんでした。中止します"; exit 1; fi
+          if [ "$rc" = 0 ] && [ ! -d arc/.git ]; then echo "::error::px-archive ブランチはあるのに取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
+          mkdir -p arc
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      - name: 古い年の画素データを作る
+        id: px
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: python pipeline/px_archive.py --data pages/data --out arc --workers 3 --deadline $(( ${{ steps.gate.outputs.t0 }} + ${{ inputs.max_minutes || '300' }} * 60 )) ${{ inputs.years && format('--years {0}', inputs.years) || '' }}
+
+      - name: px-archive ブランチに置く
+        id: push
+        if: ${{ !cancelled() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash pipeline/branch_push.sh arc px-archive "px archive"
+
+      - name: 続きを起こす（進んだときだけ）
+        if: ${{ !cancelled() && steps.push.outcome == 'success' && steps.px.outputs.made != '0' && steps.px.outputs.left != '0' && steps.px.outputs.left != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run px-archive.yml --repo "$GITHUB_REPOSITORY" -f years="${{ inputs.years }}" -f max_minutes="${{ inputs.max_minutes || '300' }}" && echo "続きを起こした（残り ${{ steps.px.outputs.left }} セル）"
