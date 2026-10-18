@@ -1587,7 +1587,7 @@ const WX=(function(){
     pr:JB+'probability/data/probability/r8/180000.json', tw:s=>TW+`data_${s}.json`, amt:JB+'amedas/data/latest_time.txt', amp:(n,d,h)=>JB+`amedas/data/point/${n}/${d}_${h}.json`};
   const TTL={f:10*6e4,ov:30*6e4,v:10*6e4,w:3*6e4,pr:30*6e4,tw:60*6e4,amt:2*6e4,amp:5*6e4};
   // ---- 場所 ----
-  let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, geoSeq=0, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
+  let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, fcKey=null, geoSeq=0, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
   function nearMuni(lat,lon){ let b=null,bd=1e9; for(const k in MUNI){ const m=MUNI[k], d=km(lat,lon,m[2],m[3]); if(d<bd){ bd=d; b=+k; } } return b; }
   const area=()=>muni&&MUNI[muni]?MUNI[muni][1]:1;   // 1=嶺北 2=嶺南
   // 2週間気温予報は「福井」だけを使う（敦賀 47631 は、気象庁のページの一覧にあるが data_47631.json がない。2026-10-18 に 404 を確認）
@@ -1605,7 +1605,9 @@ const WX=(function(){
   async function loadAmd(){ if(!ll) return; const st=nearAmd(ll.lat,ll.lng); if(!st) return;
     try{ const lt=String(await get(U.amt,TTL.amt,true)).trim(), t=Date.parse(lt); if(!isFinite(t)) throw new Error('time');
       const d=J(t), ds=d.toISOString().slice(0,10).replace(/-/g,''), h=String(Math.floor(d.getUTCHours()/3)*3).padStart(2,'0');
-      await get(U.amp(st.a[0],ds,h),TTL.amp); errs.delete('amd'); amdKey={u:U.amp(st.a[0],ds,h),st,lt:t}; }
+      await get(U.amp(st.a[0],ds,h),TTL.amp); errs.delete('amd'); amdKey={u:U.amp(st.a[0],ds,h),st,lt:t};
+      const pc=+ptCode(), pa=AMD.find(a=>a[0]===pc);   // 週間の「今日」の最高・最低に使う観測は、予報の地点（福井・大野・敦賀）のもの
+      if(pa&&pa[0]!==st.a[0]){ try{ await get(U.amp(pc,ds,h),TTL.amp); fcKey={u:U.amp(pc,ds,h),name:pa[1]}; }catch(e){ fcKey=null; } } else fcKey=amdKey&&{u:amdKey.u,name:st.a[1]}; }
     catch(e){ errs.add('amd'); }
     schedule(); }
   function schedule(){ if(!on||rendT) return; rendT=requestAnimationFrame(()=>{ rendT=0; render(); }); }
@@ -1696,7 +1698,7 @@ const WX=(function(){
     if(e.length){ const g=new Map(); for(const x of e){ const k=x.type+'|'+x.v; const o=g.get(k)||{...x,ts:[]}; o.ts.push(x.t); g.set(k,o); }
       s+=`<div class="wxearly">警報級の可能性 ${[...g.values()].map(x=>`<b class="${x.v==='高'?'hi':'mid'}">${esc(x.type)}［${x.v}］</b>${esc(md(dkey(Math.min(...x.ts))))}`).join('・')}</div>`; }
     return s; }
-  function amdObs(){ const k=amdKey&&have(amdKey.u,40*6e4); if(!k) return null; const keys=Object.keys(k).sort(), r=k[keys.filter(x=>k[x]&&k[x].maxTemp).pop()]||{}, v=f=>r[f]&&r[f][1]===0?r[f][0]:null; return {mx:v('maxTemp'),mn:v('minTemp'),st:amdKey.st.a[1]}; }
+  function amdObs(){ const k=fcKey&&have(fcKey.u,40*6e4); if(!k) return null; const keys=Object.keys(k).sort(), r=k[keys.filter(x=>k[x]&&k[x].maxTemp).pop()]||{}, v=f=>r[f]&&r[f][1]===0?r[f][0]:null; return {mx:v('maxTemp'),mn:v('minTemp'),st:fcKey.name}; }
   // いま（アメダス）: 大きな気温と、右に3行（風・湿度／最高・最低／日の出・日の入り）。雨のことは雨雲の帯の文だけ
   function nowHtml(){ const k=amdKey&&have(amdKey.u,40*6e4); if(!k){ return errs.has('amd')?'':'<div class="wxnow load">読み込んでいます…</div>'; }
     const keys=Object.keys(k).sort(), lastK=keys.filter(x=>k[x]&&k[x].temp).pop()||keys.pop(), r=k[lastK]||{}, st=amdKey.st, v=f=>r[f]&&r[f][1]===0?r[f][0]:null;
@@ -1788,7 +1790,7 @@ const WX=(function(){
   // ページを開いて少したったら、天気予報と警報・注意報を裏で先に読んでおく（「天気」を押したとき、すぐ出るように）
   function prefetch(){ if(navigator.connection&&navigator.connection.saveData) return; [[U.f,TTL.f],[U.w,TTL.w],[U.v(1),TTL.v],[U.tw(47616),TTL.tw]].forEach(([u,t])=>{ if(!have(u,t)) get(u,t).catch(()=>{}); }); }
   setTimeout(()=>{ (window.requestIdleCallback||setTimeout)(prefetch); },6000);
-  return {show, at, said, isOn:()=>on, _sun:sunTimes, _parse:parse, _icon:icon, _days:days, _warns:warns, _early:early, _state:()=>({on,muni,town,area:area(),ll:ll&&[ll.lat,ll.lng],errs:[...errs],amd:amdKey&&amdKey.st.a[1],outside}), _mem:mem, TEL, WK};
+  return {show, at, said, isOn:()=>on, _sun:sunTimes, _parse:parse, _icon:icon, _days:days, _warns:warns, _early:early, _state:()=>({on,muni,town,area:area(),ll:ll&&[ll.lat,ll.lng],errs:[...errs],amd:amdKey&&amdKey.st.a[1],fc:fcKey&&fcKey.name,outside}), _mem:mem, TEL, WK};
 })();
 RAIN.hook({toggle:go=>WX.show(go), where:(c,k)=>WX.at(c,k), say:o=>WX.said(o)});
 let geoLayer=null;
