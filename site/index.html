@@ -1050,18 +1050,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .wdet .dtx{margin:0 0 2px}
   /* 週間: 日付・絵・天気・降水確率・最低〜最高 */
   .wxlist{display:flex;flex-direction:column}
-  .wr{display:grid;grid-template-columns:62px 36px minmax(0,1fr) 42px minmax(118px,40%);align-items:center;column-gap:6px;width:100%;min-height:54px;padding:5px 12px;border:0;border-top:1px solid #edf1f4;background:#fff;text-align:left}
+  .wr{display:grid;grid-template-columns:62px 36px minmax(0,1fr) 42px 78px;align-items:center;column-gap:6px;width:100%;min-height:54px;padding:5px 12px;border:0;border-top:1px solid #edf1f4;background:#fff;text-align:left}
   .wr:first-child{border-top:0} .wr:hover{background:#f7fafc} .wr.today{background:#fffbea} .wr.open{background:#eef5ff}
   .wdy{display:flex;flex-direction:column;line-height:1.2;white-space:nowrap} .wdy small{font-size:12.5px;color:#5b6b63} .wdy.su b,.wdy.su small{color:#d0312d} .wdy.sa b,.wdy.sa small{color:#1d5fd1}
   .wic{display:flex;justify-content:center} .wic .wxi{width:32px;height:32px} .wic .wxi.w2{width:36px;height:20px}
   .wtx{line-height:1.25;min-width:0;overflow-wrap:anywhere}
   .wpp{font-weight:700;text-align:right;color:#5b7f9e} .wpp small{font-size:12px} .wpp.wet{color:#0d47a1} .wpp.dry{color:#2e8b3e} .wpp.na{color:#a3adb5}
-  .wtp{display:flex;align-items:center;gap:6px} .wtp .tv{flex:none;width:26px;font-weight:700;text-align:center;border-radius:6px} .wtp .tv.na{color:#a3adb5;font-weight:400}
-  .wtp .tv.rh,.wxleg .rh{color:#d0442c} .wtp .tv.rvh{color:#a3101c;background:#fde2de} .wtp .tv.rl,.wxleg .rl{color:#1d63d1} .wtp .tv.rvl{color:#0b3fa8;background:#dfeaff} .wtp .tv.ob{color:#6b7a72;font-style:italic}
-  .wxbar{position:relative;flex:1;height:8px;border-radius:5px;background:#eef1f4} .wxbar i{position:absolute;top:0;height:100%;border-radius:5px}
-  .wxbar b.nm{position:absolute;top:-3px;width:2px;height:14px;margin-left:-1px;background:#2b3a44;opacity:.45;border-radius:1px}
+  .wtp{display:flex;align-items:center;justify-content:flex-end;gap:4px} .wtp .tv{flex:none;min-width:26px;font-weight:700;text-align:right;font-size:17px} .wtp .tv.na{color:#a3adb5;font-weight:400}
+  .wtp .tv.rh,.wtp .tv.rvh,.wxleg .rh{color:#d0312d} .wtp .tv.rl,.wtp .tv.rvl,.wxleg .rl{color:#1d63d1} .wtp .tv.ob{color:#6b7a72;font-style:italic} .wtp .sl{color:#a3adb5;font-weight:400}
   .wdet{padding:8px 12px 10px;font-size:14px;line-height:1.6;background:#eef5ff;border-top:1px dashed #c9dbf2;color:#24323c} .wdet .dl{display:flex;flex-wrap:wrap;column-gap:12px} .wdet .dl span{white-space:nowrap}
-  .wxleg{display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 14px 8px;font-size:12.5px;color:#5b6b63;border-top:1px solid #edf1f4} .wxleg .nmk{display:inline-block;width:2px;height:11px;background:#2b3a44;opacity:.45;margin-right:5px;vertical-align:-1px}
+  .wxleg{display:flex;flex-wrap:wrap;gap:4px 14px;padding:6px 14px 8px;font-size:12.5px;color:#5b6b63;border-top:1px solid #edf1f4}
   .wxnote{margin:0 0 8px;border:1px solid #d8e0e6;border-radius:12px;background:#fff} .wxnote summary{cursor:pointer;padding:8px 14px;font-weight:700}
   .wxnote>div{padding:0 14px 10px;font-size:14px;line-height:1.7}
   .wxsrc{font-size:12.5px;color:#6b7a72} .wxsrc a{color:#0d47a1}
@@ -1070,7 +1068,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     body.wxOn #rainBar{position:relative;left:auto;right:auto;bottom:auto;margin:6px 6px 0;max-width:none;box-shadow:0 1px 6px rgba(0,0,0,.14)}
     body.wxOn .side{padding:10px 10px 30px}
   }
-  @media (max-width:400px){ .wr{grid-template-columns:56px 32px minmax(0,1fr) 38px minmax(104px,40%);column-gap:4px;padding:5px 8px} .wic .wxi{width:28px;height:28px} .wtx{font-size:14px} .wxnow .tv{font-size:38px} .wxnow{column-gap:12px} }
+  @media (max-width:400px){ .wr{grid-template-columns:56px 32px minmax(0,1fr) 38px 72px;column-gap:4px;padding:5px 8px} .wic .wxi{width:28px;height:28px} .wtx{font-size:14px} .wxnow .tv{font-size:38px} .wxnow{column-gap:12px} }
   .drop-over::after{content:"ここに離すと読み込みます";position:fixed;inset:0;background:rgba(47,125,79,.85);color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;z-index:9999}
   @media (max-width:860px){
     .layout{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}   /* 地図の行の高さは、地図（#map の 64vh）にまかせる。行と地図を別々に vh で決めると、スマホの Chrome で片方だけ古い高さのまま残ることがあり、左下の欄が地図の下にはみ出した（2026-10-16 実機） */
@@ -1732,10 +1730,6 @@ const WX=(function(){
   // 週間（今日〜7日先）: 1行に、日付・絵・天気・降水確率・最低〜最高
   function listHtml(D){ if(!D.d.length) return errs.has(U.f)?'<div class="wxsec"><div class="wxst">週間天気</div><div class="wxmsg">読み込めませんでした <button type="button" class="wxre" data-w="re">もう一度</button></div></div>':'<div class="wxsec"><div class="wxst">週間天気</div><div class="wxmsg">読み込んでいます…</div></div>';
     const t0=D.d[0]; if(t0&&t0.k===D.today&&(t0.tmin==null||t0.tmax==null)){ const ob=amdObs(); if(ob){ if(t0.tmax==null&&ob.mx!=null){ t0.tmax=ob.mx; t0.obMax=true; } if(t0.tmin==null&&ob.mn!=null){ t0.tmin=ob.mn; t0.obMin=true; } t0.obSt=ob.st; } }   // 今日の最高・最低の予報がもうないとき（夕方の発表）は、アメダスのここまでの観測を出す
-    const vals=[]; for(const o of D.d){ for(const v of [o.tmin,o.tmax,o.nmin,o.nmax]) if(v!=null&&isFinite(v)&&v>-900) vals.push(+v); }
-    const lo=vals.length?Math.floor(Math.min(...vals)-1):0, hi=vals.length?Math.ceil(Math.max(...vals)+1):30, X=v=>((v-lo)/(hi-lo)*100).toFixed(1);
-    const bar=o=>{ if(o.tmin==null||o.tmax==null) return '<span class="wxbar"></span>'; const a=+o.tmin, b=+o.tmax;
-      return `<span class="wxbar"><i class="tb" style="left:${X(a)}%;width:${Math.max(2,X(b)-X(a)).toFixed(1)}%;background:linear-gradient(90deg,${tcol(a)},${tcol(b)})"></i>${o.nmin!=null&&o.nmin>-900?`<b class="nm" style="left:${X(o.nmin)}%"></b>`:''}${o.nmax!=null&&o.nmax>-900?`<b class="nm" style="left:${X(o.nmax)}%"></b>`:''}</span>`; };
     const tv=(v,r,ob)=>{ const k=RK(r); return v==null||v===''?'<span class="tv na">—</span>':`<span class="tv${k?' r'+k[1]:''}${ob?' ob':''}"${ob?' title="アメダスの観測（ここまで）"':''}>${Math.round(+v)}</span>`; };
     const row=o=>{ const lb=dayLbl(o.k,D.today), wd=wdOf(o.k), name=o.code?TEL[o.code]||'':'', isOpen=openRow===o.k, wc=wd===0?'su':wd===6?'sa':'';
       const pc=o.pop==null?'na':o.pop>=50?'wet':o.pop<=20?'dry':'';
@@ -1743,11 +1737,11 @@ const WX=(function(){
         +`<span class="wdy ${wc}"><b>${lb||md(o.k)}</b><small>${lb?md(o.k):''}(${WD[wd]})</small></span>`
         +`<span class="wic">${icon(name,false)}</span><span class="wtx">${esc(name)}</span>`
         +`<span class="wpp ${pc}">${o.pop==null?'—':`${o.pop}<small>%</small>`}</span>`
-        +`<span class="wtp">${tv(o.tmin,o.rmin,o.obMin)}${bar(o)}${tv(o.tmax,o.rmax,o.obMax)}</span></button>`
+        +`<span class="wtp">${tv(o.tmin,o.rmin,o.obMin)}<span class="sl">〜</span>${tv(o.tmax,o.rmax,o.obMax)}</span></button>`
         +(isOpen?`<div class="wdet">${detail(o)}</div>`:''); };
     return `<div class="wxsec"><div class="wxst">週間天気<small>気温は${esc(D.tpt)}${D.tpt!=='福井'?'（3日目から福井）':''}</small></div>`
       +`<div class="wxlist">${D.d.map(row).join('')}</div>`
-      +`<div class="wxleg"><span><i class="nmk"></i>平年</span><span><b class="rh">赤</b> 平年より高い</span><span><b class="rl">青</b> 低い</span></div></div>`; }
+      +`<div class="wxleg"><span><b class="rh">赤</b> 平年より高い</span><span><b class="rl">青</b> 低い</span></div></div>`; }
   // 週間の行を押したときの、くわしい表示。今日・明日は3時間ごとの天気の絵（地域時系列予報）と6時間ごとの降水確率。その先は、天気の移り変わりを絵と言葉で（気象庁の予報用語の意味）
   const WN={晴:'晴れ',曇:'くもり',雨:'雨',雪:'雪',霙:'雨か雪',雷:'雷雨',霧:'霧'};
   function flowHtml(name){ const k=parse(name); if(!k) return '';
