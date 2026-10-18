@@ -1775,7 +1775,7 @@ const WX=(function(){
   function notesHtml(D){ const OV=have(U.ov,12*36e5); let s='';
     if(OV&&OV.text) s+=`<details class="wxnote" data-k="ov"><summary>気象台の解説</summary><div>${esc(OV.text).replace(/\n+/g,'<br>')}</div></details>`;
     const old=ageOf(U.f)&&Date.now()-ageOf(U.f)>30*6e4&&errs.has(U.f)?'（通信できず、前に読んだもの）':'';
-    return s+`<div class="wxsrc">${D.rep?`${hm(Date.parse(D.rep))}発表${old}・`:''}出典：<a href="https://www.jma.go.jp/bosai/forecast/#area_type=offices&area_code=180000" target="_blank" rel="noopener">気象庁</a>（加工して作成）・国土地理院</div>`; }
+    return s+`<div class="wxsrc">${D.rep?`${hm(Date.parse(D.rep))}発表${old}・`:''}出典：<a href="https://www.jma.go.jp/bosai/forecast/#area_type=offices&area_code=180000" target="_blank" rel="noopener">気象庁</a>（引用）・国土地理院</div>`; }
   // ---- 開く・閉じる ----
   function show(go){ if(go===on) return; on=go; document.body.classList.toggle('wxOn',on);
     let box=document.getElementById('wxPanel');
