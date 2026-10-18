@@ -1589,7 +1589,8 @@ const WX=(function(){
   let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, geoSeq=0, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
   function nearMuni(lat,lon){ let b=null,bd=1e9; for(const k in MUNI){ const m=MUNI[k], d=km(lat,lon,m[2],m[3]); if(d<bd){ bd=d; b=+k; } } return b; }
   const area=()=>muni&&MUNI[muni]?MUNI[muni][1]:1;   // 1=嶺北 2=嶺南
-  const twSt=()=>area()===2?47631:47616, ptCode=()=>area()===2?'57248':OKU.has(muni)?'57121':'57066';
+  // 2週間気温予報は「福井」だけを使う（敦賀 47631 は、気象庁のページの一覧にあるが data_47631.json がない。2026-10-18 に 404 を確認）
+  const twSt=()=>47616, ptCode=()=>area()===2?'57248':OKU.has(muni)?'57121':'57066';
   const nearAmd=(lat,lon)=>AMD.filter(a=>a[4]).map(a=>({a,d:km(lat,lon,a[2],a[3])})).sort((x,y)=>x.d-y.d)[0];
   async function locate(c){ const seq=++geoSeq, lat=+c.lat.toFixed(4), lon=+c.lng.toFixed(4);
     muni=nearMuni(lat,lon); town=''; schedule();
@@ -1654,7 +1655,7 @@ const WX=(function(){
     if(F&&F[1]){ const ts=F[1].timeSeries||[], w=ts[0]&&ts[0].areas[0];
       if(w) ts[0].timeDefines.forEach((t,i)=>{ const o=D(dkey(Date.parse(t))); if(!o.code&&w.weatherCodes[i]) o.code=w.weatherCodes[i]; if(w.pops[i]!==''&&w.pops[i]!=null) o.wpop=+w.pops[i]; if(w.reliabilities&&w.reliabilities[i]) o.rel=w.reliabilities[i]; });
       const tt=ts[1]&&ts[1].areas[0];
-      if(tt&&a===1) ts[1].timeDefines.forEach((t,i)=>{ const o=D(dkey(Date.parse(t))), n=x=>x===''||x==null?null:+x;
+      if(tt) ts[1].timeDefines.forEach((t,i)=>{ const o=D(dkey(Date.parse(t))), n=x=>x===''||x==null?null:+x;
         if(o.tmin==null&&n(tt.tempsMin[i])!=null) o.tmin=n(tt.tempsMin[i]); if(o.tmax==null&&n(tt.tempsMax[i])!=null) o.tmax=n(tt.tempsMax[i]);
         o.minR=[n(tt.tempsMinLower[i]),n(tt.tempsMinUpper[i])]; o.maxR=[n(tt.tempsMaxLower[i]),n(tt.tempsMaxUpper[i])]; }); }
     if(T&&T.wk1) for(const e of T.wk1){ if(e.elem!==2&&e.elem!==3) continue; const k=`${e.yy}-${String(e.mm).padStart(2,'0')}-${String(e.dd).padStart(2,'0')}`, o=D(k), mx=e.elem===2;
@@ -1665,7 +1666,8 @@ const WX=(function(){
     const wk2=[]; if(T&&T.wk2){ const m2=new Map(); for(const e of T.wk2){ if(e.elem!==2&&e.elem!==3) continue; const k=`${e.yy}-${String(e.mm).padStart(2,'0')}-${String(e.dd).padStart(2,'0')}`; const o=m2.get(k)||{k,w2:true}; m2.set(k,o);
         if(e.elem===2){ o.tmax=e.fcst; o.maxR=[e.lower,e.upper]; o.nmax=e.nrm; o.rmax=e.rank; } else { o.tmin=e.fcst; o.minR=[e.lower,e.upper]; o.nmin=e.nrm; o.rmin=e.rank; } }
       wk2.push(...[...m2.values()].filter(o=>!mp.has(o.k)||!mp.get(o.k).code).sort((x,y)=>x.k<y.k?-1:1)); }
-    return {d:out.filter(o=>o.code||o.tmax!=null||o.tmin!=null),w2:wk2,F,T,today,rep:F&&F[0]&&F[0].reportDatetime,wrep:F&&F[1]&&F[1].reportDatetime,tpt:T?(twSt()===47631?'敦賀':'福井'):(a===2?'敦賀':'福井')}; }
+    const p0=[...mp.values()].map(o=>o.tpt).find(Boolean)||'福井';   // 今日・明日の最高・最低の地点（福井・大野・敦賀）。3日目からは、気象庁の週間予報・2週間気温予報にある福井だけ
+    return {d:out.filter(o=>o.code||o.tmax!=null||o.tmin!=null),w2:wk2,F,T,today,rep:F&&F[0]&&F[0].reportDatetime,wrep:F&&F[1]&&F[1].reportDatetime,tpt:p0==='福井'?'福井':`${p0}（3日目からは福井）`}; }
   function warns(){ const W=have(U.w,30*6e4); if(!W||!Array.isArray(W)||!muni||outside) return null; const code=String(muni)+'00';
     const reps=W.filter(r=>r&&r.warning&&Array.isArray(r.warning.class20Items)&&r.warning.class20Items.some(x=>x.areaCode===code)).sort((x,y)=>Date.parse(y.reportDatetime)-Date.parse(x.reportDatetime));
     if(!reps.length) return {list:[],t:null,head:''}; const r=reps[0], it=r.warning.class20Items.find(x=>x.areaCode===code);
