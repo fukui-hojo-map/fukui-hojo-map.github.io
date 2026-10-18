@@ -1031,15 +1031,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   /* 1時間ごと予報: 左の見出しの列は動かず、右は横に動かす。1時間＝42px の格子。天気・風（3時間）と降水確率（6時間）は列をつないだ枠 */
   .wxhg{display:flex;padding:4px 0 6px}
   .wxhs{flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
-  .hgrid{display:grid;grid-template-rows:22px 38px 24px 24px 24px 24px;position:relative}
+  .hgrid{display:grid;grid-template-rows:22px 38px 24px 24px 24px;position:relative}
   .hgrid .g{display:flex;align-items:center;justify-content:center;white-space:nowrap;min-width:0}
-  .hgrid .bg{grid-row:1/-1;z-index:0} .hgrid .bg.nt{background:#f2f4fa} .hgrid .hd.now{color:#fff;background:#0d47a1;border-radius:999px;margin:1px 4px} .hgrid .bg.d0{border-left:1.5px dashed #b9c6d3}
+  .hgrid .bg{grid-row:1/-1;z-index:0} .hgrid .bg.nt{background:#f2f4fa} .hgrid .hd.now{color:#fff;background:#0d47a1;border-radius:999px;margin:1px 8px} .hgrid .bg.d0{border-left:1.5px dashed #b9c6d3}
   .hgrid .hd{grid-row:1;z-index:1;font-size:12.5px;font-weight:700} .hgrid .hd b{color:#0d47a1}
-  .hgrid .wx{grid-row:2;z-index:1;border-left:1px solid #e3e9ee} .hgrid .ht{grid-row:3;z-index:1;font-size:16px;font-weight:700}
-  .hgrid .rn{grid-row:4;z-index:1;margin:2px 2px;border-radius:5px;font-size:12px;font-weight:700;color:#a3adb5} .hgrid .rn.on{color:#1d2a33}
-  .hgrid .pp{grid-row:5;z-index:1;font-weight:700;color:#5b7f9e;border-left:1px solid #e3e9ee} .hgrid .pp.wet{color:#0d47a1}
-  .hgrid .wd{grid-row:6;z-index:1;font-size:12.5px;font-weight:700;color:#3d5260;border-left:1px solid #e3e9ee} .hgrid .wd.strong,.hgrid .wd.strong .wxa{color:#c2410c}
-  .hlb{flex:0 0 46px;display:grid;grid-template-rows:22px 38px 24px 24px 24px 24px;padding-left:8px;font-size:12px;color:#6b7a72} .hlb>div{display:flex;align-items:center}
+  .hgrid .wx{grid-row:2;z-index:1} .hgrid .ht{grid-row:3;z-index:1;font-size:16px;font-weight:700}
+  .hgrid .pp{grid-row:4;z-index:1;font-weight:700;color:#5b7f9e} .hgrid .pp.wet{color:#0d47a1}
+  .hgrid .wd{grid-row:5;z-index:1;font-size:12.5px;font-weight:700;color:#3d5260} .hgrid .wd.strong,.hgrid .wd.strong .wxa{color:#c2410c}
+  .hlb{flex:0 0 46px;display:grid;grid-template-rows:22px 38px 24px 24px 24px;padding-left:8px;font-size:12px;color:#6b7a72} .hlb>div{display:flex;align-items:center}
   /* 週間の行を押したときの、くわしい表示 */
   .dbandw{overflow-x:auto;margin:2px 0 8px;border:1px solid #d6e3f2;border-radius:10px;background:#fff} .dband{display:grid;grid-template-rows:20px 34px 18px 22px 22px 22px}
   .dband .b{display:flex;align-items:center;justify-content:center;white-space:nowrap;min-width:0;z-index:1} .dband .bg{grid-row:1/-1;z-index:0} .dband .bg.nt{background:#f2f4fa}
@@ -1538,11 +1537,7 @@ const RAIN=(function(){
     d.innerHTML='<button type="button" class="rainBtn" aria-pressed="false" title="天気（雨雲レーダー・2週間の天気・警報・注意報。気象庁）"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.6" cy="8.2" r="3.6" fill="#f7a823"/><path d="M8.6 1.6v1.5M2 8.2h1.5M3.9 3.5l1.1 1.1M13.3 3.5l-1.1 1.1" stroke="#f7a823" stroke-width="1.6" stroke-linecap="round"/><path d="M8 19.5a4.3 4.3 0 0 1-.4-8.6 5.8 5.8 0 0 1 11.1 1.5 3.6 3.6 0 0 1-.5 7.1z" fill="currentColor"/></svg><span>天気</span></button>';
     L.DomEvent.disableClickPropagation(d); d.querySelector('button').onclick=()=>toggle(); return d; };
   ctl.addTo(map);
-  // 天気の「1時間ごと予報」のために: ある地点の、降水短時間予報（1時間ごとの雨量。15時間先まで）を読む。[{s: 1時間の始まり, k: 色の段階（-1=雨なし、null=読めない）}]
-  async function rsPoint(lat,lon){ if(!rsCache||Date.now()-rsCache.at>3e5) rsCache={at:Date.now(),f:await loadRs()};
-    const fl=rsCache.f.filter(f=>f.kind==='fc'), ks=await Promise.all(fl.map(f=>at(f,lat,lon,LV)));
-    return fl.map((f,i)=>({s:f.t-36e5,k:ks[i]})); }
-  return {hook:h=>{ hook=h; }, rsPoint, toggle, isOn:()=>on, mode:()=>mode, viewCenter:ctrLL, _flush:()=>{ pxCache.clear(); liCache.clear(); }, setPoint, showAt, refresh, setMode, play, show, _pollIn:pollIn, _state:()=>({on,mode,idx,nowIdx,n:frames.length,all,playing,frames:frames.map(f=>f.k),th:th.length,li:liT.length,pt:pt&&[pt.lat,pt.lng],ptKind,err,layers:layers.size,ref:!!refT,ctrY,vis:frames[idx]&&frames[idx].k,tz:(()=>{ const l=frames[idx]&&layers.get(frames[idx].k); return l?l._tileZoom:null; })(),onMap:[...layers.values()].filter(l=>map.hasLayer(l)).length}), _at:at, _cls:cls, LV, TH};
+  return {hook:h=>{ hook=h; }, toggle, isOn:()=>on, mode:()=>mode, viewCenter:ctrLL, _flush:()=>{ pxCache.clear(); liCache.clear(); }, setPoint, showAt, refresh, setMode, play, show, _pollIn:pollIn, _state:()=>({on,mode,idx,nowIdx,n:frames.length,all,playing,frames:frames.map(f=>f.k),th:th.length,li:liT.length,pt:pt&&[pt.lat,pt.lng],ptKind,err,layers:layers.size,ref:!!refT,ctrY,vis:frames[idx]&&frames[idx].k,tz:(()=>{ const l=frames[idx]&&layers.get(frames[idx].k); return l?l._tileZoom:null; })(),onMap:[...layers.values()].filter(l=>map.hasLayer(l)).length}), _at:at, _cls:cls, LV, TH};
 })();
 // ---------- 天気（気象庁の 府県天気予報・週間天気予報・地域時系列予報・2週間気温予報・アメダス・警報・注意報・早期注意情報） ----------
 // 左上の「天気」で、雨雲レーダー（RAIN）といっしょに開く。右の欄（スマホは地図の下）を天気だけにする（NDVI の色・グラフは出さない）
@@ -1594,7 +1589,7 @@ const WX=(function(){
     pr:JB+'probability/data/probability/r8/180000.json', tw:s=>TW+`data_${s}.json`, amt:JB+'amedas/data/latest_time.txt', amp:(n,d,h)=>JB+`amedas/data/point/${n}/${d}_${h}.json`};
   const TTL={f:10*6e4,ov:30*6e4,v:10*6e4,w:3*6e4,pr:30*6e4,tw:60*6e4,amt:2*6e4,amp:5*6e4};
   // ---- 場所 ----
-  let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, rsp=null, geoSeq=0, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
+  let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, geoSeq=0, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
   function nearMuni(lat,lon){ let b=null,bd=1e9; for(const k in MUNI){ const m=MUNI[k], d=km(lat,lon,m[2],m[3]); if(d<bd){ bd=d; b=+k; } } return b; }
   const area=()=>muni&&MUNI[muni]?MUNI[muni][1]:1;   // 1=嶺北 2=嶺南
   // 2週間気温予報は「福井」だけを使う（敦賀 47631 は、気象庁のページの一覧にあるが data_47631.json がない。2026-10-18 に 404 を確認）
@@ -1609,11 +1604,7 @@ const WX=(function(){
     if(seq===geoSeq){ schedule(); loadArea(); } }
   // ---- 読む ----
   function loadArea(){ const a=area(); [[U.f,TTL.f],[U.ov,TTL.ov],[U.v(a),TTL.v],[U.w,TTL.w],[U.pr,TTL.pr],[U.tw(twSt()),TTL.tw]].forEach(([u,t])=>get(u,t).then(()=>{ errs.delete(u); schedule(); },()=>{ errs.add(u); schedule(); })); loadAmd(); }
-  // 1時間ごとの雨（降水短時間予報。雨雲レーダーのタイルの色を、この地点で読む）
-  function loadRain(){ if(!ll||typeof RAIN==='undefined'||!RAIN.rsPoint) return; const key=ll.lat.toFixed(3)+','+ll.lng.toFixed(3);
-    if(rsp&&rsp.key===key&&Date.now()-rsp.t<5*6e4) return;
-    RAIN.rsPoint(ll.lat,ll.lng).then(list=>{ rsp={key,list,t:Date.now()}; errs.delete('rs'); schedule(); },()=>{ errs.add('rs'); schedule(); }); }
-  async function loadAmd(){ if(!ll) return; loadRain(); const st=nearAmd(ll.lat,ll.lng); if(!st) return;
+  async function loadAmd(){ if(!ll) return; const st=nearAmd(ll.lat,ll.lng); if(!st) return;
     try{ const lt=String(await get(U.amt,TTL.amt,true)).trim(), t=Date.parse(lt); if(!isFinite(t)) throw new Error('time');
       const d=J(t), ds=d.toISOString().slice(0,10).replace(/-/g,''), h=String(Math.floor(d.getUTCHours()/3)*3).padStart(2,'0');
       await get(U.amp(st.a[0],ds,h),TTL.amp); errs.delete('amd'); amdKey={u:U.amp(st.a[0],ds,h),st,lt:t}; }
@@ -1719,30 +1710,25 @@ const WX=(function(){
     const ln=a=>a.length?`<div>${a.map(x=>`<span>${x}</span>`).join('')}</div>`:'';
     return `<div class="wxnow"><b class="tv" style="color:${t!=null?tcolD(t):'inherit'}">${t!=null?f1(t):'—'}<small>℃</small></b>`
       +`<div class="wxnr">${ln(l1)}${ln(l2)}${ln(l3)}</div><div class="wxobs">アメダス${esc(st.a[1])} ${tt?hm(tt):''}</div></div>`; }
-  // 1時間ごと予報: 1時間ごとに出すのは雨の量（気象庁の降水短時間予報。15時間先まで）。天気・風は3時間ごと、降水確率は6時間ごとの予報なので、その時間の列をつないだ枠で出す（値を補って作らない）。気温は3時間ごとの時刻だけ
-  const RNTX=['<1','1-5','5-10','10-20','20-30','30-50','50-80','80+'];
+  // 3時間ごとの予報: 気象庁の地域時系列予報（天気・風・気温は3時間ごと）と府県天気予報の降水確率（6時間ごと）を、そのまま並べる。1時間ごとに出しているのは雨の量（降水短時間予報）だけで、それは雨雲の帯に出る
   function vpfdOf(){ const V=have(U.v(area()),12*36e5); if(!V||!V.areaTimeSeries) return null; const A=V.areaTimeSeries, P=V.pointTimeSeries||{};
     return {slots:A.timeDefines.map((d,i)=>({s:Date.parse(d.dateTime),e:Date.parse(d.dateTime)+108e5,w:A.weather[i],wd:A.wind[i]})),temps:new Map((P.timeDefines||[]).map((d,i)=>[Date.parse(d.dateTime),P.temperature&&P.temperature[i]])),pt:P.pointNameJP||''}; }
   function pops6(){ const F=have(U.f,12*36e5), ac=`18${area()===2?'002':'001'}0`, s1=F&&F[0]&&F[0].timeSeries&&F[0].timeSeries[1], ar=s1&&s1.areas.find(x=>x.area.code===ac);
     return ar?s1.timeDefines.map((t,i)=>({s:Date.parse(t),e:Date.parse(t)+216e5,v:ar.pops[i]})).filter(p=>p.v!==''&&p.v!=null):[]; }
   const windTx=wd=>{ const r=String(wd&&wd.range||'').split(' ').map(Number); return {a:wd&&DEG8[wd.direction]!=null?arrow((DEG8[wd.direction]+180)%360):'',t:r.length===2&&isFinite(r[0])?`${r[0]}-${r[1]}`:'',strong:r[1]>=10}; };
-  function hoursHtml(){ const V=vpfdOf(); if(!V) return errs.has(U.v(area()))?'<div class="wxsec"><div class="wxst">1時間ごと予報</div><div class="wxmsg">読み込めませんでした</div></div>':'';
-    const H=36e5, now=nowMs(), t0=Math.floor(now/H)*H, tEnd=Math.min(t0+24*H,V.slots.length?V.slots[V.slots.length-1].e:t0);
-    if(tEnd<=t0) return ''; const N=Math.round((tEnd-t0)/H), col=t=>Math.round((t-t0)/H)+1;
-    const sp=(a,b)=>{ a=Math.max(a,t0); b=Math.min(b,tEnd); return b>a?`grid-column:${col(a)}/span ${Math.round((b-a)/H)}`:''; };
-    const LV=RAIN.LV, rmap=new Map(((rsp&&rsp.list)||[]).map(x=>[Math.round(x.s/H)*H,x])), rEnd=rsp&&rsp.list.length?Math.round(rsp.list[rsp.list.length-1].s/H)*H+H:t0;   // 降水短時間予報は、6時間先までは毎時50分の区切り（例 1:50〜2:50）。いちばん近い時刻の列に入れる
-    let c='';
-    for(let i=0;i<N;i++){ const t=t0+i*H, h=hourOf(t), night=h>=18||h<6;
-      c+=`<div class="g bg${night?' nt':''}${h===0&&i>0?' d0':''}" style="grid-column:${i+1}"></div>`
-        +`<div class="g hd${i===0?' now':''}" style="grid-column:${i+1}">${i===0?'いま':h===0?`<b>${esc(md(dkey(t)))}</b>`:`${h}時`}</div>`;
-      const tp=V.temps.get(t); if(tp!=null&&tp!=='') c+=`<div class="g ht" style="grid-column:${i+1};color:${tcolD(+tp)}">${tp}°</div>`;
-      if(rmap.has(t)){ const x=rmap.get(t), k=x.k; c+=`<div class="g rn${k!=null&&k>=0?' on':''}" style="grid-column:${i+1}${k!=null&&k>=0?`;background:rgb(${LV[k].c});color:${k>=3?'#fff':'#1d2a33'}`:''}" title="${hm(x.s)}〜${hm(x.s+H)}の雨の量${k==null?'（読めません）':k<0?'：なし':`：${RNTX[k]}mm`}">${k==null?'':k<0?'0':RNTX[k]}</div>`; } }
-    for(const sl of V.slots){ const st=sp(sl.s,sl.e); if(!st) continue; const night=hourOf(sl.s)>=18||hourOf(sl.s)<6, w=windTx(sl.wd);
-      c+=`<div class="g wx" style="${st}" title="${esc(sl.w)}">${icon(sl.w,night)}</div><div class="g wd${w.strong?' strong':''}" style="${st}">${w.a}${w.t}</div>`; }
-    for(const p of pops6()){ const st=sp(p.s,p.e); if(st) c+=`<div class="g pp${+p.v>=50?' wet':''}" style="${st}">${p.v}%</div>`; }
-    const lb=`<div class="hlb" aria-hidden="true"><div class="hd"></div><div class="wx">天気</div><div class="ht">気温</div><div class="rn">雨mm</div><div class="pp">降水</div><div class="wd">風m/s</div></div>`;
-    return `<div class="wxsec"><div class="wxst">1時間ごと予報${rsp&&rsp.list.length&&rEnd<tEnd?`<small>雨の量は${rsp.list.length}時間先まで</small>`:''}</div>`
-      +`<div class="wxhg">${lb}<div class="wxhs" tabindex="0" aria-label="1時間ごとの予報（横に動かせます）"><div class="hgrid" style="grid-template-columns:repeat(${N},42px)">${c}</div></div></div></div>`; }
+  function hoursHtml(){ const V=vpfdOf(); if(!V) return errs.has(U.v(area()))?'<div class="wxsec"><div class="wxst">3時間ごとの予報</div><div class="wxmsg">読み込めませんでした</div></div>':'';
+    const now=nowMs(), sl=V.slots.filter(x=>x.e>now).slice(0,9); if(!sl.length) return '';
+    const ps=pops6(); let c='';
+    sl.forEach((x,i)=>{ const h=hourOf(x.s), night=h>=18||h<6, cur=x.s<=now&&now<x.e, tp=V.temps.get(x.s), w=windTx(x.wd), pp=ps.find(p=>x.s>=p.s&&x.s<p.e), col=`grid-column:${i+1}`;
+      c+=`<div class="g bg${night?' nt':''}${h===0&&i>0?' d0':''}" style="${col}"></div>`
+        +`<div class="g hd${cur?' now':''}" style="${col}">${cur?'いま':h===0?`<b>${esc(md(dkey(x.s)))}</b>`:`${h}時`}</div>`
+        +`<div class="g wx" style="${col}" title="${esc(x.w)}">${icon(x.w,night)}</div>`
+        +`<div class="g ht" style="${col};color:${tp!=null&&tp!==''?tcolD(+tp):'inherit'}">${tp!=null&&tp!==''?`${tp}°`:'—'}</div>`
+        +`<div class="g pp${pp&&+pp.v>=50?' wet':''}" style="${col}">${pp?`${pp.v}%`:'—'}</div>`
+        +`<div class="g wd${w.strong?' strong':''}" style="${col}">${w.a}${w.t}</div>`; });
+    const lb=`<div class="hlb" aria-hidden="true"><div class="hd"></div><div class="wx">天気</div><div class="ht">気温</div><div class="pp">降水</div><div class="wd">風m/s</div></div>`;
+    return `<div class="wxsec"><div class="wxst">3時間ごとの予報</div>`
+      +`<div class="wxhg">${lb}<div class="wxhs" tabindex="0" aria-label="3時間ごとの予報（横に動かせます）"><div class="hgrid" style="grid-template-columns:repeat(${sl.length},58px)">${c}</div></div></div></div>`; }
   // 週間（今日〜7日先）: 1行に、日付・絵・天気・降水確率・最低〜最高
   function listHtml(D){ if(!D.d.length) return errs.has(U.f)?'<div class="wxsec"><div class="wxst">週間天気</div><div class="wxmsg">読み込めませんでした <button type="button" class="wxre" data-w="re">もう一度</button></div></div>':'<div class="wxsec"><div class="wxst">週間天気</div><div class="wxmsg">読み込んでいます…</div></div>';
     const t0=D.d[0]; if(t0&&t0.k===D.today&&(t0.tmin==null||t0.tmax==null)){ const ob=amdObs(); if(ob){ if(t0.tmax==null&&ob.mx!=null){ t0.tmax=ob.mx; t0.obMax=true; } if(t0.tmin==null&&ob.mn!=null){ t0.tmin=ob.mn; t0.obMin=true; } t0.obSt=ob.st; } }   // 今日の最高・最低の予報がもうないとき（夕方の発表）は、アメダスのここまでの観測を出す
