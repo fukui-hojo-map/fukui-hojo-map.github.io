@@ -1699,18 +1699,17 @@ const WX=(function(){
       s+=`<div class="wxearly">警報級の可能性 ${[...g.values()].map(x=>`<b class="${x.v==='高'?'hi':'mid'}">${esc(x.type)}［${x.v}］</b>${esc(md(dkey(Math.min(...x.ts))))}`).join('・')}</div>`; }
     return s; }
   function amdObs(){ const k=fcKey&&have(fcKey.u,40*6e4); if(!k) return null; const keys=Object.keys(k).sort(), r=k[keys.filter(x=>k[x]&&k[x].maxTemp).pop()]||{}, v=f=>r[f]&&r[f][1]===0?r[f][0]:null; return {mx:v('maxTemp'),mn:v('minTemp'),st:fcKey.name}; }
-  // いま（アメダス）: 大きな気温と、右に3行（風・湿度／最高・最低／日の出・日の入り）。雨のことは雨雲の帯の文だけ
+  // いま（アメダス）: 大きな気温と、右に2行（風・湿度／日の出・日の入り）。今日の最高・最低は週間の「今日」の行だけに出す（上下で数字が食い違わないように）。雨のことは雨雲の帯の文だけ
   function nowHtml(){ const k=amdKey&&have(amdKey.u,40*6e4); if(!k){ return errs.has('amd')?'':'<div class="wxnow load">読み込んでいます…</div>'; }
     const keys=Object.keys(k).sort(), lastK=keys.filter(x=>k[x]&&k[x].temp).pop()||keys.pop(), r=k[lastK]||{}, st=amdKey.st, v=f=>r[f]&&r[f][1]===0?r[f][0]:null;
-    const t=v('temp'), wd=v('windDirection'), ws=v('wind'), hu=v('humidity'), mx=v('maxTemp'), mn=v('minTemp');
+    const t=v('temp'), wd=v('windDirection'), ws=v('wind'), hu=v('humidity');
     const tt=lastK?Date.UTC(+lastK.slice(0,4),+lastK.slice(4,6)-1,+lastK.slice(6,8),+lastK.slice(8,10)-9,+lastK.slice(10,12)):null;
     const sn=ll&&sunTimes(dkey(nowMs()),ll.lat,ll.lng), f1=x=>x.toFixed(1);
     const l1=[wd!=null&&ws!=null?(wd===0?'風 静穏':`${arrow(((wd*22.5)+180)%360)}${DIR16[wd]} <b>${f1(ws)}</b>m/s`):'',hu!=null?`湿度 <b>${hu}</b>%`:''].filter(Boolean);
-    const l2=[mx!=null?`最高 <b>${f1(mx)}</b>℃`:'',mn!=null?`最低 <b>${f1(mn)}</b>℃`:''].filter(Boolean);
     const l3=sn?[`日の出 <b>${hm(sn[0])}</b>`,`日の入り <b>${hm(sn[1])}</b>`]:[];
     const ln=a=>a.length?`<div>${a.map(x=>`<span>${x}</span>`).join('')}</div>`:'';
     return `<div class="wxnow"><b class="tv" style="color:${t!=null?tcolD(t):'inherit'}">${t!=null?f1(t):'—'}<small>℃</small></b>`
-      +`<div class="wxnr">${ln(l1)}${ln(l2)}${ln(l3)}</div><div class="wxobs">アメダス${esc(st.a[1])} ${tt?hm(tt):''}</div></div>`; }
+      +`<div class="wxnr">${ln(l1)}${ln(l3)}</div><div class="wxobs">アメダス${esc(st.a[1])} ${tt?hm(tt):''}</div></div>`; }
   // 3時間ごとの予報: 気象庁の地域時系列予報（天気・風・気温は3時間ごと）と府県天気予報の降水確率（6時間ごと）を、そのまま並べる。1時間ごとに出しているのは雨の量（降水短時間予報）だけで、それは雨雲の帯に出る
   function vpfdOf(){ const V=have(U.v(area()),12*36e5); if(!V||!V.areaTimeSeries) return null; const A=V.areaTimeSeries, P=V.pointTimeSeries||{};
     return {slots:A.timeDefines.map((d,i)=>({s:Date.parse(d.dateTime),e:Date.parse(d.dateTime)+108e5,w:A.weather[i],wd:A.wind[i]})),temps:new Map((P.timeDefines||[]).map((d,i)=>[Date.parse(d.dateTime),P.temperature&&P.temperature[i]])),pt:P.pointNameJP||''}; }
@@ -1728,7 +1727,7 @@ const WX=(function(){
         +`<div class="g pp${pp&&+pp.v>=50?' wet':''}" style="${col}">${pp?`${pp.v}%`:'—'}</div>`
         +`<div class="g wd${w.strong?' strong':''}" style="${col}">${w.a}${w.t}</div>`; });
     const lb=`<div class="hlb" aria-hidden="true"><div class="hd"></div><div class="wx">天気</div><div class="ht">気温</div><div class="pp">降水</div><div class="wd">風m/s</div></div>`;
-    return `<div class="wxsec"><div class="wxst">3時間ごとの予報</div>`
+    return `<div class="wxsec"><div class="wxst">3時間ごとの予報${V.pt?`<small>気温は${esc(V.pt)}</small>`:''}</div>`
       +`<div class="wxhg">${lb}<div class="wxhs" tabindex="0" aria-label="3時間ごとの予報（横に動かせます）"><div class="hgrid" style="grid-template-columns:repeat(${sl.length},58px)">${c}</div></div></div></div>`; }
   // 週間（今日〜7日先）: 1行に、日付・絵・天気・降水確率・最低〜最高
   function listHtml(D){ if(!D.d.length) return errs.has(U.f)?'<div class="wxsec"><div class="wxst">週間天気</div><div class="wxmsg">読み込めませんでした <button type="button" class="wxre" data-w="re">もう一度</button></div></div>':'<div class="wxsec"><div class="wxst">週間天気</div><div class="wxmsg">読み込んでいます…</div></div>';
