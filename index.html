@@ -1652,7 +1652,8 @@ const WX=(function(){
       const s1=ts[1], ar1=s1&&s1.areas.find(x=>x.area.code===ac);
       if(ar1) s1.timeDefines.forEach((t,i)=>{ const st=Date.parse(t), v=ar1.pops[i]; if(v===''||v==null) return; D(dkey(st)).pops.push({h:hourOf(st),v:+v,end:st+6*36e5}); });
       const s2=ts[2], pc=ptCode(), ar2=s2&&(s2.areas.find(x=>x.area.code===pc)||s2.areas.find(x=>x.area.code===(a===2?'57248':'57066')));
-      if(ar2) s2.timeDefines.forEach((t,i)=>{ const st=Date.parse(t), v=ar2.temps[i]; if(v===''||v==null) return; const o=D(dkey(st)); if(hourOf(st)<6) o.tmin=+v; else o.tmax=+v; o.tpt=ar2.area.name; }); }
+      const rk=dkey(Date.parse(F[0].reportDatetime));
+      if(ar2) s2.timeDefines.forEach((t,i)=>{ const st=Date.parse(t), v=ar2.temps[i]; if(v===''||v==null) return; const o=D(dkey(st)); if(hourOf(st)<6){ if(dkey(st)===rk) return; o.tmin=+v; } else o.tmax=+v; o.tpt=ar2.area.name; }); }   // 朝（5時・11時）の発表では、今日の最低の欄に、最高と同じ値が入っている（過ぎた時間の欄を埋めたもの）。予報ではないので使わない
     if(F&&F[1]){ const ts=F[1].timeSeries||[], w=ts[0]&&ts[0].areas[0];
       if(w) ts[0].timeDefines.forEach((t,i)=>{ const o=D(dkey(Date.parse(t))); if(!o.code&&w.weatherCodes[i]) o.code=w.weatherCodes[i]; if(w.pops[i]!==''&&w.pops[i]!=null) o.wpop=+w.pops[i]; if(w.reliabilities&&w.reliabilities[i]) o.rel=w.reliabilities[i]; });
       const tt=ts[1]&&ts[1].areas[0];
