@@ -314,8 +314,12 @@ def main():
     ff = os.path.join(a.state, "fail.json")
     try: fails = json.load(open(ff))
     except Exception: fails = {}
+    tf = os.path.join(a.state, "tried.json")   # 最後に読みに行った時刻（UNIX 秒）。読めない古い時刻・3・24時間が欠けた時刻を、毎分読み直さないため
+    try: tried = json.load(open(tf))
+    except Exception: tried = {}
+    now_s = time.time()
     recent = (top - timedelta(hours=2)).strftime("%Y%m%d%H%M00")
-    MAXF = 8   # 2時間より前の時刻は、8回（その時刻の並びは1時間ごとなので、およそ8時間）読めなかったら、欠けのまま
+    MAXF = 8   # 2時間より前の時刻は、1時間ごとに8回（およそ8時間）読めなかったら、欠けのまま
     def mem_of(ts):
         """この時刻を、どちらで読むか（None＝読まない）"""
         if is_half(ts) and ts <= Tn: return "none"
@@ -326,8 +330,10 @@ def main():
         m = mem_of(ts)
         if m is None: return False
         if m == "immed" and is_half(ts) and ts in imm: return False   # :00・:30 の速報は1回だけ（解析が出たら読み直す）
-        if ts >= recent: return True   # 新しい時刻は、出そろうまで毎回読む
-        return fails.get(ts, 0) < MAXF
+        last = tried.get(ts, 0)
+        if ts >= recent:   # 新しい時刻は、出そろうまで読む（記録がないときは毎回。3・24時間だけ欠けたときは 10分ごと）
+            return ts not in part or now_s - last >= 600
+        return fails.get(ts, 0) < MAXF and now_s - last >= 3600
     # 読む順: いちばん新しい速報と解析 → いま出す並び（速報の時刻の 1時間ごと）→ 解析の並び → ほかの :10・:20・:40・:50 の並び（はじめのときに、48時間分をためていく）
     order = [max(Tn, Ti), Tn] + list(reversed(series_of(top))) + list(reversed(series_of(pt(Tn))))
     if Ti:
@@ -352,13 +358,15 @@ def main():
     for ts in todo:
         if time.time() - t0 > a.budget: log("budget over"); break
         m = mem_of(ts)
+        tried[ts] = int(now_s)
+        before = (ts in full, ts in part, ts in imm)
         rec, why = fetch_time(ts, m)
         if rec is None:
             failed.append((ts, why)); log("  fail", m, ts, why)
             if ts < recent: fails[ts] = fails.get(ts, 0) + 1
             continue
-        got.add(ts)
         ok_full = save_state(a.state, rec, m)
+        if not any(before) or (ok_full and not before[0]) or (m == "none" and before[2]): got.add(ts)   # 記録がよくなったときだけ（同じ欠けのままなら、置き直さない）
         if ok_full and not (m == "immed" and is_half(ts)): fails.pop(ts, None)
         elif ts < recent: fails[ts] = fails.get(ts, 0) + 1   # 3・24時間だけ読めなかった: 1時間の分は使い、あとで読み直す
         if rec["odd"]: log("  odd colors", ts, rec["odd"])
@@ -366,16 +374,21 @@ def main():
         if not ok_full: log("  partial (3h/24h missing)", ts)
     lim0 = (top - timedelta(hours=KEEP_H + 2)).strftime("%Y%m%d%H%M00")
     json.dump({k: v for k, v in fails.items() if k >= lim0}, open(ff, "w"))
+    json.dump({k: v for k, v in tried.items() if k >= lim0}, open(tf, "w"))
     # 出す時刻を選ぶ: 新しい順に 10分ずつ（2時間まで）さかのぼって、その時刻の記録があり、
     # 48時間のうちの欠けが「30分ごとの解析の並び」より多くないもの（速報の並びを、はじめにためている間は、解析の時刻のまま）
     have = lambda ts: any(os.path.exists(os.path.join(a.state, ts + x)) for x in (".npz", "_p.npz", "_i.npz"))
-    def nmiss(T): return sum(1 for ts in series_of(T)[-max(WINS):] if not have(ts))
+    def nmiss(T):   # 12・24・48時間それぞれの欠けの数
+        hv = [have(ts) for ts in series_of(T)]
+        return tuple(sum(1 for x in hv[-W:] if not x) for W in WINS)
     cands = [top - STEP * k for k in range(0, 13)]
     base = next((c for c in cands if is_half(c.strftime("%Y%m%d%H%M00")) and c <= pt(Tn) and have(c.strftime("%Y%m%d%H%M00"))), None)
-    bm = nmiss(base) if base else max(1, max(WINS) // 10)
-    T = next((c for c in cands if (base is None or c >= base) and have(c.strftime("%Y%m%d%H%M00")) and nmiss(c) <= bm), None)
+    bm = nmiss(base) if base else tuple(max(1, W // 10) for W in WINS)
+    T = next((c for c in cands if (base is None or c >= base) and have(c.strftime("%Y%m%d%H%M00")) and all(x <= y for x, y in zip(nmiss(c), bm))), None)
     if T is None:
-        log("no recent data; keep the previous acc.json"); return
+        log("no recent data; keep the previous acc.json")
+        if nf and not got: open(nf, "w").write(key)
+        return
     if T != top: log("newest not ready; use", T.strftime("%Y%m%d%H%M"), "(missing in 48h:", nmiss(top), "base", bm, ")")
     series = series_of(T)
     # 古い記録を消す（6つの時刻の並び（:00〜:50）も、それぞれ KEEP_H 時間）
@@ -396,7 +409,8 @@ def main():
     chk = None; Tc = pt(Tn)
     try: last_chk = json.loads(open(os.path.join(a.out, "check.jsonl")).read().strip().splitlines()[-1])
     except Exception: last_chk = None
-    if Tc.minute == 0 and Tc.hour % 3 == 0 and not (last_chk and last_chk.get("t") == tstr(Tc)):
+    has_none = any(os.path.exists(os.path.join(a.state, Tn + x)) for x in (".npz", "_p.npz"))   # 解析そのものが読めてから（速報のつなぎでは答え合わせしない）
+    if has_none and Tc.minute == 0 and Tc.hour % 3 == 0 and not (last_chk and last_chk.get("t") == tstr(Tc)):
         try:
             if Tc == T: Xc, mc = X, miss
             else: Xc, mc = estimate([load_state(a.state, ts) for ts in series_of(Tc)])
