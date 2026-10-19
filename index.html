@@ -1548,6 +1548,57 @@ const WX=(function(){
   const MUNI={18201:['福井市',1,36.064,136.220],18202:['敦賀市',2,35.645,136.056],18204:['小浜市',2,35.496,135.747],18205:['大野市',1,35.980,136.488],18206:['勝山市',1,36.061,136.500],18207:['鯖江市',1,35.957,136.184],
     18208:['あわら市',1,36.211,136.229],18209:['越前市',1,35.904,136.169],18210:['坂井市',1,36.167,136.232],18322:['永平寺町',1,36.092,136.299],18382:['池田町',1,35.891,136.344],18404:['南越前町',1,35.836,136.193],
     18423:['越前町',1,35.974,136.130],18442:['美浜町',2,35.601,135.941],18481:['高浜町',2,35.490,135.551],18483:['おおい町',2,35.481,135.618],18501:['若狭町',2,35.548,135.908]};
+  const MG={lat0:36.32,lon0:135.42,step:0.02,al:'abcdefghijklmnopq',cd:[18201, 18202, 18204, 18205, 18206, 18207, 18208, 18209, 18210, 18322, 18382, 18404, 18423, 18442, 18481, 18483, 18501],rows:[
+    "...........................................xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "..........................................xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ".........................................gxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ".......................................gggggxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "....................................iiiggggggxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "....................................iiggggggggxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "....................................iiggggggggxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "...................................iiiiiiiggiixxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "..................................aaaaiiiiiiiiiiiixxxxxxxxxxxxxxxxxxxxxxxxx",
+    ".................................aaaaaiiiiiiiiiiiiixxeeeeexxxxxxxxxxxxxxxxx",
+    "................................aaaaaaaaaiiiiiijjeeeeeeeeeeexxxxxxxxxxxxxxx",
+    "...............................aaaaaaaaaaaaajjjjjjeeeeeeeeeeexxxxxxxxxxxxxx",
+    "...............................aaaaaaaaaaaaajjjjjjeeeeeeeeeeeexxxdddxxxxxxx",
+    "..............................aaaaaaaaaaaaaajjjjjjjeeeeeeeeeeddddddxxxxxxxx",
+    "..............................aaaaaaaaaaaaaaaaajaaaeeeeeeeeeddddddxxxxxxxxx",
+    ".............................aaammaaaaaaaaaaaaaaaaaaedddeeddddddddxxxxxxxxx",
+    "............................aammmmmmaafaaaaaaaaaaaaaddddddddddddddxxxxxxxxx",
+    "...........................mmmmmmmmmmffffffaaaaaaaaadddddddddddddddxxxxxxxx",
+    "............................mmmmmmmmfffffffffaaaaaaadddddddddddddddxxxxxxxx",
+    ".............................mmmmmmmfffffhhhhfakkkkaaddddddddddddddddxxxxxx",
+    ".............................mmmmhmmhhhhhhhhhkkkkkkkkddddddddddddddddxxxxxx",
+    ".............................mmhhhhhhhhhhhhhhkkkkkkdddddddddddddddddddxxxxx",
+    "..............................hhhhhhhhhhhhhhhkkkkkkdddddddddddddddddddxxxxx",
+    "...............................lhhhhhhhhhhhkkkkkkkkddddddddddddddddddddxxxx",
+    "................................llllhhllllkkkkkkkkkdddddddddddddddddddxxxxx",
+    ".................................lllhllllllllklkkkkddddddddddddddddddxxxxxx",
+    "..................................lllllllllllllkkkkddddddddddxddddxxdxxxxxx",
+    "..................................lllllllllllllxxxxddddxxdxxxxxxxxxxxxxxxxx",
+    "..............................b....lllllllllllxxxxxxxxdxxxxxxxxxxxxxxxxxxxx",
+    ".............................bb...bbllllllllllxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "...........................nnnb...bbllllllllllxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "............................nnbb..bbblxllllllxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "............................nnb..bbbbxxxxlllxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "............................nnbbbbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "....................q........nbbbbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ".....................q..n..nnnbbbbbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "..xx..................qqqnnnnnbbbbbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    ".x....................qqqnnnnnnbbbbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxx............cc...cqqqqqqnnnnbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxo.o.......p..cccc..cqqqqqnnnnbbbbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxooo.....p......ccccqqqqqxnnnnxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxoo....op.....ccccccqqqqxxnnxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxoooooooppccccccccqqqqqqxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxoopopppppccccccccqqqqqxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxppppppccccccccccccqqqxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxxxpppcppccccccccccqqxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxxxppppppppppppccxxqxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxxxpppppppppppppxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxxxxxxxxxppppppxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]};   // 市町の表（'x'=福井県の外、'.'=海など）
   const OKU=new Set([18205,18206]);   // 奥越（今日・明日の最高・最低は「大野」の予想を使う）
   // アメダス（福井県と、県境に近い所）: [番号, 名前, 緯度, 経度, 気温・風あり]
   const AMD=[[57001,'三国',36.243,136.173,1],[57026,'春江',36.142,136.223,1],[57051,'越廼',36.012,135.990,1],[57066,'福井',36.055,136.222,1],[57071,'美山',35.998,136.358,0],[57082,'勝山',36.038,136.522,1],
@@ -1575,8 +1626,8 @@ const WX=(function(){
   try{ disk=JSON.parse(localStorage.getItem(LS)||'{}')||{}; }catch(e){ disk={}; }
   const keep=u=>!/mreversegeocoder/.test(u);
   function persist(){ try{ const cut=Date.now()-2*864e5; for(const k in disk) if(!(disk[k]&&disk[k].t>cut)) delete disk[k]; localStorage.setItem(LS,JSON.stringify(disk)); }catch(e){} }
-  function get(u,ttl,text){ const m=mem.get(u)||{}; if(m.v!==undefined&&Date.now()-m.t<ttl) return Promise.resolve(m.v); if(m.p) return m.p;
-    const c=typeof AbortController==='function'?new AbortController():null, tm=c?setTimeout(()=>c.abort(),12000):0;
+  function get(u,ttl,text,tmo){ const m=mem.get(u)||{}; if(m.v!==undefined&&Date.now()-m.t<ttl) return Promise.resolve(m.v); if(m.p) return m.p;
+    const c=typeof AbortController==='function'?new AbortController():null, tm=c?setTimeout(()=>c.abort(),tmo||12000):0;
     const p=fetch(u,{cache:'no-cache',credentials:'omit',signal:c?c.signal:undefined}).then(r=>{ if(!r.ok) throw new Error('http '+r.status); return text?r.text():r.json(); })
       .then(v=>{ mem.set(u,{v,t:Date.now()}); if(keep(u)){ disk[u]={v,t:Date.now()}; persist(); } return v; })
       .catch(e=>{ const o=mem.get(u)||{}; delete o.p; mem.set(u,o); throw e; }).finally(()=>clearTimeout(tm));
@@ -1587,19 +1638,24 @@ const WX=(function(){
     pr:JB+'probability/data/probability/r8/180000.json', tw:s=>TW+`data_${s}.json`, amt:JB+'amedas/data/latest_time.txt', amp:(n,d,h)=>JB+`amedas/data/point/${n}/${d}_${h}.json`};
   const TTL={f:10*6e4,ov:30*6e4,v:10*6e4,w:3*6e4,pr:30*6e4,tw:60*6e4,amt:2*6e4,amp:5*6e4};
   // ---- 場所 ----
-  let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, fcKey=null, geoSeq=0, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
+  let on=false, ll=null, ptKind='center', muni=null, town='', outside=false, amdKey=null, fcKey=null, geoSeq=0, geoFail=false, rendT=0, refT=null, say=null, openRow=null, hscroll=0, errs=new Set();
   function nearMuni(lat,lon){ let b=null,bd=1e9; for(const k in MUNI){ const m=MUNI[k], d=km(lat,lon,m[2],m[3]); if(d<bd){ bd=d; b=+k; } } return b; }
   const area=()=>muni&&MUNI[muni]?MUNI[muni][1]:1;   // 1=嶺北 2=嶺南
   // 2週間気温予報は「福井」だけを使う（敦賀 47631 は、気象庁のページの一覧にあるが data_47631.json がない。2026-10-18 に 404 を確認）
   const twSt=()=>47616, ptCode=()=>area()===2?'57248':OKU.has(muni)?'57121':'57066';
   const nearAmd=(lat,lon)=>AMD.filter(a=>a[4]).map(a=>({a,d:km(lat,lon,a[2],a[3])})).sort((x,y)=>x.d-y.d)[0];
-  async function locate(c){ const seq=++geoSeq, lat=+c.lat.toFixed(4), lon=+c.lng.toFixed(4);
-    muni=nearMuni(lat,lon); town=''; schedule();
-    try{ const r=await get(GSI+`lat=${lat}&lon=${lon}`,864e5); if(seq!==geoSeq) return; const cd=r&&r.results&&+r.results.muniCd;
+  // 市町の表（国土地理院の逆ジオコーダーを0.02°ごとに引いて作った）: 返事を待たずにすぐ出す市町。返事が来たら、そちらの名前（町名つき）に置きかえる
+  function gridMuni(lat,lon){ const i=Math.round((MG.lat0-lat)/MG.step), j=Math.round((lon-MG.lon0)/MG.step), ch=MG.rows[i]&&MG.rows[i][j]; if(ch==null) return 0; if(ch==='x') return -1; const k=MG.al.indexOf(ch); return k<0?0:MG.cd[k]; }
+  async function locate(c){ const seq=++geoSeq, lat=+c.lat.toFixed(4), lon=+c.lng.toFixed(4), a0=area(), g=gridMuni(lat,lon);
+    if(g===-1){ muni=nearMuni(lat,lon); outside=true; } else { muni=g||nearMuni(lat,lon); outside=false; } town=''; geoFail=false; schedule(); if(area()!==a0) loadArea();
+    let r=null;
+    for(let k=0;k<2&&!r;k++){ try{ r=await get(GSI+`lat=${lat}&lon=${lon}`,864e5,false,25000); }catch(e){ if(seq!==geoSeq) return; } }   // 返事が遅いことがある（国土地理院）。25秒まで待って、だめならもう一度
+    if(seq!==geoSeq) return;
+    if(!r) geoFail=true;   // 返事がないときは、表で出した市町に「付近」をつける
+    else{ const cd=r.results&&+r.results.muniCd;
       if(cd&&MUNI[cd]){ muni=cd; town=r.results.lv01Nm&&r.results.lv01Nm!=='−'?r.results.lv01Nm:''; outside=false; }
       else if(cd){ outside=true; town=''; } }   // 福井県の外: 予報は近い市町（嶺北・嶺南）のものを出し、警報・注意報は出さない
-    catch(e){ /* 逆ジオコーダーが使えないときは、近い役場の市町のまま */ }
-    if(seq===geoSeq){ schedule(); loadArea(); } }
+    schedule(); loadArea(); }
   // ---- 読む ----
   function loadArea(){ const a=area(); [[U.f,TTL.f],[U.ov,TTL.ov],[U.v(a),TTL.v],[U.w,TTL.w],[U.pr,TTL.pr],[U.tw(twSt()),TTL.tw]].forEach(([u,t])=>get(u,t).then(()=>{ errs.delete(u); schedule(); },()=>{ errs.add(u); schedule(); })); loadAmd(); }
   async function loadAmd(){ if(!ll) return; const st=nearAmd(ll.lat,ll.lng); if(!st) return;
@@ -1684,7 +1740,7 @@ const WX=(function(){
     const hs=box.querySelector('.wxhs'); if(hs) hscroll=hs.scrollLeft;
     const openD=[...box.querySelectorAll('details[open]')].map(x=>x.dataset.k);
     const D=days(), a=area(), mname=muni&&MUNI[muni]?MUNI[muni][0]:'';
-    let h=`<div class="wxhd"><div class="wxloc"><b>${outside?'福井県の外':esc(mname)}</b>${town?`<span class="tw">${esc(town)}</span>`:''}<span class="ar">${outside?'嶺北の予報':a===2?'嶺南':'嶺北'}</span></div><button type="button" class="wxgeo" data-w="geo">現在地</button></div>`;
+    let h=`<div class="wxhd"><div class="wxloc"><b>${outside?'福井県の外':esc(mname)+(geoFail?'付近':'')}</b>${town?`<span class="tw">${esc(town)}</span>`:''}<span class="ar">${outside?'嶺北の予報':a===2?'嶺南':'嶺北'}</span></div><button type="button" class="wxgeo" data-w="geo">現在地</button></div>`;
     h+=warnHtml()+nowHtml()+hoursHtml()+listHtml(D)+notesHtml(D);
     box.innerHTML=h;
     const hs2=box.querySelector('.wxhs'); if(hs2) hs2.scrollLeft=hscroll;
@@ -1721,7 +1777,7 @@ const WX=(function(){
     const ps=pops6(); let c='';
     sl.forEach((x,i)=>{ const h=hourOf(x.s), night=h>=18||h<6, cur=x.s<=now&&now<x.e, tp=V.temps.get(x.s), w=windTx(x.wd), pp=ps.find(p=>x.s>=p.s&&x.s<p.e), col=`grid-column:${i+1}`;
       c+=`<div class="g bg${night?' nt':''}${h===0&&i>0?' d0':''}" style="${col}"></div>`
-        +`<div class="g hd${cur?' now':''}" style="${col}">${cur?'いま':h===0?`<b>${esc(md(dkey(x.s)))}</b>`:`${h}時`}</div>`
+        +`<div class="g hd${cur?' now':''}" style="${col}">${h===0?`<b>${esc(md(dkey(x.s)))}</b>`:`${h}時`}</div>`
         +`<div class="g wx" style="${col}" title="${esc(x.w)}">${icon(x.w,night)}</div>`
         +`<div class="g ht" style="${col};color:${tp!=null&&tp!==''?tcolD(+tp):'inherit'}">${tp!=null&&tp!==''?`${tp}°`:'—'}</div>`
         +`<div class="g pp${pp&&+pp.v>=50?' wet':''}" style="${col}">${pp?`${pp.v}%`:'—'}</div>`
@@ -1784,7 +1840,7 @@ const WX=(function(){
   document.addEventListener('click',e=>{ const a=e.target.closest&&e.target.closest('#wxPanel [data-w]'); if(!a) return; const w=a.dataset.w;
     if(w==='row'){ openRow=openRow===a.dataset.k?null:a.dataset.k; render(); const b=document.querySelector(`#wxPanel .wr[data-k="${a.dataset.k}"]`); if(b) b.focus(); }
     else if(w==='geo'){ const g=document.querySelector('#rainBar [data-r="geo"]'); if(g) g.click(); else if(navigator.geolocation) navigator.geolocation.getCurrentPosition(p=>RAIN.showAt([p.coords.latitude,p.coords.longitude]),()=>{},{timeout:15000,maximumAge:6e4}); }
-    else if(w==='re'){ errs.clear(); loadArea(); render(); } });
+    else if(w==='re'){ errs.clear(); loadArea(); if(geoFail&&ll) locate(ll); render(); } });
   document.addEventListener('visibilitychange',()=>{ if(on&&!document.hidden) loadArea(); });
   // ページを開いて少したったら、天気予報と警報・注意報を裏で先に読んでおく（「天気」を押したとき、すぐ出るように）
   function prefetch(){ if(navigator.connection&&navigator.connection.saveData) return; [[U.f,TTL.f],[U.w,TTL.w],[U.v(1),TTL.v],[U.tw(47616),TTL.tw]].forEach(([u,t])=>{ if(!have(u,t)) get(u,t).catch(()=>{}); }); }
