@@ -1246,6 +1246,7 @@ const RAINACC=(function(){
   // 読みに行くか: 次の時刻（10分あと）が出るのは、その時刻の 15〜17分あと。それまでは前に読んだものを使う（API の回数を使いすぎない）
   const now=()=>typeof window.__accNow==='function'?window.__accNow():Date.now();   // 試験で、時計を進めるための入り口
   function due(){ if(!data) return true; const n=now(), age=n-data.t, since=n-at;
+    if(since<0) return true;   // 端末の時計が戻ったとき
     if(since<6e4) return false;
     if(age<14*6e4) return since>=10*6e4;
     if(age>45*6e4) return since>=5*6e4;   // 止まっているときは、5分ごと
@@ -1372,7 +1373,7 @@ const RAIN=(function(){
         }
         lastKey=key; frames=fl; nowIdx=ni0; prune(); idx=ni; ptShown=false; buildBar(); show(idx); point();
       } else { if(!$('rainS')) buildBar(); if(!ptShown) point();   // 「もう一度」で読めたときは、出ていた「読み込めませんでした」を消す
-        else RAINACC.load().then(a=>{ if(a&&on&&md===mode&&ptShown&&a.t!==accT) point(); }).catch(()=>{}); }   // 「過去降った雨」が新しくなったら、地点の欄を出しなおす（10分ごと）
+        else RAINACC.load().then(a=>{ if(a&&on&&md===mode&&ptShown&&a.t!==accT){ accT=a.t; point(); } }).catch(()=>{}); }   // 「過去降った雨」が新しくなったら、地点の欄を出しなおす（10分ごと）
       stamp=Date.now();
     }catch(e){ if(on&&md===mode){ err='気象庁のデータを読み込めませんでした。通信を確かめて「もう一度」を押してください。'; if(!frames.length) buildBar(); else msg(err,true); } }
     finally{ busy=false; if(again&&on){ again=false; refresh(keep); } }
