@@ -1,8 +1,10 @@
 # 圃場ごとの雨量（12・24・48時間）を、気象庁の解析雨量から 1km 四方ごとに組み立てて、rain-data ブランチに置く
-#   画面（site/index.html）は https://raw.githubusercontent.com/<このリポジトリ>/rain-data/acc.json を読む
+#   画面（site/index.html）は GitHub の API（contents/acc.json?ref=rain-data。キャッシュなし）で読む。だめなときは https://raw.githubusercontent.com/<このリポジトリ>/rain-data/acc.json（5分のキャッシュ）
 #   rain-data には、いまの結果（acc.json）・アメダスとの答え合わせ（check.jsonl）・作りかけの記録（cache/）だけを置く（変わるたびに、1つのコミットに置きかえる）
 # 動かし方: GitHub の定時（schedule）は、このリポジトリでは3〜4時間も遅れる（weekly-ndvi で確認）。そこで、1回の実行を約5時間半つづけ、
-#   その間 5分ごとに気象庁の新しい解析を見に行って（新しいものがなければ、すぐ次の待ちに入る）、終わりに自分で次の実行を起こす（workflow_dispatch は、GITHUB_TOKEN からでも起こせる）。
+#   その間 1分ごとに気象庁の新しい解析・速報を見に行って（新しいものがなければ、すぐ次の待ちに入る）、終わりに自分で次の実行を起こす（workflow_dispatch は、GITHUB_TOKEN からでも起こせる）。
+#   気象庁の10分ごとの速報は、その時刻の 5〜7分あとに出る。1分ごとに見るので、画面に出るまでの遅れは、ふだん 7〜9分ほど。
+#   毎回、main の pipeline/ を読み直す（rain_acc.py を直したら、実行を止めなくても次の回から使う）。
 #   定時（schedule）と push は、つながりが切れたときの立て直し用。
 name: rain
 on:
@@ -29,13 +31,15 @@ jobs:
           U="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git clone -q --depth 1 --branch rain-data "$U" data 2>/dev/null; then echo "前回あり: $(cat data/t.txt 2>/dev/null)"; else mkdir data && cd data && git init -q && git remote add origin "$U" && echo "はじめて"; fi
       - run: pip install -q numpy pillow
-      - name: 雨量を作りつづける（5分ごと・約5時間半）
+      - name: 雨量を作りつづける（1分ごと・約5時間半）
         run: |
           START=$(date +%s); N=0; FAILS=0
           export RAIN_NOCHANGE_FILE="$RUNNER_TEMP/nochange"
           while :; do
             rm -f "$RAIN_NOCHANGE_FILE"
-            if python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 1300 --max-new 80 > "$RUNNER_TEMP/log_now.txt" 2>&1; then FAILS=0; else FAILS=$((FAILS+1)); echo "失敗 ($FAILS)"; tail -n 20 "$RUNNER_TEMP/log_now.txt"; fi
+            ( cd main && git fetch -q --depth 1 origin main && git reset -q --hard FETCH_HEAD ) || echo "main を読み直せなかった（前のまま使う）"
+            # 1回で読むのは 4分まで（はじめに 48時間分の速報をためるときも、そのつど新しい結果を置く）
+            if python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 240 --max-new 80 > "$RUNNER_TEMP/log_now.txt" 2>&1; then FAILS=0; else FAILS=$((FAILS+1)); echo "失敗 ($FAILS)"; tail -n 20 "$RUNNER_TEMP/log_now.txt"; fi
             if [ ! -f "$RAIN_NOCHANGE_FILE" ] && [ "$FAILS" = 0 ]; then
               cat "$RUNNER_TEMP/log_now.txt"
               tail -n 400 "$RUNNER_TEMP/log_now.txt" > data/log.txt
@@ -47,7 +51,7 @@ jobs:
             echo $(( $(date +%s) - START )) > "$RUNNER_TEMP/elapsed"
             [ "$FAILS" -ge 6 ] && { echo "6回つづけて失敗。この実行は終わる"; break; }
             [ $(( $(date +%s) - START )) -gt 19800 ] && break
-            sleep 300
+            sleep 60
           done
       - name: つぎの実行を起こす（つながりをつづける）
         if: always()

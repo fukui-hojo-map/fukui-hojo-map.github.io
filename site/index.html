@@ -1231,21 +1231,34 @@ photo.addTo(map); const lcLayers=L.control.layers({'航空写真':photo,'淡色�
 // 重なり: 区画(400) < ハザード(450) < 雨雲(455) < マーカー(600)。雨雲を出している間は、背景の写真を少し暗く、区画の色を薄くして、雨の色を見やすく
 map.createPane('rainPane').style.zIndex=455; map.getPane('rainPane').style.pointerEvents='none';
 // ---------- 圃場ごとの雨量（12・24・48時間）----------
-// 気象庁の解析雨量（レーダーと雨量計から作る 1km 四方の雨量）を、Actions（rain）が 30分ごとに 1km 四方ごとに組み立てて置いたもの（rain-data ブランチの acc.json）を読む。
+// 気象庁の解析雨量（レーダーと雨量計から作る 1km 四方の雨量）を、Actions（rain）が 10分ごとに 1km 四方ごとに組み立てて置いたもの（rain-data ブランチの acc.json）を読む。
+// 時刻は、気象庁の10分ごとの速報（その時刻の 5〜7分あとに出る）まで。:00・:30 は解析が出たら、それに置きかえる
+// 読む先: GitHub の API（キャッシュなし。1時間に60回まで）→ だめなら raw.githubusercontent.com（5分のキャッシュがあり、最大5分古い）
 // 気象庁の 5km 四方の最大値と 1km 四方の色の階級から組み立てる。アメダスで確かめたずれは 1割ほど（くわしくは docs/rain）。気象庁の観測・解析だけで、予報ではない
 const RAINACC=(function(){
   const URL='https://raw.githubusercontent.com/fukui-hojo-map/fukui-hojo-map.github.io/rain-data/acc.json';
-  let data=null, at=0, pend=null, err='';
+  const API='https://api.github.com/repos/fukui-hojo-map/fukui-hojo-map.github.io/contents/acc.json?ref=rain-data';
+  let data=null, at=0, pend=null, err='', apiOff=0;   // apiOff: API が断ったとき（回数の上限など）は、その時刻まで raw を使う
   function decode(o){ const a={};
     for(const w of o.w){ const b=o.a[String(w)]; if(!b){ a[w]=null; continue; }   // null＝データの欠けが多くて、その長さの雨量は分からない
       const s=atob(b), n=s.length>>1, v=new Float32Array(n); for(let i=0;i<n;i++) v[i]=(s.charCodeAt(2*i)|s.charCodeAt(2*i+1)<<8)/10; a[w]=v; }
     return {t:Date.parse(o.t), made:Date.parse(o.made), g:o.grid, w:o.w, a, miss:o.miss||{}}; }
-  function load(force){ if(data&&!force&&Date.now()-at<10*6e4) return Promise.resolve(data); if(pend) return pend;
-    const c=typeof AbortController==='function'?new AbortController():null, tm=c?setTimeout(()=>c.abort(),12000):0;
-    pend=fetch(URL,{cache:'no-cache',credentials:'omit',signal:c?c.signal:undefined}).then(r=>{ if(!r.ok) throw new Error('http '+r.status); return r.json(); })
-      .then(o=>{ if(!o||o.v!==1||!o.grid||!o.a) throw new Error('format'); data=decode(o); at=Date.now(); err=''; return data; })
-      .catch(e=>{ err=String(e&&e.message||e); return data; })   // 読めなかったら、前に読んだもの（なければ null）
-      .finally(()=>{ clearTimeout(tm); pend=null; });
+  // 読みに行くか: 次の時刻（10分あと）が出るのは、その時刻の 15〜17分あと。それまでは前に読んだものを使う（API の回数を使いすぎない）
+  const now=()=>typeof window.__accNow==='function'?window.__accNow():Date.now();   // 試験で、時計を進めるための入り口
+  function due(){ if(!data) return true; const n=now(), age=n-data.t, since=n-at;
+    if(since<6e4) return false;
+    if(age<14*6e4) return since>=10*6e4;
+    if(age>45*6e4) return since>=5*6e4;   // 止まっているときは、5分ごと
+    return since>=9e4; }
+  function get1(u,hd){ const c=typeof AbortController==='function'?new AbortController():null, tm=c?setTimeout(()=>c.abort(),12000):0;
+    return fetch(u,{cache:'no-cache',credentials:'omit',headers:hd,signal:c?c.signal:undefined}).then(r=>{ if(!r.ok){ const e=new Error('http '+r.status); e.st=r.status; throw e; } return r.json(); })
+      .then(o=>{ if(!o||o.v!==1||!o.grid||!o.a) throw new Error('format'); return o; }).finally(()=>clearTimeout(tm)); }
+  function load(force){ if(data&&!force&&!due()) return Promise.resolve(data); if(pend) return pend;
+    const viaApi=now()>=apiOff;
+    pend=(viaApi?get1(API,{Accept:'application/vnd.github.raw'}).catch(e=>{ apiOff=now()+(e.st===403||e.st===429?30:5)*6e4; return get1(URL); }):get1(URL))
+      .then(o=>{ const d=decode(o); if(!data||d.t>=data.t) data=d; at=now(); err=''; return data; })   // raw の古いキャッシュで、時刻を戻さない
+      .catch(e=>{ err=String(e&&e.message||e); at=now(); return data; })   // 読めなかったら、前に読んだもの（なければ null）
+      .finally(()=>{ pend=null; });
     return pend; }
   function idx(d,lat,lon){ const g=d.g, x=Math.floor((lon-118)/0.0125)-g.p0, y=Math.floor((48-lat)*120)-g.q0; return x<0||y<0||x>=g.nx||y>=g.ny?-1:y*g.nx+x; }
   function val(d,lat,lon){ const i=idx(d,lat,lon); if(i<0) return null; const v={}; for(const w of d.w) v[w]=d.a[w]?d.a[w][i]:null; return v; }
@@ -1276,7 +1289,7 @@ const RAINACC=(function(){
       +`<table><tr><th></th><th>12時間以内</th><th>24時間以内</th><th>48時間以内</th></tr>${rows.map(({s,v})=>`<tr><td style="color:${s.color}">${esc(selLabel(s.pid))}</td>${d.w.map(w=>`<td><b>${fmtMm(v[w])}</b></td>`).join('')}</tr>`).join('')}</table>`
       +`<div class="rf">${missNote(d)}出典：気象庁ホームページ（加工して作成）</div>`;
     box.hidden=false; }
-  return {load, at:atLL, fmt, line, renderSel, until, anyMiss, URL, _data:()=>data, _err:()=>err, _val:val};
+  return {load, at:atLL, fmt, line, renderSel, until, anyMiss, URL, API, _data:()=>data, _err:()=>err, _val:val};
 })();
 const RAIN=(function(){
   const JT='https://www.jma.go.jp/bosai/jmatile/data/', BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
@@ -1295,6 +1308,7 @@ const RAIN=(function(){
   const MODES=['1h','15h'];
   let on=false, mode=MODES.includes(mem('mode'))?mem('mode'):'1h', frames=[], idx=0, nowIdx=0, th=[], liT=[], playing=false, playT=null, wait=0, refT=null, busy=false, err='', lastKey='', stamp=0, all=false, rsCache=null, obsT=0;   // obsT = 気象庁の最新の実況の時刻
   let pt=null, ptKind='center', ptMk=null, ptShown=false;   // 地点の雨を見る場所（center=地図の真ん中／tap=タップした所／geo=現在地）
+  let accT=0;   // 地点の欄に出している「過去降った雨」の時刻（新しい時刻が出たら、出しなおす）
   let hook=null;   // 天気（WX）: 開く・閉じる、見る場所、地点の雨の文を知らせる
   const layers=new Map();   // こまの鍵 → タイルの層
     function ft(u,o,read,ms){ const c=typeof AbortController==='function'?new AbortController():null, t=c?setTimeout(()=>c.abort(),ms||15000):0;   // 読み込みに上限15秒（止まった通信で、ほかの操作が待たされないように）
@@ -1357,7 +1371,8 @@ const RAIN=(function(){
           if(!on||md!==mode) return;
         }
         lastKey=key; frames=fl; nowIdx=ni0; prune(); idx=ni; ptShown=false; buildBar(); show(idx); point();
-      } else { if(!$('rainS')) buildBar(); if(!ptShown) point(); }   // 「もう一度」で読めたときは、出ていた「読み込めませんでした」を消す
+      } else { if(!$('rainS')) buildBar(); if(!ptShown) point();   // 「もう一度」で読めたときは、出ていた「読み込めませんでした」を消す
+        else RAINACC.load().then(a=>{ if(a&&on&&md===mode&&ptShown&&a.t!==accT) point(); }).catch(()=>{}); }   // 「過去降った雨」が新しくなったら、地点の欄を出しなおす（10分ごと）
       stamp=Date.now();
     }catch(e){ if(on&&md===mode){ err='気象庁のデータを読み込めませんでした。通信を確かめて「もう一度」を押してください。'; if(!frames.length) buildBar(); else msg(err,true); } }
     finally{ busy=false; if(again&&on){ again=false; refresh(keep); } }
@@ -1490,8 +1505,9 @@ const RAIN=(function(){
     const cells=ks.map((k,i)=>`<i data-i="${ni+i}" style="left:${atF(ni+i)}%;width:calc(${100/Math.max(1,nF-1)}% - 2px);background:${ok(k)?`rgb(${pal[k].c})`:k==null?'repeating-linear-gradient(45deg,#c9ced6 0 2px,#fff 2px 4px)':'#fff'}" title="${md==='15h'?(i?rng(i):'直前1時間'):(i?mins(i)+'分後':'いま')}：${k==null?'読めません':nm(k)}"></i>`).join('');
     setStrip((md==='1h'&&ni>=6?'<span class="cap">この場所の雨</span>':'')+cells);
     box.innerHTML=`<div class="rtx"><span class="rwh">${where}</span><span class="rsay">${s}${part==='some'?reB:''}</span></div>${thS?`<div class="rthw">${thS}</div>`:''}${old}${acc?RAINACC.line(acc):''}`;
+    if(acc) accT=acc.t;
     if(hook) hook.say({s,k0});
-    if(acc===undefined) accP.then(r=>{ if(r&&live()&&!box.querySelector('.racc')) box.insertAdjacentHTML('beforeend',RAINACC.line(r)); });
+    if(acc===undefined) accP.then(r=>{ if(r&&live()&&!box.querySelector('.racc')){ box.insertAdjacentHTML('beforeend',RAINACC.line(r)); accT=r.t; } });
     paintCells(); }
   function paintCells(){ document.querySelectorAll('#rainStrip i').forEach(x=>x.classList.toggle('on',+x.dataset.i===idx)); }
   function showAt(ll){ setPoint(ll,'geo'); panVis(L.latLng(ll)); }   // 現在地: 印をつけて、見えている所の真ん中へ
