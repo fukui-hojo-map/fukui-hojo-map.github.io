@@ -227,6 +227,25 @@ def estimate(recs):
             X[i0:i1 + 1] = seg
     return X, miss
 
+def phase_sums(state, T, est=None):
+    """12・24・48時間の雨量（1km 格子）。いちばん新しい1時間は T の並びそのまま、それより前は 6つの並び（T、10分前…50分前）の平均。
+    並びごとに1時間の階級の区切りがちがうので、1つの並びだけだと、10分ごとに値が 1割ほど（ときに3割）上下する。平均すると 2分ほどに減る（2026-10-20、実データ）。
+    d 分前の並びは、両はしの d 分を、その1時間の雨が一様に降ったとして足し引きする。返り値: ({W: 配列}, T の並びの欠けの印, T の並びの X)"""
+    est = {} if est is None else est
+    def one(t):
+        k = t.strftime("%Y%m%d%H%M00")
+        if k not in est: est[k] = estimate([load_state(state, ts) for ts in series_of(t)])
+        return est[k]
+    X0, m0 = one(T); A = {}
+    for W in WINS:
+        Bs = []
+        for k in range(6):
+            d = 10 * k; X, m = (X0, m0) if k == 0 else one(T - timedelta(minutes=d))
+            if m[-W:].sum() > m0[-W:].sum(): continue   # 欠けの多い並び（速報を、はじめにためている間など）は使わない
+            Bs.append(X[-W:-1].sum(0) + d / 60 * (X[-1] - X[-W]))
+        A[W] = np.maximum(0, X0[-1] + np.mean(Bs, 0))
+    return A, m0, X0
+
 def b64u16(a):
     a = np.clip(np.round(a * 10), 0, 65534).astype("<u2")
     return base64.b64encode(a.tobytes()).decode()
@@ -266,7 +285,7 @@ def check_amedas(T, X, miss, out_dir):
         g = {12: None if None in g12 else sum(g12), 24: rec(code, 0, "precipitation24h")}
         g48 = [rec(code, 0, "precipitation24h"), rec(code, 24, "precipitation24h")]
         g[48] = None if None in g48 else sum(g48)
-        e = {W: (None if miss[-W:].any() else float(X[-W:, qi, pi].sum())) for W in WINS}
+        e = {W: (None if miss[-W:].any() else float(X[W][qi, pi] if isinstance(X, dict) else X[-W:, qi, pi].sum())) for W in WINS}
         rows.append({"code": code, "name": nm, "lat": round(lat, 4), "lon": round(lon, 4), **{f"g{W}": g[W] for W in WINS}, **{f"e{W}": None if e[W] is None else round(e[W], 1) for W in WINS}})
     summ = {}
     for W in WINS:
@@ -395,8 +414,8 @@ def main():
     lim = (top - timedelta(hours=KEEP_H + 2)).strftime("%Y%m%d%H%M00")
     for f in os.listdir(a.state):
         if f.endswith(".npz") and f[:-4].split("_")[0] < lim: os.remove(os.path.join(a.state, f))
-    recs = [load_state(a.state, ts) for ts in series]
-    X, miss = estimate(recs)
+    est = {}
+    A, miss, X = phase_sums(a.state, T, est)
     src = "immed" if not is_half(series[-1]) or not os.path.exists(os.path.join(a.state, series[-1] + ".npz")) and not os.path.exists(os.path.join(a.state, series[-1] + "_p.npz")) else "none"
     out = {"v": 1, "t": tstr(T), "made": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "src": "気象庁ホームページ（解析雨量）を加工して作成", "last": src, "grid": {"p0": P0, "q0": Q0, "nx": NX, "ny": NY, "lon0": 118, "lat0": 48, "dlon": 0.0125, "dlat": 1 / 120},
@@ -404,7 +423,7 @@ def main():
     for W in WINS:
         mW = int(miss[-W:].sum()); out["miss"][str(W)] = mW
         # 欠けた時間が多いときは、その長さの雨量は「分からない」（0mm と見せない）。少しだけなら出す（画面で「一部欠け」と出す）
-        out["a"][str(W)] = None if mW > max(1, W // 10) else b64u16(X[-W:].sum(0))
+        out["a"][str(W)] = None if mW > max(1, W // 10) else b64u16(A[W])
     # 答え合わせ（3時間ごとの正時。30分ごとの解析が出てから、その並びで1回）
     chk = None; Tc = pt(Tn)
     try: last_chk = json.loads(open(os.path.join(a.out, "check.jsonl")).read().strip().splitlines()[-1])
@@ -412,9 +431,8 @@ def main():
     has_none = any(os.path.exists(os.path.join(a.state, Tn + x)) for x in (".npz", "_p.npz"))   # 解析そのものが読めてから（速報のつなぎでは答え合わせしない）
     if has_none and Tc.minute == 0 and Tc.hour % 3 == 0 and not (last_chk and last_chk.get("t") == tstr(Tc)):
         try:
-            if Tc == T: Xc, mc = X, miss
-            else: Xc, mc = estimate([load_state(a.state, ts) for ts in series_of(Tc)])
-            chk = check_amedas(Tc, Xc, mc, a.out)
+            Ac, mc, _ = (A, miss, X) if Tc == T else phase_sums(a.state, Tc, est)   # 画面に出すのと同じ足し方で
+            chk = check_amedas(Tc, Ac, mc, a.out)
         except Exception as e: log("check failed", e)
         if chk:
             with open(os.path.join(a.out, "check.jsonl"), "a") as f: f.write(json.dumps(chk, ensure_ascii=False) + "\n")
@@ -438,7 +456,7 @@ def main():
         return
     json.dump(out, open(os.path.join(a.out, "acc.json"), "w"), ensure_ascii=False, separators=(",", ":"))
     open(os.path.join(a.out, "t.txt"), "w").write(out["t"] + "\n")
-    log("done", out["t"], src, {W: out["miss"][str(W)] for W in WINS}, "max mm", {W: round(float(X[-W:].sum(0).max()), 1) for W in WINS}, "unknown", [W for W in WINS if out["a"][str(W)] is None], "failed", len(failed), round(time.time() - t0), "s")
+    log("done", out["t"], src, {W: out["miss"][str(W)] for W in WINS}, "max mm", {W: round(float(A[W].max()), 1) for W in WINS}, "unknown", [W for W in WINS if out["a"][str(W)] is None], "failed", len(failed), round(time.time() - t0), "s")
 
 if __name__ == "__main__":
     main()
