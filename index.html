@@ -797,11 +797,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .sx .sxy{grid-column:1/-1;font-weight:700;font-size:14px;padding:4px 6px;border-radius:5px;margin-top:2px} .sx .sxy.now{background:#2f7d4f;color:#fff} .sx .sxy.old{background:#777;color:#fff} .sx .sxy:not(:first-child){margin-top:8px} .sx .sxb{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0} .sx .sxm{font-size:13px;color:var(--ink2);min-height:1.5em}
   .btn:hover{background:var(--panel)} .btn.primary{background:var(--ink);color:#fff} .btn.small{padding:3px 9px;min-height:28px;font-size:14px}
   .btn:disabled{opacity:.45;cursor:default}
-  /* 上の段の「営農地」「マイ圃場」: 白地（マイ圃場は淡い緑）に、濃い緑→黄緑→黄色のグラデーションの枠のピル（見本41） */
+  /* 上の段の「本拠地」「マイ圃場」: 白地（マイ圃場は淡い緑）に、濃い緑→黄緑→黄色のグラデーションの枠のピル（見本41） */
   header #btnGeo,header #myOpen{border:2px solid transparent;border-radius:999px;font-weight:700;color:var(--ink);padding-left:13px;padding-right:13px;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
   header #myOpen{background:linear-gradient(#e4efe6,#e4efe6) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
   header #btnGeo:hover,header #myOpen:hover{filter:brightness(.96)} header #btnGeo:active,header #myOpen:active{filter:brightness(.92)}
-  /* 「営農地」の小窓（上の段のボタンの下）: 営農地へ・いま見ている所／現在地を営農地にする・現在地へ */
+  /* 「本拠地」の小窓（上の段のボタンの下）: 本拠地へ・いま見ている所／現在地を本拠地にする・現在地へ */
   #homeMenu{position:fixed;z-index:1300;width:min(300px,calc(100vw - 16px));background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 28px rgba(15,61,46,.22);padding:12px;display:flex;flex-direction:column;gap:7px}
   #homeMenu[hidden]{display:none}
   #homeMenu .hh{font-weight:700;font-size:15px;color:var(--ink);display:flex;align-items:baseline;gap:8px}
@@ -1085,7 +1085,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     .layout{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}   /* 地図の行の高さは、地図（#map の 64vh）にまかせる。行と地図を別々に vh で決めると、スマホの Chrome で片方だけ古い高さのまま残ることがあり、左下の欄が地図の下にはみ出した（2026-10-16 実機） */
     #map{height:64vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
     header{padding:8px 12px;gap:4px 6px} .side{padding:10px 12px 30px} header h1.fukui-logo{--s:17px}
-    /* スマホ幅: 「ふくい圃場マップ」の右に、「営農地」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
+    /* スマホ幅: 「ふくい圃場マップ」の右に、「本拠地」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
     header h1{order:0} header .spacer{order:1} header #btnGeo,header #myOpen{order:2} header .meta{order:3;flex:0 0 100%;font-size:13px;line-height:1.35}
     header .btn{min-height:30px;padding:3px 8px;font-size:13.5px;border-radius:6px}
     header #btnGeo,header #myOpen{padding:3px 8px;border-width:1.5px}   /* 360px幅でも、題字と同じ行に収まる幅 */
@@ -1096,9 +1096,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <h1 class="fukui-logo"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="8 8 84 84"><rect x="12" y="12" width="23" height="23" rx="6" fill="#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" fill="#1f8a53"/></svg><span>ふくい圃場マップ</span></h1>
   <span class="meta" id="meta"></span>
   <span class="spacer"></span>
-  <button class="btn" id="btnGeo" type="button" aria-haspopup="true" aria-expanded="false" title="営農地（開くたびに、ここから始まります）">営農地</button>
+  <button class="btn" id="btnGeo" type="button" aria-haspopup="true" aria-expanded="false" title="本拠地（開くたびに、ここから始まります）">本拠地</button>
 </header>
-<div id="homeMenu" role="dialog" aria-label="営農地" hidden></div>
+<div id="homeMenu" role="dialog" aria-label="本拠地" hidden></div>
 <div class="layout">
   <div class="mapwrap">
     <div id="map"></div>
@@ -1483,7 +1483,7 @@ const RAIN=(function(){
   async function point(){ const box=$('rainPt'); if(!box||!frames.length) return;
     const seq=++ptSeq, md=mode, fr0=frames, ni=nowIdx, n0=fr0[ni].t, oT=md==='15h'?n0:obsT, th0=th, li0=liT, pal=LV;
     const live=()=>seq===ptSeq&&on&&md===mode&&frames===fr0;   // 読む間に、閉じた・見るものを変えた・新しいデータになったときは、何もしない
-    const c=pt||ctrLL(), lat=c.lat, lon=c.lng, where=ptKind==='geo'?'現在地':ptKind==='home'?'営農地':ptKind==='tap'?'タップした所':'＋の地点';
+    const c=pt||ctrLL(), lat=c.lat, lon=c.lng, where=ptKind==='geo'?'現在地':ptKind==='home'?'本拠地':ptKind==='tap'?'タップした所':'＋の地点';
     if(hook) hook.where(c,ptKind);
     const accP=RAINACC.at(lat,lon).catch(()=>null);   // 降った雨（12・24・48時間）も、同じ場所で
     const setStrip=h=>{ const e=$('rainStrip'); if(e) e.innerHTML=h; };   // 帯が作り直されても、いまの帯に入れる
@@ -1523,7 +1523,7 @@ const RAIN=(function(){
     if(acc===undefined) accP.then(r=>{ if(r&&live()&&!box.querySelector('.racc')){ box.insertAdjacentHTML('beforeend',RAINACC.line(r)); accT=r.t; } });
     paintCells(); }
   function paintCells(){ document.querySelectorAll('#rainStrip i').forEach(x=>x.classList.toggle('on',+x.dataset.i===idx)); }
-  function showAt(ll,kind){ setPoint(ll,kind||'geo'); panVis(L.latLng(ll)); }   // 現在地・営農地: 印をつけて、見えている所の真ん中へ
+  function showAt(ll,kind){ setPoint(ll,kind||'geo'); panVis(L.latLng(ll)); }   // 現在地・本拠地: 印をつけて、見えている所の真ん中へ
   function setPoint(ll,kind){ pt=ll?L.latLng(ll):null; ptKind=ll?(kind||'tap'):'center'; ptShown=false;
     if(ptMk){ map.removeLayer(ptMk); ptMk=null; }
     if(pt&&on) ptMk=L.marker(pt,{interactive:false,keyboard:false,icon:L.divIcon({className:'rainPin',html:'<span></span>',iconSize:[22,22],iconAnchor:[11,11]})}).addTo(map);
@@ -2935,7 +2935,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
   document.getElementById('foot').textContent='データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院。雨雲・雷: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・雷ナウキャスト・雷の観測。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。';
   const h=parseHash();
-  const hm=HOME.get();   // 営農地を決めてあれば、開くたびにそこから（共有・Excel の「地図」のリンクなど、#c= のある開き方は、その場所）
+  const hm=HOME.get();   // 本拠地を決めてあれば、開くたびにそこから（共有・Excel の「地図」のリンクなど、#c= のある開き方は、その場所）
   if(h.c) map.setView(h.c,h.z||15); else if(hm) map.setView([hm.lat,hm.lng],hm.z); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]]);
   if(h.rain) RAIN.toggle(true,{mode:h.rain==='15'?'15h':'1h'});   // 共有された「雨雲」のリンク（#…&rain=1）は、雨雲を開いた形で始める
   let bulkZ=map.getZoom()>=BULK_ZOOM;
@@ -2990,8 +2990,8 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
 }
 function parseHash(){ const o={}; for(const kv of location.hash.replace(/^#/,'').split('&')){ const [k,v]=kv.split('='); if(!k) continue; if(k==='c'){const a=v.split(',').map(Number); if(a.length===2&&a.every(isFinite)) o.c=a;} else if(k==='z') o.z=+v; else if(k==='sel') o.sel=decodeURIComponent(v); else if(k==='rain') o.rain=v||'1'; } return o; }
 function writeHash(){ const c=RAIN.isOn()?RAIN.viewCenter():map.getCenter(); const parts=[`c=${c.lat.toFixed(5)},${c.lng.toFixed(5)}`,`z=${map.getZoom()}`]; if(selected.length) parts.push('sel='+encodeURIComponent(selected.map(s=>s.pid).join(','))); if(RAIN.isOn()) parts.push('rain='+(RAIN.mode()==='15h'?'15':'1')); history.replaceState(history.state,'','#'+parts.join('&')); }
-// ---------- 営農地（上の段のボタン）: 決めておくと、開くたびにそこが地図の真ん中になる。この端末に覚える ----------
-// 押すと小窓: 営農地へ・いま見ている所を営農地にする・現在地を営農地にする・現在地へ（前の「現在地へ」ボタンの働き）・営農地をやめる
+// ---------- 本拠地（上の段のボタン）: 決めておくと、開くたびにそこが地図の真ん中になる。この端末に覚える ----------
+// 押すと小窓: 本拠地へ・いま見ている所を本拠地にする・現在地を本拠地にする・現在地へ（前の「現在地へ」ボタンの働き）・本拠地をやめる
 const HOME=(function(){
   const K='fhm_home', btn=document.getElementById('btnGeo'), box=document.getElementById('homeMenu');
   function get(){ try{ const o=JSON.parse(localStorage.getItem(K)||'null'); return o&&isFinite(o.lat)&&isFinite(o.lng)?{lat:+o.lat,lng:+o.lng,z:Math.max(12,Math.min(18,Math.round(+o.z||16)))}:null; }catch(e){ return null; } }
@@ -3005,13 +3005,13 @@ const HOME=(function(){
   function say(m,err){ const e=box.querySelector('.hok'); if(e){ e.textContent=m; e.style.color=err?'#9a3b00':''; e.style.background=err?'#fff3e6':''; e.hidden=false; } else setStatus(m); }
   function place(){ const r=btn.getBoundingClientRect(), w=box.offsetWidth||300; box.style.top=Math.round(r.bottom+6)+'px'; box.style.left=Math.round(Math.max(8,Math.min(innerWidth-w-8,r.right-w)))+'px'; }
   function render(){ const hm=get();
-    box.innerHTML=(hm?`<div class="hh">営農地<small>開くたびに、ここから始まります</small></div><button type="button" class="btn go" data-h="go">営農地へ</button>`
-        :`<div class="hh">営農地を決めましょう</div><div class="hn">決めておくと、ふくい圃場マップを開くたびに、そこが地図の真ん中になります（この端末に覚えます）。</div>`)
-      +`<button type="button" class="btn${hm?'':' go'}" data-h="here">いま見ている所を営農地にする</button>`
-      +`<button type="button" class="btn" data-h="gps">現在地を営農地にする</button>`
+    box.innerHTML=(hm?`<div class="hh">本拠地<small>開くたびに、ここから始まります</small></div><button type="button" class="btn go" data-h="go">本拠地へ</button>`
+        :`<div class="hh">本拠地を決めましょう</div><div class="hn">決めておくと、ふくい圃場マップを開くたびに、そこが地図の真ん中になります（この端末に覚えます）。</div>`)
+      +`<button type="button" class="btn${hm?'':' go'}" data-h="here">いま見ている所を本拠地にする</button>`
+      +`<button type="button" class="btn" data-h="gps">現在地を本拠地にする</button>`
       +`<button type="button" class="btn" data-h="now">現在地へ</button>`
       +`<div class="hok" hidden></div>`
-      +`<div class="hx">${hm?'<button type="button" data-h="clear">営農地をやめる</button>':'<span></span>'}<button type="button" data-h="close">閉じる</button></div>`; }
+      +`<div class="hx">${hm?'<button type="button" data-h="clear">本拠地をやめる</button>':'<span></span>'}<button type="button" data-h="close">閉じる</button></div>`; }
   function open(){ render(); box.hidden=false; btn.setAttribute('aria-expanded','true'); place(); }
   function close(){ box.hidden=true; btn.setAttribute('aria-expanded','false'); clearTimeout(sayT); }
   function done(m){ render(); say(m); clearTimeout(sayT); sayT=setTimeout(close,1800); }
@@ -3019,10 +3019,10 @@ const HOME=(function(){
   box.addEventListener('click',e=>{ e.stopPropagation(); const b=e.target.closest('button[data-h]'); if(!b) return; const k=b.dataset.h;
     if(k==='close') return close();
     if(k==='go'){ const hm=get(); if(hm){ close(); go([hm.lat,hm.lng],hm.z,'home'); } return; }
-    if(k==='here'){ const c=RAIN.isOn()?RAIN.viewCenter():map.getCenter(); if(set(c.lat,c.lng,Math.max(14,map.getZoom()))) done('✓ いま見ている所を営農地にしました。次から、開くとここから始まります。'); else say('この端末では覚えられませんでした（プライベートモードなど）。',1); return; }
-    if(k==='gps') return geo(ll=>{ if(set(ll[0],ll[1],Math.max(15,map.getZoom()))){ go(ll,16,'home'); done('✓ 現在地を営農地にしました。次から、開くとここから始まります。'); } else say('この端末では覚えられませんでした（プライベートモードなど）。',1); });
+    if(k==='here'){ const c=RAIN.isOn()?RAIN.viewCenter():map.getCenter(); if(set(c.lat,c.lng,Math.max(14,map.getZoom()))) done('✓ いま見ている所を本拠地にしました。次から、開くとここから始まります。'); else say('この端末では覚えられませんでした（プライベートモードなど）。',1); return; }
+    if(k==='gps') return geo(ll=>{ if(set(ll[0],ll[1],Math.max(15,map.getZoom()))){ go(ll,16,'home'); done('✓ 現在地を本拠地にしました。次から、開くとここから始まります。'); } else say('この端末では覚えられませんでした（プライベートモードなど）。',1); });
     if(k==='now') return geo(ll=>{ close(); go(ll,16,'geo'); });
-    if(k==='clear'){ clear(); done('営農地をやめました。開いたときは、県全体から始まります。'); } });
+    if(k==='clear'){ clear(); done('本拠地をやめました。開いたときは、県全体から始まります。'); } });
   document.addEventListener('click',e=>{ if(!box.hidden&&!box.contains(e.target)&&e.target!==btn) close(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!box.hidden) close(); });
   addEventListener('resize',()=>{ if(!box.hidden) place(); });
