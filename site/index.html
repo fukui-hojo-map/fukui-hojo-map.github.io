@@ -811,6 +811,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #homeMenu .btn.go{background:linear-gradient(135deg,#0f3d2e,#2f7d4f);color:#fff;border-color:transparent;font-weight:700}
   #homeMenu .hx{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
   #homeMenu .hx button{background:none;border:0;padding:4px 2px;font-size:12.5px;color:#6b7a72;text-decoration:underline;cursor:pointer}
+  .homePin{pointer-events:none} .homePin svg{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}   /* 地図の上の本拠地のピン（押せない＝下の圃場をそのまま押せる） */
   #homeMenu .hok{font-size:13.5px;font-weight:700;color:#1b6e3a;background:#eef7ee;border-radius:8px;padding:6px 8px}
   input[type=file]{display:none}
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 7px var(--sideW,440px);height:calc(100vh - 56px);height:calc(100dvh - 56px)}
@@ -2997,6 +2998,11 @@ const HOME=(function(){
   function get(){ try{ const o=JSON.parse(localStorage.getItem(K)||'null'); return o&&isFinite(o.lat)&&isFinite(o.lng)?{lat:+o.lat,lng:+o.lng,z:Math.max(12,Math.min(18,Math.round(+o.z||16)))}:null; }catch(e){ return null; } }
   function set(lat,lng,z){ try{ localStorage.setItem(K,JSON.stringify({lat:+lat.toFixed(6),lng:+lng.toFixed(6),z:Math.max(12,Math.min(18,Math.round(z))),t:Date.now()})); return true; }catch(e){ return false; } }
   function clear(){ try{ localStorage.removeItem(K); }catch(e){} }
+  // 地図に本拠地のピン（緑のピンに黄色の家）。押せない印（下の圃場は、そのまま押せる）。決めた・やめたときに置き直す
+  let mk=null;
+  const PIN='<svg width="30" height="40" viewBox="0 0 32 42" aria-hidden="true"><path d="M16 40.5C16 40.5 3 25 3 15a13 13 0 0 1 26 0C29 25 16 40.5 16 40.5z" fill="#1e5a3c" stroke="#fff" stroke-width="2.2"/><path d="M9.3 16.6 16 10.4l6.7 6.2V23.3h-4.4v-4.6h-4.6v4.6H9.3z" fill="#f5c542"/></svg>';
+  function pin(){ const hm=get(); if(mk){ map.removeLayer(mk); mk=null; } if(!hm) return;
+    mk=L.marker([hm.lat,hm.lng],{interactive:false,keyboard:false,zIndexOffset:-200,title:'本拠地',icon:L.divIcon({className:'homePin',html:PIN,iconSize:[30,40],iconAnchor:[15,39]})}).addTo(map); }
   function go(ll,z,kind){ if(RAIN.isOn()) RAIN.showAt(ll,kind); else map.setView(ll,z); }   // 雨雲を出しているときは、拡大せずに、その場所の雨を見る
   function geo(ok){ if(!navigator.geolocation){ say('この端末では現在地を取得できません。',1); return; }
     say('現在地を調べています…');
@@ -3019,14 +3025,16 @@ const HOME=(function(){
   box.addEventListener('click',e=>{ e.stopPropagation(); const b=e.target.closest('button[data-h]'); if(!b) return; const k=b.dataset.h;
     if(k==='close') return close();
     if(k==='go'){ const hm=get(); if(hm){ close(); go([hm.lat,hm.lng],hm.z,'home'); } return; }
-    if(k==='here'){ const c=RAIN.isOn()?RAIN.viewCenter():map.getCenter(); if(set(c.lat,c.lng,Math.max(14,map.getZoom()))) done('✓ いま見ている所を本拠地にしました。次から、開くとここから始まります。'); else say('この端末では覚えられませんでした（プライベートモードなど）。',1); return; }
-    if(k==='gps') return geo(ll=>{ if(set(ll[0],ll[1],Math.max(15,map.getZoom()))){ go(ll,16,'home'); done('✓ 現在地を本拠地にしました。次から、開くとここから始まります。'); } else say('この端末では覚えられませんでした（プライベートモードなど）。',1); });
+    if(k==='here'){ const c=RAIN.isOn()?RAIN.viewCenter():map.getCenter(); if(set(c.lat,c.lng,Math.max(14,map.getZoom()))){ pin(); done('✓ いま見ている所を本拠地にしました。次から、開くとここから始まります。'); } else say('この端末では覚えられませんでした（プライベートモードなど）。',1); return; }
+    if(k==='gps') return geo(ll=>{ if(set(ll[0],ll[1],Math.max(15,map.getZoom()))){ pin(); go(ll,16,'home'); done('✓ 現在地を本拠地にしました。次から、開くとここから始まります。'); } else say('この端末では覚えられませんでした（プライベートモードなど）。',1); });
     if(k==='now') return geo(ll=>{ close(); go(ll,16,'geo'); });
-    if(k==='clear'){ clear(); done('本拠地をやめました。開いたときは、県全体から始まります。'); } });
+    if(k==='clear'){ clear(); pin(); done('本拠地をやめました。開いたときは、県全体から始まります。'); } });
   document.addEventListener('click',e=>{ if(!box.hidden&&!box.contains(e.target)&&e.target!==btn) close(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!box.hidden) close(); });
   addEventListener('resize',()=>{ if(!box.hidden) place(); });
-  return {get,set,clear,open,close};
+  addEventListener('storage',e=>{ if(e.key===K) pin(); });   // 別のタブで決めた・やめたとき
+  pin();
+  return {get,set,clear,open,close,pin,_mk:()=>mk};
 })();
 // ---------- ARで見る（Android の Chrome。WebXR の immersive-ar と hit-test） ----------
 // 田んぼに立ってスマホをかざすと、選んだ筆の中の色（NDVI など）が地面に塗られて見える。three.js は押したときだけ読み込む（cdn.jsdelivr.net）
