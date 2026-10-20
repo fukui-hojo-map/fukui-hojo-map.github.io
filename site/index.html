@@ -996,10 +996,14 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #rainBar .rlg i{position:relative;display:inline-block;width:17px;height:10px;border-top:1px solid rgba(0,0,0,.15);border-bottom:1px solid rgba(0,0,0,.15)} #rainBar .rlg i:first-of-type{border-left:1px solid rgba(0,0,0,.15)}
   #rainBar .rlg i b{position:absolute;left:0;top:11px;transform:translateX(-50%);font-size:10.5px;font-weight:400;line-height:11px;color:#33433b}
   #rainBar .rfoot{display:flex;flex-wrap:wrap;column-gap:10px;margin-top:2px;font-size:11.5px;line-height:1.3;text-align:left} #rainBar .rsrc{color:#5b6b63} #rainBar .rsrc a{color:#0d47a1}
-  .rainX{display:none;position:absolute;z-index:640;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;pointer-events:none}
+  .rainX{display:none;position:absolute;z-index:640;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}   /* 天気モードの照準（小さめ。利用者の指示 2026-10-20「大きすぎるから、小さくして」） */
   body.rainCtr .rainX{display:block}
-  .rainX::before,.rainX::after{content:'';position:absolute;background:#0d47a1;box-shadow:0 0 0 1.5px #fff}
-  .rainX::before{left:13px;top:0;width:2.5px;height:28px} .rainX::after{top:13px;left:0;height:2.5px;width:28px}
+  .rainX::before,.rainX::after{content:'';position:absolute;background:#0d47a1;box-shadow:0 0 0 1px #fff}
+  .rainX::before{left:8px;top:0;width:2px;height:18px} .rainX::after{top:8px;left:0;height:2px;width:18px}
+  .ctrX{position:absolute;z-index:640;left:50%;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;pointer-events:none}   /* ふつうの地図の真ん中の照準（小さめ。天気モードでは、青い照準にかわる） */
+  body.rainOn .ctrX{display:none}
+  .ctrX::before,.ctrX::after{content:'';position:absolute;background:#1e3a2f;box-shadow:0 0 0 1px rgba(255,255,255,.95)}
+  .ctrX::before{left:8px;top:0;width:2px;height:18px} .ctrX::after{top:8px;left:0;height:2px;width:18px}
   .rainPin span{display:block;width:22px;height:22px;border-radius:50%;background:#0d47a1;border:3px solid #fff;box-shadow:0 0 0 2px #0d47a1,0 2px 6px rgba(0,0,0,.4)}
   @media (max-width:860px){
     body.rainOn #map{height:76vh}   /* スマホ: 雨雲の間は地図を縦に広く（行の高さは地図に合わせる＝auto） */
@@ -1103,6 +1107,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 <div class="layout">
   <div class="mapwrap">
     <div id="map"></div>
+    <div class="ctrX" aria-hidden="true"></div>
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
       <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません"></select><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><input type="checkbox" id="colorOn" checked hidden></div>
