@@ -1390,7 +1390,7 @@ const RAIN=(function(){
           if(!on||md!==mode) return;
         }
         lastKey=key; frames=fl; nowIdx=ni0; prune(); idx=ni; ptShown=false; buildBar(); show(idx); point();
-      } else { if(!$('rainS')) buildBar(); if(!ptShown) point();   // 「もう一度」で読めたときは、出ていた「読み込めませんでした」を消す
+      } else { if(!$('rainS')) buildBar(); else label(); if(!ptShown) point();   // 「もう一度」で読めたときは、出ていた「読み込めませんでした」を消す
         else RAINACC.load().then(a=>{ if(a&&on&&md===mode&&ptShown&&a.t!==accT){ accT=a.t; point(); } }).catch(()=>{}); }   // 「過去降った雨」が新しくなったら、地点の欄を出しなおす（10分ごと）
       stamp=Date.now();
     }catch(e){ if(on&&md===mode){ err='気象庁のデータを読み込めませんでした。通信を確かめて「もう一度」を押してください。'; if(!frames.length) buildBar(); else msg(err,true); } }
@@ -1419,7 +1419,9 @@ const RAIN=(function(){
   function rel(f){ const n=frames[nowIdx]; if(!n) return ''; const m=Math.round((f.t-n.t)/6e4); return m===0?'いま':m<0?`${-m}分前`:`${m}分後`; }
   function label(){ const f=frames[idx], lb=$('rainT'); if(!f||!lb) return; const n=frames[nowIdx];
     if(f.p==='rasrf'){ const t0=f.t-36e5, dd=sameDay(t0,n.t)?'':day(t0)+' ';
-      lb.innerHTML=`<b>${dd}${hm(t0)}〜${hm(f.t)}</b><span class="rk${f.kind==='fc'?' fc':''}">${f.kind==='an'?'解析・直前1時間':'予報・1時間の雨量'}</span>`; }
+      if(f.kind==='an'){ const T=nowMs(), ago=Math.round((T-f.t)/6e4);   // 最新の解析は、実際の時刻より10〜20分ほど古い。見出しは実際の時刻（端末の時計と合わせる）にして、解析の時刻は「まで（n分前）」と添える
+        lb.innerHTML=`<b>いま ${hm(T)}</b><span class="rk" title="直前1時間の雨量。気象庁の解析は ${hm(f.t)} まで${ago>=1?`（実際の時刻より${ago}分前）`:''}">解析 ${hm(f.t)}${ago>=1?`（${ago}分前）`:''}</span>`; }
+      else lb.innerHTML=`<b>${dd}${hm(t0)}〜${hm(f.t)}</b><span class="rk fc">予報・1時間の雨量</span>`; }
     else { const dd=sameDay(f.t,n.t)?'':day(f.t)+' ';
       lb.innerHTML=`<b>${dd}${hm(f.t)}</b><span class="rk${f.kind==='fc'?' fc':''}">${f.kind==='fc'?'予報':'実況'}・${rel(f)}</span>`; }
     const s=$('rainS'); if(s){ s.value=idx; s.setAttribute('aria-valuetext',lb.textContent); }
