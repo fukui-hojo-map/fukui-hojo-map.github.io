@@ -1200,8 +1200,11 @@ map.createPane('pxPane').style.zIndex=390;
   const ogl=L.GridLayer.prototype._getTiledPixelBounds;
   L.GridLayer.prototype._getTiledPixelBounds=function(c){ const b=ogl.call(this,c), m=this._map; if(!m||!m._rotBig) return b; const k=b.getSize().x/m.getSize().x, [ex,ey]=half(m); return new L.Bounds([b.min.x-ex*k,b.min.y-ey*k],[b.max.x+ex*k,b.max.y+ey*k]); };
   const oru=L.Renderer.prototype._update;
-  L.Renderer.prototype._update=function(){ const m=this._map; if(!m||!m._rotBig) return oru.call(this); const s=m.getSize(), h=Math.ceil(Math.hypot(s.x,s.y)/2+Math.max(s.x,s.y)*this.options.padding), c=m.containerPointToLayerPoint(s.divideBy(2)).round();
-    this._bounds=new L.Bounds(c.subtract([h,h]),c.add([h,h])); this._center=m.getCenter(); this._zoom=m.getZoom(); };
+  L.Renderer.prototype._update=function(){ const m=this._map; if(!m||!m._rotBig){ this._big=false; return oru.call(this); } const s=m.getSize(), h=Math.ceil(Math.hypot(s.x,s.y)/2+Math.max(s.x,s.y)*this.options.padding), c=m.containerPointToLayerPoint(s.divideBy(2)).round();
+    this._bounds=new L.Bounds(c.subtract([h,h]),c.add([h,h])); this._center=m.getCenter(); this._zoom=m.getZoom(); this._big=true; };
+  const out=L.Renderer.prototype._updateTransform;   // ピンチ中に描画の層を拡大縮小する位置も、広げた範囲の大きさで計算する（元は「画面＋余白」の大きさ前提で、白い輪郭線がずれていた）
+  L.Renderer.prototype._updateTransform=function(c,z){ if(!this._big||!this._bounds) return out.call(this,c,z); const m=this._map, sc=m.getZoomScale(z,this._zoom), off=this._bounds.getSize().multiplyBy(.5).multiplyBy(-sc).add(m.project(this._center,z)).subtract(m._getNewPixelOrigin(c,z));
+    if(L.Browser.any3d) L.DomUtil.setTransform(this._container,off,sc); else L.DomUtil.setPosition(this._container,off); };
   const oDown=L.Draggable.prototype._onDown, oMove=L.Draggable.prototype._onMove;
   L.Draggable.prototype._onDown=function(e){ oDown.call(this,e); const p=this._element&&this._element.parentNode; if(p&&p._fhmMap&&this._parentScale) this._parentScale={x:1,y:1}; };   // 枠が回っていても、拡大縮小はしていない
   L.Draggable.prototype._onMove=function(e){ const p=this._element&&this._element.parentNode, m=p&&p._fhmMap; if(!m||!m._rot) return oMove.call(this,e);   // 指の動きを、回す前の地図の向きに直して動かす（元の処理と同じ）
