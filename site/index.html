@@ -1176,7 +1176,7 @@ let excluded=new Set(), autoFlag={};
 let allDates=[];
 
 // ---------- map ----------
-const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true,maxZoom:20})   // 区画は canvas で描く（数千枚の SVG より動かしたときに軽い）.setView([36.06,136.28],15);
+const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true,maxZoom:22})   // 区画は canvas で描く（数千枚の SVG より動かしたときに軽い）.setView([36.06,136.28],15);
 map.createPane('pxPane').style.zIndex=390;
 
 // 地図とサイドの境目をドラッグして幅を変える（幅はこの端末に覚えておく。ダブルクリックで元に戻す）
@@ -1192,13 +1192,13 @@ map.createPane('pxPane').style.zIndex=390;
   sp.addEventListener('dblclick',()=>{ lay.style.removeProperty('--sideW'); try{ localStorage.removeItem('sideW'); }catch(e){} map.invalidateSize({pan:false}); });
 })();
 const gsi='https://cyberjapandata.gsi.go.jp/xyz/';
-const photo=L.tileLayer(gsi+'seamlessphoto/{z}/{x}/{y}.jpg',{maxNativeZoom:18,maxZoom:20,attribution:'地理院タイル（航空写真）'});
-const std=L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:20,attribution:'地理院タイル'});
+const photo=L.tileLayer(gsi+'seamlessphoto/{z}/{x}/{y}.jpg',{maxNativeZoom:18,maxZoom:22,attribution:'地理院タイル（航空写真）'});
+const std=L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:22,attribution:'地理院タイル'});
 // 背景「土壌図」: 淡色地図の上に、国土交通省 土地分類基本調査（20万分の1）の土壌図（data/soil_mlit.geojson）を土の種類で色分け。選んだときだけ読み込む
 map.createPane('soilPane').style.zIndex=350;
 const SOIL_COLS=[['#6a3d9a','泥炭土・黒泥土（軟らかい）'],['#1f5fa8','グライ土（湿田）'],['#7fb2dc','灰色低地土など'],['#e2b46a','褐色低地土・黒ボク土など（乾きやすい）'],['#9dbb86','山地の土・その他']];
 const soilGeo=L.geoJSON(null,{pane:'soilPane',interactive:false,style:f=>({color:'#444',weight:.6,opacity:.6,fillColor:(SOIL_COLS[f.properties.c]||SOIL_COLS[4])[0],fillOpacity:.6})});
-const soilBase=L.layerGroup([L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:20,attribution:'地理院タイル'}),soilGeo]);
+const soilBase=L.layerGroup([L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:22,attribution:'地理院タイル'}),soilGeo]);
 let soilLoaded=null, soilOn=false;
 const soilLeg=L.control({position:'topleft'}); soilLeg.onAdd=()=>{ const d=L.DomUtil.create('div','soilleg');   // 小さなボタン。押すと色の説明を開く
   d.innerHTML='<button type="button" class="sl-b">凡例</button><div class="sl-l" hidden>'+SOIL_COLS.map(([c,t])=>`<div><i style="background:${c}"></i>${t}</div>`).join('')+'<small>土地分類基本調査 1/20万</small></div><div class="sl-n"></div>';
@@ -1214,7 +1214,7 @@ map.on('baselayerchange',e=>{ soilOn=e.layer===soilBase; map.getPane('pxPane').s
 map.createPane('hazardPane').style.zIndex=450; map.getPane('hazardPane').style.pointerEvents='none';
 const HZ=(function(){
   const HB='https://disaportaldata.gsi.go.jp/raster/', BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', LEG='https://disaportal.gsi.go.jp/hazardmap/copyright/img/';
-  const mk=u=>{ const l=L.tileLayer(HB+u+'/{z}/{x}/{y}.png',{pane:'hazardPane',minNativeZoom:2,maxNativeZoom:17,maxZoom:20,opacity:.6,errorTileUrl:BLANK,keepBuffer:1});
+  const mk=u=>{ const l=L.tileLayer(HB+u+'/{z}/{x}/{y}.png',{pane:'hazardPane',minNativeZoom:2,maxNativeZoom:17,maxZoom:22,opacity:.6,errorTileUrl:BLANK,keepBuffer:1});
     l.on('tileerror',e=>{ if(e.tile) e.tile.style.visibility='hidden'; }); return l; };   // 配信元にないタイル（404）は、何も出さない
   const FL=[['洪水（計画規模）',mk('01_flood_l1_shinsuishin_newlegend_data'),LEG+'shinsui_legend3.png'],
             ['洪水（想定最大規模）',mk('01_flood_l2_shinsuishin_data'),LEG+'shinsui_legend3.png'],
@@ -1336,7 +1336,7 @@ const RAIN=(function(){
   const urlT=(f,z,x,y)=>`${JT}${f.p}/${f.b}/${f.m}/${f.v}/surf/${f.el}/${z}/${x}/${y}.png`;
   const Tile=L.TileLayer.extend({ _clampZoom(z){ z=Math.max(MINZ,Math.min(this.options.maxNativeZoom,Math.round(z))); return z-z%2; } });   // 奇数のズーム → 1つ下の偶数
   const BOUNDS=L.latLngBounds([[17,115],[50,155]]);   // 気象庁のタイルがある範囲（日本のまわり）。この外と、ズーム4より引いたときは読まない（読むタイルが何千枚にもならないように）
-  const mkTile=f=>new Tile(urlT(f,'{z}','{x}','{y}'),{pane:'rainPane',opacity:0,maxNativeZoom:MAXZ[f.el],minNativeZoom:MINZ,minZoom:MINZ,maxZoom:20,bounds:BOUNDS,keepBuffer:1,updateWhenIdle:true,errorTileUrl:BLANK,className:'rainT'});
+  const mkTile=f=>new Tile(urlT(f,'{z}','{x}','{y}'),{pane:'rainPane',opacity:0,maxNativeZoom:MAXZ[f.el],minNativeZoom:MINZ,minZoom:MINZ,maxZoom:22,bounds:BOUNDS,keepBuffer:1,updateWhenIdle:true,errorTileUrl:BLANK,className:'rainT'});
   // ---- 時刻の一覧を読んで、こま（frame）を作る ----
   async function loadNow(){
     const [n1,n2]=await Promise.all([gj('nowc/targetTimes_N1.json'),gj('nowc/targetTimes_N2.json')]);
