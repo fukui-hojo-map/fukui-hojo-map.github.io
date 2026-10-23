@@ -2141,7 +2141,7 @@ function pxOverlay(R,m,val,color,fill,band){   // val（NaN=なし）を色に�
 function drawPx(pid,r,k,mode){
   const {m,g}=r, R=pxRegion(pid,m); if(!R) return false; const {c0,r0,cw,ch,inside}=R;
   const val=new Float32Array(cw*ch).fill(NaN), oks=[]; let nin=0,nok=0,sum=0;
-  for(let y=0;y<ch;y++) for(let x=0;x<cw;x++){ const v=g[(k*m.h+r0+y)*m.w+c0+x]; if(!inside(c0+x+.5,r0+y+.5)) continue; nin++; if(v>0){ const nd=Math.max(0,(v-1)/254*1.2-0.2); val[y*cw+x]=nd; nok++; sum+=nd; oks.push(nd); } }
+  for(let y=0;y<ch;y++) for(let x=0;x<cw;x++){ const v=g[(k*m.h+r0+y)*m.w+c0+x]; if(!inside(c0+x+.5,r0+y+.5)) continue; nin++; if(v>0){ const nd=(v-1)/254*1.2-0.2; val[y*cw+x]=nd; nok++; sum+=nd; oks.push(nd); } }
   if(!nin||nok<nin*0.5) return false;                       // 半分以上が雲なら出さない
   const mean=sum/nok, base=Math.max(0.05,mean);
   // 相対表示の目盛り: その田の中の差の大きさ（外れた5%を除く）に合わせる。最低 ±REL_MIN
@@ -2348,7 +2348,7 @@ function seasonMins(pid,r){   // {sp:{年: 4/15〜6/10 の最小}, au:{年: 8/15
   const sp={}, au={}, add=(d,v)=>{ const md=d.slice(5), y=d.slice(0,4), o=md>=SPRING[0]&&md<=SPRING[1]?sp:md>=HARVEST[0]&&md<=HARVEST[1]?au:null;
     if(o&&(!(y in o)||v<o[y])) o[y]=v; };
   for(const q of pkg.series[pid]||[]) if(q[2]>=0.8-1e-9) add(q[0],q[1]);
-  for(const j of [r&&r.sj,r&&r.hj]){ const a=j&&j.p&&j.p[pid]; if(a) for(let k=0;k<a.length;k+=3) if(a[k+2]>=80) add(j.dates[a[k]],Math.max(0,a[k+1]/1000)); }
+  for(const j of [r&&r.sj,r&&r.hj]){ const a=j&&j.p&&j.p[pid]; if(a) for(let k=0;k<a.length;k+=3) if(a[k+2]>=80) add(j.dates[a[k]],a[k+1]/1000); }
   const out={sp,au}; if(pkg.series[pid]) spMemo.set(pid,out);   // 区画の系列を読み込む前は覚えない
   return out; }
 function cropOf(row,sp,au){   // その年の作物（'稲' / '休'=休耕か草 / '麦' / '他' / ''=わからない）。sp・au = その年の 4/15〜6/10・8/15〜10/15 の NDVI のいちばん低い値
@@ -2959,13 +2959,13 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
       const [g,n]=await Promise.all([fetch(`${DATA}cells/${c.id}/parcels.geojson`).then(r=>r.json()), fetch(`${DATA}cells/${c.id}/ndvi.json`).then(r=>r.ok?r.json():{dates:[],p:{}})]);
       const full={}; for(const f of g.features){ f.properties.pid=String(f.properties.pid); full[f.properties.pid]=f.properties.full||1; }
       if(n.v===2){ // [添字, NDVI×1000, 有効画素率%] の並び。Landsat（ldates/lp）は同じ日に Sentinel-2 がなければ使う
-        const by={}, put=(dates,p,src,cv=v=>v)=>{ for(const pid in p||{}){ const a=p[pid], m=by[pid]||(by[pid]=new Map()); for(let k=0;k<a.length;k+=3){ const d=dates[a[k]]; if(!m.has(d)) m.set(d,[d,Math.max(0,cv(a[k+1]/1000)),a[k+2]/100,src]); } } };   // マイナスの NDVI（水面など）は 0 として扱う（利用者の指示）
+        const by={}, put=(dates,p,src,cv=v=>v)=>{ for(const pid in p||{}){ const a=p[pid], m=by[pid]||(by[pid]=new Map()); for(let k=0;k<a.length;k+=3){ const d=dates[a[k]]; if(!m.has(d)) m.set(d,[d,cv(a[k+1]/1000),a[k+2]/100,src]); } } };   // 0 より小さい NDVI（水面など）も、そのまま残す（水の状態を示す大事な情報。2026-10-23 の利用者の指示で、0にそろえるのをやめた）
         put(n.dates,n.p,'S'); put(n.ldates,n.lp,'L',lsConv);
         const fit=radarOn()?radarFit(n):null;   // レーダーの推定（ふだんは使わない）は、使うときだけ計算する   // レーダーは範囲ごとの換算式で推定 NDVI にする（5/10〜7/31 だけ）
         if(fit) for(const pid in n.rp){ const a=n.rp[pid], rows=[]; for(let k=0;k<a.length;k+=3){ const d=n.rdates[a[k]], md=d.slice(5); if(md<'05-10'||md>'07-31') continue;
-          rows.push([d,Math.max(0,Math.min(1,fit.a+fit.b*a[k+1]/1000)),a[k+2]/100,'R']); } pkg.radar[pid]=rows.sort((x,y)=>x[0]<y[0]?-1:1); }
+          rows.push([d,Math.max(-0.1,Math.min(1,fit.a+fit.b*a[k+1]/1000)),a[k+2]/100,'R']); } pkg.radar[pid]=rows.sort((x,y)=>x[0]<y[0]?-1:1); }
         for(const pid in by) pkg.series[pid]=[...by[pid].values()].sort((x,y)=>x[0]<y[0]?-1:1); }
-      else for(const pid in n.p){ pkg.series[pid]=n.dates.map((d,i)=>{ const v=n.p[pid][i]; return v?[d,Math.max(0,v[0]),Math.min(1,v[1]/(full[pid]||v[1]||1))]:null; }).filter(Boolean); }
+      else for(const pid in n.p){ pkg.series[pid]=n.dates.map((d,i)=>{ const v=n.p[pid][i]; return v?[d,v[0],Math.min(1,v[1]/(full[pid]||v[1]||1))]:null; }).filter(Boolean); }
       pkg.parcels.features.push(...g.features); geoLayer.addData(g); dataVer++;
       for(const f of g.features) if(parcels[f.properties.pid]) parcels[f.properties.pid].cell=c.id;
       cellLayers[c.id]=g.features.map(f=>parcels[f.properties.pid]&&parcels[f.properties.pid].layer).filter(Boolean); cellShown[c.id]=true; shownPids=null;
@@ -3085,7 +3085,7 @@ async function arNdvi(pid){   // NDVI: 地図の日付の 10m 画素（その日
   const px=(k,i)=>g[(k*m.h+r0+(i/cw|0))*m.w+c0+i%cw], okAt=k=>ins.length&&ins.filter(i=>px(k,i)>0).length>=ins.length*0.5;
   let k=m.dates.indexOf(d0); if(k<0||!okAt(k)){ k=-1; for(let j=m.dates.length-1;j>=0;j--) if(okAt(j)){ k=j; break; } }
   if(k<0) return {err:`${y}年に、この筆が晴れて写った日がありません`};
-  const val=new Float32Array(cw*ch).fill(NaN); let sm=0,nm=0; for(const i of ins){ const v=px(k,i); if(v>0){ val[i]=Math.max(0,(v-1)/254*1.2-0.2); sm+=val[i]; nm++; } }   // 地図と同じく、真ん中が筆の中の画素だけ使う（縁の画素はあぜ・道が混ざる）
+  const val=new Float32Array(cw*ch).fill(NaN); let sm=0,nm=0; for(const i of ins){ const v=px(k,i); if(v>0){ val[i]=(v-1)/254*1.2-0.2; sm+=val[i]; nm++; } }   // 地図と同じく、真ん中が筆の中の画素だけ使う（縁の画素はあぜ・道が混ざる）
   for(let pass=0;pass<3;pass++){ const nv=val.slice(); for(let i=0;i<cw*ch;i++){ if(!isNaN(val[i])) continue; const x=i%cw, yy=i/cw|0; let s=0,n=0;   // 雲・外の画素は周りでうめる
       for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){ const xx=x+dx, y2=yy+dy; if(xx<0||y2<0||xx>=cw||y2>=ch) continue; const w=val[y2*cw+xx]; if(!isNaN(w)){ s+=w; n++; } } if(n) nv[i]=s/n; } val.set(nv); }
   for(let i=0;i<cw*ch;i++) if(isNaN(val[i])) val[i]=sm/nm;   // 残りは筆の中の平均
