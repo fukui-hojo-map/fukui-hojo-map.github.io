@@ -1151,7 +1151,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
-      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より低いV字の点（雲・かすみの疑い。前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上）を、グラフと計算から外す</label></div>
+      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より低いV字の点（雲・かすみの疑い。前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上）と、同じ日の周りの圃場の中央値より、いつもの差で 0.12 以上低く15日以内にもどる点を、グラフと計算から外す</label></div>
       <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）の99%以上が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
@@ -1982,13 +1982,40 @@ function isDip(s,i){ // one parcel only: lower than both neighbours (each within
   const th=pv[1]>=DIP_HI_AT&&nx[1]>=DIP_HI_AT?DIP_HI:DIP;
   return pv[1]-s[i][1]>=th-1e-9&&nx[1]-s[i][1]>=th-1e-9;
 }
+// 同じ日の「周りの圃場」（同じ区画のまとまり）より、その圃場だけ極端に下がった点（雲・かすみの疑い）。2026-10-23 の利用者の指示
+//   前後の点が雲で欠けた日（前の点が20日前など）は、前後との比べ（isDip）では見つからない。周りの圃場といっしょに下がった分は引いて、この圃場だけ下がった分を見る。
+//   周りの変化は、2つの日の両方にデータのある圃場だけの「差の中央値」で測る（その日に使える圃場の顔ぶれの違いで、中央値が揺れないように）。
+//   外すのは、次を全部満たす Sentinel-2 の点だけ（本物の変化＝田植え・収穫・生育を外さないための歯止め）:
+//   ① 前後30日の自分の点と比べて、周りの変化を引いても 0.12 以上低い（比べた点との差の中央値）　② 前後30日の自分の点の中央値が 0.7 以上（葉が詰まった時期）
+//   ③ 15日以内の次の点では、もう低くない（一時的）。次の点がない最後の点は外さない　④ 前の点（30日以内）があれば、それも低くない（前も低いなら、本物の変化かもしれない）
+//   ⑤ 6/15〜8/31の点だけ（収穫前の色落ちは、品種ごとに時期が違うので対象外）　⑥ 前30日の自分の点があれば、その最高値より 0.05 以上低い（成長の途中で上がっていく点は外さない）
+const NB_T=0.12, NB_MIN=20, NB_HI=0.7, NB_WIN=30*864e5, NB_BACK=15*864e5, NB_FROM='06-15', NB_TO='08-31';
+let nbMed=new Map();   // 区画のまとまり → {mem: 圃場ごとの 日付→NDVI, pair: 日付の組→周りの変化}
+function nbOf(cell){ if(!cell) return null; let c=nbMed.get(cell); if(c!==undefined) return c;
+  const t=thr()-1e-9, cn=cnOn(), mem=[]; for(const q in parcels){ if(parcels[q].cell!==cell) continue; const m=new Map();
+    for(const r of (pkg.series[q]||[])){ if(r[3]==='L'||r[2]<t||excluded.has(r[0])||(cn&&cnBad(cell,r[0]))) continue; m.set(r[0],r[1]); } if(m.size) mem.push(m); }
+  c={mem,pair:new Map()}; nbMed.set(cell,c); return c; }
+function nbPair(c,d,e){ const k=d+'|'+e; if(c.pair.has(k)) return c.pair.get(k); const a=[]; for(const m of c.mem){ const x=m.get(d), y=m.get(e); if(x!==undefined&&y!==undefined) a.push(x-y); }
+  let v=null; if(a.length>=NB_MIN){ a.sort((p,q)=>p-q); const h=a.length>>1; v=a.length%2?a[h]:(a[h-1]+a[h])/2; } c.pair.set(k,v); return v; }   // d の日と e の日の両方にデータのある圃場の、差（d−e）の中央値
+function nbDips(s,C){ const out=new Set(); if(!C||!C.mem.length) return out; const S2=s.filter(r=>r[3]!=='L'); if(S2.length<4) return out;
+  const T=S2.map(r=>tOf(r[0])), med=a=>{ a=a.slice().sort((x,y)=>x-y); const h=a.length>>1; return a.length%2?a[h]:(a[h-1]+a[h])/2; };
+  const res=(x,list)=>{ const o=[]; for(const j of list){ const m=nbPair(C,S2[x][0],S2[j][0]); if(m!==null) o.push(S2[x][1]-S2[j][1]-m); } return o; };   // x の点が、比べた点より、周りの変化を引いてもどれだけ違うか
+  for(let i=0;i<S2.length;i++){ const md=S2[i][0].slice(5); if(md<NB_FROM||md>NB_TO) continue; const win=[]; for(let j=0;j<S2.length;j++) if(j!==i&&Math.abs(T[j]-T[i])<=NB_WIN) win.push(j);
+    if(win.length<2||med(win.map(j=>S2[j][1]))<NB_HI) continue;   // 葉が詰まった時期の田だけ（成長の途中・収穫後は対象外）
+    const r0=res(i,win); if(r0.length<2||med(r0)>-NB_T) continue;   // この圃場だけの落ち込み
+    const ear=win.filter(j=>j<i).map(j=>S2[j][1]); if(ear.length&&S2[i][1]>Math.max(...ear)-NB_T*0.4) continue;   // 前の点より上がっていく途中（成長）は外さない
+    let nx=-1,pv=-1; for(let j=i+1;j<S2.length;j++){ if(T[j]-T[i]<=NB_BACK) nx=j; break; } for(let j=i-1;j>=0;j--){ if(T[i]-T[j]<=NB_WIN) pv=j; break; }
+    if(nx<0) continue; const rn=res(nx,win.filter(j=>j!==nx)); if(!rn.length||med(rn)<-NB_T/2) continue;   // 15日以内に、もう低くない（一時的）
+    if(pv>=0){ const rp=res(pv,win.filter(j=>j!==pv)); if(!rp.length||med(rp)<-NB_T/2) continue; }   // 前の点も低いなら、本物の変化かもしれない
+    out.add(S2[i][0]); }
+  return out; }
 // filtered rows per parcel, cached; rebuilt when threshold / excluded days / dip or Landsat filter / data change
 let clean=new Map(), cleanKey='', dataVer=0;
-function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
+function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); nbMed=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
   const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0])));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
-  const isD=s.map((r,i)=>dip&&isDip(s,i)), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
+  const nb=dip?nbDips(s,nbOf(cell)):null, isD=s.map((r,i)=>dip&&(isDip(s,i)||(!!nb&&r[3]!=='L'&&nb.has(r[0])))), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
   if(radarOn()&&rad&&rad.length){ // レーダーの推定値は光の観測がない日だけ足す。前後のレーダーより急に上下した点（ノイズ）は除く
     const od=new Set(s.map(r=>r[0])), rs=rad.filter(r=>r[2]>=t&&!od.has(r[0])); rows=rows.concat(rs.filter((r,i)=>!radarSpike(rs,i))).sort((a,b)=>a[0]<b[0]?-1:1); }
