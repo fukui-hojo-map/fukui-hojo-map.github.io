@@ -1176,7 +1176,7 @@ let excluded=new Set(), autoFlag={};
 let allDates=[];
 
 // ---------- map ----------
-const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true})   // 区画は canvas で描く（数千枚の SVG より動かしたときに軽い）.setView([36.06,136.28],15);
+const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true,maxZoom:20})   // 区画は canvas で描く（数千枚の SVG より動かしたときに軽い）.setView([36.06,136.28],15);
 map.createPane('pxPane').style.zIndex=390;
 
 // 地図とサイドの境目をドラッグして幅を変える（幅はこの端末に覚えておく。ダブルクリックで元に戻す）
@@ -1192,13 +1192,13 @@ map.createPane('pxPane').style.zIndex=390;
   sp.addEventListener('dblclick',()=>{ lay.style.removeProperty('--sideW'); try{ localStorage.removeItem('sideW'); }catch(e){} map.invalidateSize({pan:false}); });
 })();
 const gsi='https://cyberjapandata.gsi.go.jp/xyz/';
-const photo=L.tileLayer(gsi+'seamlessphoto/{z}/{x}/{y}.jpg',{maxZoom:18,attribution:'地理院タイル（航空写真）'});
-const std=L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxZoom:18,attribution:'地理院タイル'});
+const photo=L.tileLayer(gsi+'seamlessphoto/{z}/{x}/{y}.jpg',{maxNativeZoom:18,maxZoom:20,attribution:'地理院タイル（航空写真）'});
+const std=L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:20,attribution:'地理院タイル'});
 // 背景「土壌図」: 淡色地図の上に、国土交通省 土地分類基本調査（20万分の1）の土壌図（data/soil_mlit.geojson）を土の種類で色分け。選んだときだけ読み込む
 map.createPane('soilPane').style.zIndex=350;
 const SOIL_COLS=[['#6a3d9a','泥炭土・黒泥土（軟らかい）'],['#1f5fa8','グライ土（湿田）'],['#7fb2dc','灰色低地土など'],['#e2b46a','褐色低地土・黒ボク土など（乾きやすい）'],['#9dbb86','山地の土・その他']];
 const soilGeo=L.geoJSON(null,{pane:'soilPane',interactive:false,style:f=>({color:'#444',weight:.6,opacity:.6,fillColor:(SOIL_COLS[f.properties.c]||SOIL_COLS[4])[0],fillOpacity:.6})});
-const soilBase=L.layerGroup([L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxZoom:18,attribution:'地理院タイル'}),soilGeo]);
+const soilBase=L.layerGroup([L.tileLayer(gsi+'pale/{z}/{x}/{y}.png',{maxNativeZoom:18,maxZoom:20,attribution:'地理院タイル'}),soilGeo]);
 let soilLoaded=null, soilOn=false;
 const soilLeg=L.control({position:'topleft'}); soilLeg.onAdd=()=>{ const d=L.DomUtil.create('div','soilleg');   // 小さなボタン。押すと色の説明を開く
   d.innerHTML='<button type="button" class="sl-b">凡例</button><div class="sl-l" hidden>'+SOIL_COLS.map(([c,t])=>`<div><i style="background:${c}"></i>${t}</div>`).join('')+'<small>土地分類基本調査 1/20万</small></div><div class="sl-n"></div>';
@@ -1214,7 +1214,7 @@ map.on('baselayerchange',e=>{ soilOn=e.layer===soilBase; map.getPane('pxPane').s
 map.createPane('hazardPane').style.zIndex=450; map.getPane('hazardPane').style.pointerEvents='none';
 const HZ=(function(){
   const HB='https://disaportaldata.gsi.go.jp/raster/', BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==', LEG='https://disaportal.gsi.go.jp/hazardmap/copyright/img/';
-  const mk=u=>{ const l=L.tileLayer(HB+u+'/{z}/{x}/{y}.png',{pane:'hazardPane',minNativeZoom:2,maxNativeZoom:17,maxZoom:18,opacity:.6,errorTileUrl:BLANK,keepBuffer:1});
+  const mk=u=>{ const l=L.tileLayer(HB+u+'/{z}/{x}/{y}.png',{pane:'hazardPane',minNativeZoom:2,maxNativeZoom:17,maxZoom:20,opacity:.6,errorTileUrl:BLANK,keepBuffer:1});
     l.on('tileerror',e=>{ if(e.tile) e.tile.style.visibility='hidden'; }); return l; };   // 配信元にないタイル（404）は、何も出さない
   const FL=[['洪水（計画規模）',mk('01_flood_l1_shinsuishin_newlegend_data'),LEG+'shinsui_legend3.png'],
             ['洪水（想定最大規模）',mk('01_flood_l2_shinsuishin_data'),LEG+'shinsui_legend3.png'],
@@ -1336,7 +1336,7 @@ const RAIN=(function(){
   const urlT=(f,z,x,y)=>`${JT}${f.p}/${f.b}/${f.m}/${f.v}/surf/${f.el}/${z}/${x}/${y}.png`;
   const Tile=L.TileLayer.extend({ _clampZoom(z){ z=Math.max(MINZ,Math.min(this.options.maxNativeZoom,Math.round(z))); return z-z%2; } });   // 奇数のズーム → 1つ下の偶数
   const BOUNDS=L.latLngBounds([[17,115],[50,155]]);   // 気象庁のタイルがある範囲（日本のまわり）。この外と、ズーム4より引いたときは読まない（読むタイルが何千枚にもならないように）
-  const mkTile=f=>new Tile(urlT(f,'{z}','{x}','{y}'),{pane:'rainPane',opacity:0,maxNativeZoom:MAXZ[f.el],minNativeZoom:MINZ,minZoom:MINZ,maxZoom:18,bounds:BOUNDS,keepBuffer:1,updateWhenIdle:true,errorTileUrl:BLANK,className:'rainT'});
+  const mkTile=f=>new Tile(urlT(f,'{z}','{x}','{y}'),{pane:'rainPane',opacity:0,maxNativeZoom:MAXZ[f.el],minNativeZoom:MINZ,minZoom:MINZ,maxZoom:20,bounds:BOUNDS,keepBuffer:1,updateWhenIdle:true,errorTileUrl:BLANK,className:'rainT'});
   // ---- 時刻の一覧を読んで、こま（frame）を作る ----
   async function loadNow(){
     const [n1,n2]=await Promise.all([gj('nowc/targetTimes_N1.json'),gj('nowc/targetTimes_N2.json')]);
@@ -1885,7 +1885,7 @@ function loadPackage(p, label){
       parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid,crop:f.properties.crop||''};
       l.on('click',()=>onParcelTap(pid)); }
   }).addTo(map);
-  if(feats.length) map.fitBounds(geoLayer.getBounds().pad(0.15));
+  if(feats.length) map.fitBounds(geoLayer.getBounds().pad(0.15),{maxZoom:18});
   allDates=[...new Set(Object.values(p.series||{}).flat().map(r=>r[0]))].sort();
   detectOutliers();
   document.getElementById('meta').textContent=`${label||p.meta?.name||''}：${feats.length}区画 / ${allDates.length}観測日${allDates.length?'（'+allDates[0]+'〜'+allDates[allDates.length-1]+'）':''}`;
@@ -2926,7 +2926,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   document.getElementById('foot').textContent='データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。';
   const h=parseHash();
   const hm=HOME.get();   // 本拠地を決めてあれば、開くたびにそこから（共有・Excel の「地図」のリンクなど、#c= のある開き方は、その場所）
-  if(h.c) map.setView(h.c,h.z||15); else if(hm) map.setView([hm.lat,hm.lng],hm.z); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]]);
+  if(h.c) map.setView(h.c,h.z||15); else if(hm) map.setView([hm.lat,hm.lng],hm.z); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]],{maxZoom:18});
   if(h.rain) RAIN.toggle(true,{mode:h.rain==='15'?'15h':'1h'});   // 共有された「雨雲」のリンク（#…&rain=1）は、雨雲を開いた形で始める
   let bulkZ=map.getZoom()>=BULK_ZOOM;
   map.on('moveend',()=>{ const ch=cullCells(); loadVisible(); writeHash(); const bz=map.getZoom()>=BULK_ZOOM; if(ch||fillMode()!=='abs'||bz||bulkZ) paintMap(); bulkZ=bz; });   // 絶対表示も、拡大しているときは動かすたびに圃場の中を塗り直す
@@ -3146,7 +3146,7 @@ let arWideNow=arWide(); addEventListener('resize',()=>{ const w=arWide(); if(w!=
 function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V,arSide), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,err:''}); arSet1(R.c1,'');
   if(!same&&arP.srcUser&&arP.src!=='top') arP.srcUser=false;
   arPrepDraw(); const h=arWide()?0:document.getElementById('arPrep').offsetHeight;   // 案内の欄の上に筆がぜんぶ見えるように（パソコンは右の欄なので重ならない）
-  map.fitBounds(parcels[pid].layer.getBounds(),{paddingTopLeft:[24,24],paddingBottomRight:[24,Math.min(h+30,map.getSize().y*0.6)],maxZoom:19}); arPrepData(); arPrepNear(pid); }
+  map.fitBounds(parcels[pid].layer.getBounds(),{paddingTopLeft:[24,24],paddingBottomRight:[24,Math.min(h+30,map.getSize().y*0.6)],maxZoom:18}); arPrepData(); arPrepNear(pid); }
 function arPrepNear(pid){   // 現在地を使ってよいと前に許可されていれば、今いる所にいちばん近い角を 角1 にする（許可を新しく聞くことはしない）
   if(arP.lite||!navigator.geolocation||!navigator.permissions||!navigator.permissions.query) return;
   navigator.permissions.query({name:'geolocation'}).then(st=>{ if(st.state!=='granted') return;
