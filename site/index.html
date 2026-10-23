@@ -772,7 +772,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .hz-x .hz-lg img{max-width:100%;height:auto;display:block;margin-top:4px}
   .leaflet-control-layers-overlays::before{content:'ハザードマップ';display:block;font-weight:700;font-size:14px;color:#1e3a2f;margin:2px 0 4px}   /* 洪水などの上の題（欄を作り直しても消えないよう、CSSで付ける） */
   .leaflet-control-layers-selector{width:20px;height:20px} .leaflet-control-layers label{margin:3px 0}
-  .nodat{ white-space:nowrap; font:600 10px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; }
+  .nodat{ white-space:nowrap; font:600 10px/1.15 'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif; color:#fff; text-align:center; text-shadow:0 0 2px #000,0 0 2px #000; pointer-events:none; } .nodat span{display:block;transform:rotate(var(--unrot,0deg))}
 </style>
 <style>
   :root{--ink:#1e3a2f;--ink2:#4c5a52;--line:#cfd6cc;--panel:#f3f6f1;--accent:#2f7d4f;--warn:#b8442c;--grid:#e6eae3;
@@ -811,7 +811,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #homeMenu .btn.go{background:linear-gradient(135deg,#0f3d2e,#2f7d4f);color:#fff;border-color:transparent;font-weight:700}
   #homeMenu .hx{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
   #homeMenu .hx button{background:none;border:0;padding:4px 2px;font-size:12.5px;color:#6b7a72;text-decoration:underline;cursor:pointer}
-  .homePin{pointer-events:none} .homePin svg{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45))}   /* 地図の上の本拠地のピン（押せない＝下の圃場をそのまま押せる） */
+  .homePin{pointer-events:none} .homePin svg{display:block;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));transform-origin:15px 39px;transform:rotate(var(--unrot,0deg))}   /* 地図の上の本拠地のピン（押せない＝下の圃場をそのまま押せる） */
   #homeMenu .hok{font-size:13.5px;font-weight:700;color:#1b6e3a;background:#eef7ee;border-radius:8px;padding:6px 8px}
   input[type=file]{display:none}
   .layout{display:grid;grid-template-columns:minmax(0,1fr) 7px var(--sideW,440px);height:calc(100vh - 56px);height:calc(100dvh - 56px)}
@@ -915,7 +915,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   #mode{font:inherit;font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#f0f1f3} .chartctl{align-items:stretch;flex-wrap:wrap}
   .btn.gogo{font-weight:700;font-size:15px;padding:7px 20px;color:#fff;border:1px solid #1e3a2f;border-radius:6px;background:linear-gradient(180deg,#2f7d4f,#1e5a38);box-shadow:0 1px 3px rgba(0,0,0,.2);letter-spacing:.05em}
   .btn.gogo:hover{background:linear-gradient(180deg,#358a58,#22663f)} .btn.gogo:disabled{opacity:.6}
-  .plno span{position:absolute;transform:translate(-50%,-50%);font:700 11px/1 sans-serif;color:#222;background:rgba(255,255,255,.88);border:1.5px solid #e0b800;border-radius:9px;padding:2px 5px;white-space:nowrap}
+  .plno span{position:absolute;transform:translate(-50%,-50%) rotate(var(--unrot,0deg));font:700 11px/1 sans-serif;color:#222;background:rgba(255,255,255,.88);border:1.5px solid #e0b800;border-radius:9px;padding:2px 5px;white-space:nowrap}
   .plno.man span{background:#ff6d00;border-color:#fff;color:#fff}
   .plan h3{font-size:14.5px;margin:8px 0 4px;color:var(--ink)} .plan .ctl{font-size:14.5px} .plan select{font-size:14.5px;padding:3px 4px;min-height:28px} .plan .ctl.pgo{margin-top:8px} .plan .ctl.pgo .btn{min-width:9em} .plan .btn.on{background:var(--ink);color:#fff}
   .topbox{margin:0 0 12px;border:1px solid #cfe3d6;border-radius:10px;overflow:hidden;background:#fbfdfb;user-select:none}
@@ -956,6 +956,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .rainBtn svg{width:20px;height:20px;color:#8ea2b6;flex:none} .leaflet-touch .rainBtn svg{width:25px;height:25px}
   .rainBtn:hover{background-color:#f2f7ff} .rainBtn.on{background:#0d47a1;color:#fff} .rainBtn.on svg{color:#dce9f7}
   .rainBtn:focus-visible{outline:3px solid #f5c542;outline-offset:2px}
+  .rotpane{position:absolute;left:0;top:0;width:100%;height:100%;z-index:400;transform-origin:50% 50%}   /* 地図の層を入れて回す枠（回転は JS）。名札は --unrot で逆に回して立てる */
+  .compassCtl .compassBtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:5px;background:#fff;cursor:pointer}
+  .leaflet-touch .compassCtl .compassBtn{width:44px;height:44px} .compassBtn svg{width:26px;height:26px} .leaflet-touch .compassBtn svg{width:32px;height:32px}
+  .compassBtn:hover{background-color:#f2f7ff} .compassBtn:focus-visible{outline:3px solid #f5c542;outline-offset:2px}
   body.rainOn .leaflet-tile-pane{filter:saturate(.55) brightness(.8)}   /* 背景の写真を少し暗く。雨の色が見やすい */
   body.rainOn .leaflet-px-pane,body.rainOn .leaflet-overlay-pane{opacity:.35}   /* 区画の色（NDVI）を薄く。雨の色とまぎれない */
   body.rainOn .mapbar,body.rainOn #maphint{display:none!important}
@@ -1178,6 +1182,52 @@ let allDates=[];
 // ---------- map ----------
 const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true,maxZoom:22})   // 区画は canvas で描く（数千枚の SVG より動かしたときに軽い）.setView([36.06,136.28],15);
 map.createPane('pxPane').style.zIndex=390;
+// ---------- 地図の回転（2本の指でひねる。出てくるコンパスで北を上にもどす） ----------
+// Leaflet には回転がないので、地図の層（mapPane）を回転用の枠（rotpane）に入れ、枠を CSS で回す。回した分だけ、画面の位置と地図の中の位置の
+// 変換（タップ・ドラッグ・ピンチ）を直す。回している間は、角にすきまが出ないよう、表示の対角線の大きさで地図を読み込む（_rotBig）。
+// 回転の既存の部品（leaflet-rotate）は GPL なので使わず、自分で書いた。名札・ピンは、回さず立てたまま（CSS の --unrot で逆に回す）
+(()=>{
+  const cont=map.getContainer(), rot=document.createElement('div');
+  rot.className='rotpane'; rot._fhmMap=map; cont.insertBefore(rot,cont.firstChild); rot.appendChild(map.getPane('mapPane'));
+  map._rot=0; map._rotBig=false;
+  const norm=d=>{ d%=360; return d>180?d-360:d<=-180?d+360:d; };
+  const back=(v,m)=>{ const t=m._rot*Math.PI/180, co=Math.cos(t), si=Math.sin(t); return {x:v.x*co+v.y*si,y:-v.x*si+v.y*co}; };   // 画面の向き → 回す前の地図の向き
+  const half=m=>{ const s=m.getSize(), d=Math.hypot(s.x,s.y); return [(d-s.x)/2,(d-s.y)/2]; };   // 対角線の大きさにするための、左右・上下に足す長さ
+  const omc=L.Map.prototype.mouseEventToContainerPoint;
+  L.Map.prototype.mouseEventToContainerPoint=function(e){ const p=omc.call(this,e); if(!this._rot) return p; const c=this.getSize().divideBy(2), v=back({x:p.x-c.x,y:p.y-c.y},this); return L.point(c.x+v.x,c.y+v.y); };
+  const ogb=L.Map.prototype.getBounds;
+  L.Map.prototype.getBounds=function(){ if(!this._rotBig) return ogb.call(this); const b=this.getPixelBounds(), [ex,ey]=half(this), mn=b.min.subtract([ex,ey]), mx=b.max.add([ex,ey]); return new L.LatLngBounds(this.unproject(L.point(mn.x,mx.y)),this.unproject(L.point(mx.x,mn.y))); };
+  const ogl=L.GridLayer.prototype._getTiledPixelBounds;
+  L.GridLayer.prototype._getTiledPixelBounds=function(c){ const b=ogl.call(this,c), m=this._map; if(!m||!m._rotBig) return b; const k=b.getSize().x/m.getSize().x, [ex,ey]=half(m); return new L.Bounds([b.min.x-ex*k,b.min.y-ey*k],[b.max.x+ex*k,b.max.y+ey*k]); };
+  const oru=L.Renderer.prototype._update;
+  L.Renderer.prototype._update=function(){ const m=this._map; if(!m||!m._rotBig) return oru.call(this); const s=m.getSize(), h=Math.ceil(Math.hypot(s.x,s.y)/2+Math.max(s.x,s.y)*this.options.padding), c=m.containerPointToLayerPoint(s.divideBy(2)).round();
+    this._bounds=new L.Bounds(c.subtract([h,h]),c.add([h,h])); this._center=m.getCenter(); this._zoom=m.getZoom(); };
+  const oDown=L.Draggable.prototype._onDown, oMove=L.Draggable.prototype._onMove;
+  L.Draggable.prototype._onDown=function(e){ oDown.call(this,e); const p=this._element&&this._element.parentNode; if(p&&p._fhmMap&&this._parentScale) this._parentScale={x:1,y:1}; };   // 枠が回っていても、拡大縮小はしていない
+  L.Draggable.prototype._onMove=function(e){ const p=this._element&&this._element.parentNode, m=p&&p._fhmMap; if(!m||!m._rot) return oMove.call(this,e);   // 指の動きを、回す前の地図の向きに直して動かす（元の処理と同じ）
+    if(!this._enabled) return; if(e.touches&&e.touches.length>1){ this._moved=true; return; }
+    const f=e.touches&&e.touches.length===1?e.touches[0]:e, o=new L.Point(f.clientX,f.clientY)._subtract(this._startPoint);
+    if(!o.x&&!o.y) return; if(Math.abs(o.x)+Math.abs(o.y)<this.options.clickTolerance) return;
+    const v=back(o,m); L.DomEvent.preventDefault(e);
+    if(!this._moved){ this.fire('dragstart'); this._moved=true; L.DomUtil.addClass(document.body,'leaflet-dragging'); this._lastTarget=e.target||e.srcElement; if(window.SVGElementInstance&&this._lastTarget instanceof window.SVGElementInstance) this._lastTarget=this._lastTarget.correspondingUseElement; L.DomUtil.addClass(this._lastTarget,'leaflet-drag-target'); }
+    this._newPos=this._startPos.add(L.point(v.x,v.y)); this._moving=true; this._lastEvent=e; this._updatePosition(); };
+  let comp=null, svg=null, anim=0, g=null;
+  const ui=()=>{ if(comp) return; const c=L.control({position:'topleft'}); c.onAdd=()=>{ const d=L.DomUtil.create('div','compassCtl leaflet-control-layers');
+      d.innerHTML='<button type="button" class="compassBtn" title="北を上にもどす" aria-label="地図の向きを、北が上にもどす"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="#fff" stroke="#c4cfc8" stroke-width="1.5"/><path d="M16 4.5l5 11.5-5-2-5 2z" fill="#d32f2f"/><path d="M16 27.5l5-11.5-5 2-5-2z" fill="#8a979b"/></svg></button>';
+      L.DomEvent.disableClickPropagation(d); d.querySelector('button').onclick=()=>to(0); comp=d; svg=d.querySelector('svg'); return d; }; c.addTo(map); };   // 回したときだけ、左上の「天気」の下に出す
+  const setRot=deg=>{ deg=norm(deg); if(Math.abs(deg)<0.01) deg=0; map._rot=deg; rot.style.transform=deg?`rotate(${deg}deg)`:''; cont.style.setProperty('--unrot',`${-deg}deg`);
+    if(deg) ui(); if(comp){ comp.style.display=deg?'':'none'; svg.style.transform=`rotate(${deg}deg)`; } };
+  const done=()=>{ map._rotBig=map._rot!==0; map.fire('moveend'); };   // 読み込む広さを切りかえて、見えている範囲を読み直す
+  const to=(t,ms=240)=>{ cancelAnimationFrame(anim); const a=map._rot, d=norm(t-a); if(!d){ done(); return; } map._rotBig=true; const t0=performance.now();
+    const step=n=>{ const k=Math.min(1,(n-t0)/ms), e=1-Math.pow(1-k,3); setRot(a+d*e); if(k<1) anim=requestAnimationFrame(step); else done(); }; anim=requestAnimationFrame(step); };
+  map._fhmRot={reset:animate=>{ if(animate) return to(0); cancelAnimationFrame(anim); g=null; setRot(0); done(); },get:()=>map._rot};
+  const ang=e=>Math.atan2(e.touches[1].clientY-e.touches[0].clientY,e.touches[1].clientX-e.touches[0].clientX)*180/Math.PI, T=7;   // 7°までのひねりは、拡大縮小の指のぶれとして、回さない
+  cont.addEventListener('touchstart',e=>{ if(document.body.classList.contains('arPrepOn')) return; if(e.touches.length===2){ cancelAnimationFrame(anim); g={a:ang(e),acc:0,b0:map._rot,on:false}; } else if(e.touches.length>2) g=null; },{passive:true});
+  cont.addEventListener('touchmove',e=>{ if(!g||e.touches.length!==2) return; const a=ang(e); g.acc+=norm(a-g.a); g.a=a; const f=Math.sign(g.acc)*Math.max(0,Math.abs(g.acc)-T);
+    if(!g.on){ if(!f) return; g.on=true; map._rotBig=true; map.fire('moveend'); } setRot(g.b0+f); },{passive:true});   // 回しはじめたら、角まで読み込んでおく
+  const end=e=>{ if(!g||e.touches.length>=2) return; const on=g.on; g=null; if(on){ if(Math.abs(map._rot)<4) to(0,160); else done(); } };   // 北に近ければ、北にそろえる
+  cont.addEventListener('touchend',end,{passive:true}); cont.addEventListener('touchcancel',end,{passive:true});
+})();
 
 // 地図とサイドの境目をドラッグして幅を変える（幅はこの端末に覚えておく。ダブルクリックで元に戻す）
 (function(){ const sp=document.getElementById('splitter'), lay=document.querySelector('.layout'); let raf=0, cur=0;
@@ -2051,7 +2101,7 @@ function syncNoData(list){ noDataLast=list; noDataLbl.clearLayers(); if(!list.le
     let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; for(const q of ring){ const t=map.latLngToContainerPoint([q[1],q[0]]); x0=Math.min(x0,t.x); x1=Math.max(x1,t.x); y0=Math.min(y0,t.y); y1=Math.max(y1,t.y); }
     if(x1-x0<95||y1-y0<24) continue;   // 田が画面で小さいときは出さない（字が重なって読めなくなる）
     if(++n>150) break;
-    noDataLbl.addLayer(L.marker([c[1],c[0]],{interactive:false,keyboard:false,icon:L.divIcon({className:'nodat',html:'この日は写真なし',iconSize:[90,14],iconAnchor:[45,7]})})); } }
+    noDataLbl.addLayer(L.marker([c[1],c[0]],{interactive:false,keyboard:false,icon:L.divIcon({className:'nodat',html:'<span>この日は写真なし</span>',iconSize:[90,14],iconAnchor:[45,7]})})); } }
 map.on('moveend',()=>syncNoData(noDataLast));
 document.getElementById('colorDate').onchange=paintMap; document.getElementById('colorOn').onchange=paintMap;
 
@@ -3133,7 +3183,7 @@ function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
     if(arP.on){ arP.src=src&&AR_SRC.some(s=>s.k===src)?src:arP.src; arP.srcUser=!!src; arPrepField(pid); return; }
     Object.assign(arP,{on:true,pid,src:src&&AR_SRC.some(s=>s.k===src)?src:null,srcUser:!!src,pick:1,data:{},err:'',zs:map.options.zoomSnap,layer:L.layerGroup().addTo(map)});
     let box=$('arPrep'); if(!box){ box=document.createElement('div'); box.id='arPrep'; document.querySelector('.mapwrap').appendChild(box); L.DomEvent.disableClickPropagation(box); L.DomEvent.disableScrollPropagation(box); }
-    box.hidden=false; arPlace(); if(arWide()) document.querySelector('.side').scrollTop=0; document.body.classList.add('arPrepOn'); map.options.zoomSnap=0.25; map.invalidateSize();   // スマホでは地図を大きく・地図を画面に出す
+    box.hidden=false; arPlace(); if(arWide()) document.querySelector('.side').scrollTop=0; if(map._fhmRot) map._fhmRot.reset(false); document.body.classList.add('arPrepOn'); map.options.zoomSnap=0.25; map.invalidateSize();   // スマホでは地図を大きく・地図を画面に出す
     const mw=document.querySelector('.mapwrap'), rc=mw.getBoundingClientRect(); if(rc.top<0||rc.top>innerHeight*0.3) mw.scrollIntoView({block:'start'});
     history.pushState({arPrep:1},''); arP.pushed=true;   // 戻るボタンで閉じる
     if(!arP.zh){ arP.zh=()=>{ if(arP.on&&arP.V) arPrepDraw(); }; map.on('zoomend',arP.zh); }
