@@ -956,6 +956,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .rainBtn svg{width:20px;height:20px;color:#8ea2b6;flex:none} .leaflet-touch .rainBtn svg{width:25px;height:25px}
   .rainBtn:hover{background-color:#f2f7ff} .rainBtn.on{background:#0d47a1;color:#fff} .rainBtn.on svg{color:#dce9f7}
   .rainBtn:focus-visible{outline:3px solid #f5c542;outline-offset:2px}
+  .glbIcon{background:none;border:0} .glb{position:absolute;left:0;top:0;white-space:nowrap;pointer-events:none;font:600 12px/1.15 'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif;color:#fff;text-shadow:0 0 2px #000,0 0 3px #000,0 0 5px rgba(0,0,0,.85);transform:translate(-50%,-50%) rotate(var(--unrot,0deg))}   /* 航空写真の上の地名・施設名（白い字に黒いふち）。地図を回しても立てたまま */
+  .glb.k1{font-size:15px;font-weight:700;letter-spacing:.1em} .glb.k2{font-size:13px;letter-spacing:.06em} .glb.k3{opacity:.92} .glb.k4{color:#fff3b8} .glb.k5{color:#bfe6ff;font-style:italic} .glb.k6{color:#e6e6e6}
+  .glb.k4{transform-origin:0 50%;transform:translate(0,-50%) rotate(var(--unrot,0deg))} .glb.k4::before{content:'';display:inline-block;width:7px;height:7px;margin:0 3px 0 -4px;border-radius:50%;background:#ffd54a;border:1px solid #333;vertical-align:0}   /* 施設は、点（位置）の右に名前。点を軸に、立てたまま */
   .rotpane{position:absolute;left:0;top:0;width:100%;height:100%;z-index:400;transform-origin:50% 50%}   /* 地図の層を入れて回す枠（回転は JS）。名札は --unrot で逆に回して立てる */
   .compassCtl .compassBtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:5px;background:#fff;cursor:pointer}
   .leaflet-touch .compassCtl .compassBtn{width:44px;height:44px} .compassBtn svg{width:26px;height:26px} .leaflet-touch .compassBtn svg{width:32px;height:32px}
@@ -1290,7 +1293,69 @@ const HZ=(function(){
       box.querySelector('input').oninput=e=>{ op=+e.target.value; box.querySelector('.hz-ov').textContent=Math.round(op*100)+'%'; tiles.forEach(l=>l.setOpacity(op)); };
       lc._section.appendChild(box); refresh(); }};
 })();
-photo.addTo(map); const lcLayers=L.control.layers({'航空写真':photo,'淡色地図':std,'土壌図':soilBase},HZ.ov,{position:'topright'}).addTo(map); HZ.setBox(lcLayers);
+// ---------- 航空写真の上の地名・施設名（国土地理院の実験版ベクトルタイル experimental_bvmap の label 層）。2026-10-23 の利用者の指示 ----------
+// 地理院の注記は、町名（字・大字）・役場・消防署・郵便局・学校・福祉施設・寺・公園など。民間の店・旅館などは、地理院にも OpenStreetMap にも入っていないので出ない。
+// 名札は HTML の部品（地図を回しても --unrot で立ったまま）。重なるものは、施設を優先して間引く。航空写真のときだけ出す（淡色地図は、もともと名前入り）
+const LBL=(function(){
+  const URL_=(z,x,y)=>`https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/${z}/${x}/${y}.pbf`, ATTR='地名：国土地理院';
+  map.createPane('lblPane').style.zIndex=470; map.getPane('lblPane').style.pointerEvents='none';
+  const grp=L.layerGroup(), cache=new Map(), td=new TextDecoder(); let gen=0, tmr=0, wOn=false;
+  const zz=v=>(v>>>1)^-(v&1), esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function decode(buf,z,tx,ty){   // label 層の点だけ取り出す（protobuf を直接読む。ほかの層は読み飛ばす）
+    const u=new Uint8Array(buf), N=u.length; let p=0; const out=[];
+    const rv=()=>{ let r=0,m=1,b; do{ b=u[p++]; r+=(b&127)*m; m*=128; }while(b&128&&p<N); return r; };
+    while(p<N){ const tag=rv(), f=tag>>>3, w=tag&7; if(w!==2){ if(w===0) rv(); else if(w===1) p+=8; else if(w===5) p+=4; continue; }
+      const len=rv(), end=p+len; if(f!==3){ p=end; continue; }
+      let name='', feats=[], keys=[], vals=[], ext=4096;
+      while(p<end){ const t2=rv(), f2=t2>>>3, w2=t2&7;
+        if(w2===0){ const v=rv(); if(f2===5) ext=v; continue; } if(w2!==2){ p+=w2===1?8:4; continue; }
+        const l2=rv(), e2=p+l2;
+        if(f2===1){ name=td.decode(u.subarray(p,e2)); if(name!=='label'){ p=end; break; } }
+        else if(f2===2) feats.push([p,e2]); else if(f2===3) keys.push(td.decode(u.subarray(p,e2)));
+        else if(f2===4){ let q=p, val=null; while(q<e2){ const t3=u[q++]; let v=0,m=1,b; const f3=t3>>3, w3=t3&7;
+            if(w3===0){ do{ b=u[q++]; v+=(b&127)*m; m*=128; }while(b&128); if(f3===4||f3===5) val=v; else if(f3===6) val=zz(v); }
+            else if(w3===2){ do{ b=u[q++]; v+=(b&127)*m; m*=128; }while(b&128); if(f3===1) val=td.decode(u.subarray(q,q+v)); q+=v; }
+            else q+=w3===1?8:4; } vals.push(val); }
+        p=e2; }
+      if(name!=='label'){ p=end; continue; }
+      for(const [a,b] of feats){ let q=a, tags=[], gt=0, geo=[];
+        while(q<b){ const t=u[q++], f4=t>>3, w4=t&7; let v=0,m=1,bb;
+          if(w4===0){ do{ bb=u[q++]; v+=(bb&127)*m; m*=128; }while(bb&128); if(f4===3) gt=v; }
+          else if(w4===2){ do{ bb=u[q++]; v+=(bb&127)*m; m*=128; }while(bb&128); const e4=q+v; if(f4===2||f4===4){ const arr=[]; while(q<e4){ let x=0,mm=1,b3; do{ b3=u[q++]; x+=(b3&127)*mm; mm*=128; }while(b3&128); arr.push(x); } if(f4===2) tags=arr; else geo=arr; } else q=e4; }
+          else q+=w4===1?8:4; }
+        if(gt!==1||geo.length<3) continue; const px=zz(geo[1]), py=zz(geo[2]); if(px<0||py<0||px>=ext||py>=ext) continue;   // 隣のタイルとの重なりは、点の入っているタイルだけで数える
+        const pr={}; for(let i=0;i+1<tags.length;i+=2) pr[keys[tags[i]]]=vals[tags[i+1]];
+        if(!pr.knj) continue; const n=2**z, lng=(tx+px/ext)/n*360-180, lat=Math.atan(Math.sinh(Math.PI*(1-2*(ty+py/ext)/n)))*180/Math.PI;
+        out.push({lat,lng,name:String(pr.knj),ctg:+pr.annoCtg||0}); }
+      p=end; }
+    return out; }
+  function tile(z,x,y){ const k=z+'/'+x+'/'+y; let t=cache.get(k); if(!t){ t=fetch(URL_(z,x,y)).then(r=>r.ok?r.arrayBuffer():null).then(b=>b?decode(b,z,x,y):[]).catch(()=>{ cache.delete(k); return []; }); cache.set(k,t); if(cache.size>260) cache.delete(cache.keys().next().value); } return t; }
+  const kind=c=>c>=110&&c<200?1:c===210?2:c===800?3:c>=300&&c<400?5:c>=400&&c<500?6:4;   // 1 市町村 2 大字 3 字・町丁目 4 施設（役場・学校・郵便局・寺・公園など） 5 川・水 6 交通
+  const pri={4:0,1:1,2:2,6:3,5:4,3:5}, FS={1:15,2:13,3:12,4:12,5:12,6:12}, FR={881:0,884:1,885:2,887:3,883:4,890:5,860:6,870:7,531:8,534:9,673:10};   // 施設の中の優先（役場・消防・学校・郵便局…の順）
+  const cv=document.createElement('canvas').getContext('2d'), wcache=new Map();
+  const wid=(s,k)=>{ const key=k+s; let w=wcache.get(key); if(w===undefined){ cv.font=`${k===1?700:600} ${FS[k]}px sans-serif`; w=cv.measureText(s).width*(k===1?1.12:k===2?1.06:1)+(k===4?10:0); wcache.set(key,w); } return w; };
+  function scr(p){ const r=map._rot; if(!r) return p; const c=map.getSize().divideBy(2), t=r*Math.PI/180, co=Math.cos(t), si=Math.sin(t), x=p.x-c.x, y=p.y-c.y; return L.point(c.x+x*co-y*si,c.y+x*si+y*co); }   // 回した画面の上の位置（名札は立っているので、重なりは画面の上で見る）
+  const active=()=>wOn&&map.hasLayer(photo)&&map.getZoom()>=14&&!document.body.classList.contains('myMapOn');
+  async function update(){ const g=++gen; if(!active()){ grp.clearLayers(); return; }
+    const Z=Math.min(16,Math.floor(map.getZoom())), b=map.getBounds(), n=2**Z, tx=lng=>Math.floor((lng+180)/360*n), ty=lat=>Math.floor((1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*n);
+    const x0=tx(b.getWest()), x1=tx(b.getEast()), y0=ty(b.getNorth()), y1=ty(b.getSouth()); if((x1-x0+1)*(y1-y0+1)>36){ grp.clearLayers(); return; }
+    const ps=[]; for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++) ps.push(tile(Z,x,y)); const all=(await Promise.all(ps)).flat(); if(g!==gen||!active()) return;
+    const sz=map.getSize(), M=80, items=[]; for(const a of all){ const s=scr(map.latLngToContainerPoint([a.lat,a.lng])); if(s.x<-M||s.y<-M||s.x>sz.x+M||s.y>sz.y+M) continue; items.push({a,s,k:kind(a.ctg)}); }
+    const rk=it=>it.k===4?(FR[it.a.ctg]!==undefined?FR[it.a.ctg]:20):it.a.ctg; items.sort((p,q)=>pri[p.k]-pri[q.k]||rk(p)-rk(q));
+    const boxes=[], names=[], keep=[]; for(const it of items){ if(keep.length>=160) break; const w=wid(it.a.name,it.k)+6, h=FS[it.k]*1.3, x=it.k===4?it.s.x-4:it.s.x-w/2, y=it.s.y-h/2;   // 施設は、点（黄色い丸）のすぐ右に名前、町名は点の真ん中に名前
+      if(boxes.some(r=>x<r[2]&&x+w>r[0]&&y<r[3]&&y+h>r[1])) continue; if(names.some(q=>q[0]===it.a.name&&Math.hypot(q[1]-it.s.x,q[2]-it.s.y)<260)) continue;   // 重なる名札・近くの同じ名前は出さない
+      boxes.push([x,y,x+w,y+h]); names.push([it.a.name,it.s.x,it.s.y]); keep.push(it); }
+    grp.clearLayers(); for(const it of keep) L.marker([it.a.lat,it.a.lng],{pane:'lblPane',interactive:false,keyboard:false,icon:L.divIcon({className:'glbIcon',html:`<span class="glb k${it.k}">${esc(it.a.name)}</span>`,iconSize:[0,0]})}).addTo(grp); }
+  const soon=()=>{ clearTimeout(tmr); tmr=setTimeout(update,120); };
+  const ctl=L.layerGroup();   // 入り切りの欄に出すための、中身のない層（名札そのものは grp）
+  ctl.on('add',()=>{ wOn=true; grp.addTo(map); try{ localStorage.removeItem('fhmLblOff'); }catch(e){} map.attributionControl.addAttribution(ATTR); soon(); });
+  ctl.on('remove',()=>{ wOn=false; gen++; grp.clearLayers(); map.removeLayer(grp); try{ localStorage.setItem('fhmLblOff','1'); }catch(e){} map.attributionControl.removeAttribution(ATTR); });
+  map.on('moveend',soon); map.on('baselayerchange',soon);
+  new MutationObserver(soon).observe(document.body,{attributes:true,attributeFilter:['class']});   // マイ圃場の地図に入ったとき・出たときも、出し入れする
+  return {layer:ctl, update, _decode:decode, _state:()=>({wOn,active:active(),n:grp.getLayers().length,cache:cache.size})};
+})();
+photo.addTo(map); { let off=false; try{ off=localStorage.getItem('fhmLblOff')==='1'; }catch(e){} if(!off) LBL.layer.addTo(map); }
+const lcLayers=L.control.layers({'航空写真':photo,'淡色地図':std,'土壌図':soilBase},Object.assign({'地名・施設名':LBL.layer},HZ.ov),{position:'topright'}).addTo(map); HZ.setBox(lcLayers);
 // ---------- 雨雲レーダー（気象庁の 高解像度降水ナウキャスト・降水短時間予報） ----------
 // 気象庁ホームページのタイルと時刻の一覧（どちらも CORS 可）を、そのまま地図に重ねる。中継のサーバーは使わない（端末から気象庁へ直接）
 // 予報は気象庁の予報だけを見せる。このアプリでは予報を作らない・警報もしない（気象業務法 第17条・第23条）
