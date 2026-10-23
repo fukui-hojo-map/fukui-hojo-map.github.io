@@ -1224,11 +1224,12 @@ map.createPane('pxPane').style.zIndex=390;
   const to=(t,ms=240)=>{ cancelAnimationFrame(anim); const a=map._rot, d=norm(t-a); if(!d){ done(); return; } map._rotBig=true; const t0=performance.now();
     const step=n=>{ const k=Math.min(1,(n-t0)/ms), e=1-Math.pow(1-k,3); setRot(a+d*e); if(k<1) anim=requestAnimationFrame(step); else done(); }; anim=requestAnimationFrame(step); };
   map._fhmRot={reset:animate=>{ if(animate) return to(0); cancelAnimationFrame(anim); g=null; setRot(0); done(); },get:()=>map._rot};
-  const ang=e=>Math.atan2(e.touches[1].clientY-e.touches[0].clientY,e.touches[1].clientX-e.touches[0].clientX)*180/Math.PI, T=7;   // 7°までのひねりは、拡大縮小の指のぶれとして、回さない
-  cont.addEventListener('touchstart',e=>{ if(document.body.classList.contains('arPrepOn')) return; if(e.touches.length===2){ cancelAnimationFrame(anim); g={a:ang(e),acc:0,b0:map._rot,on:false}; } else if(e.touches.length>2) g=null; },{passive:true});
-  cont.addEventListener('touchmove',e=>{ if(!g||e.touches.length!==2) return; const a=ang(e); g.acc+=norm(a-g.a); g.a=a; const f=Math.sign(g.acc)*Math.max(0,Math.abs(g.acc)-T);
+  const ang=e=>Math.atan2(e.touches[1].clientY-e.touches[0].clientY,e.touches[1].clientX-e.touches[0].clientX)*180/Math.PI, gap=e=>Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+  // 15°までのひねりは、拡大縮小・移動の指のぶれとして、回さない（指の間が90px未満だと、同じ手の動きでも角度が大きくぶれるので 22°）。2026-10-23 の利用者の指示で、7°から広げた
+  cont.addEventListener('touchstart',e=>{ if(document.body.classList.contains('arPrepOn')) return; if(e.touches.length===2){ cancelAnimationFrame(anim); g={a:ang(e),acc:0,b0:map._rot,on:false,T:gap(e)<90?22:15}; } else if(e.touches.length>2) g=null; },{passive:true});
+  cont.addEventListener('touchmove',e=>{ if(!g||e.touches.length!==2) return; const a=ang(e); g.acc+=norm(a-g.a); g.a=a; const f=Math.sign(g.acc)*Math.max(0,Math.abs(g.acc)-g.T);
     if(!g.on){ if(!f) return; g.on=true; map._rotBig=true; map.fire('moveend'); } setRot(g.b0+f); },{passive:true});   // 回しはじめたら、角まで読み込んでおく
-  const end=e=>{ if(!g||e.touches.length>=2) return; const on=g.on; g=null; if(on){ if(Math.abs(map._rot)<4) to(0,160); else done(); } };   // 北に近ければ、北にそろえる
+  const end=e=>{ if(!g||e.touches.length>=2) return; const on=g.on; g=null; if(on){ if(Math.abs(map._rot)<8) to(0,160); else done(); } };   // 北に近ければ（8°以内）、北にそろえる
   cont.addEventListener('touchend',end,{passive:true}); cont.addEventListener('touchcancel',end,{passive:true});
 })();
 
