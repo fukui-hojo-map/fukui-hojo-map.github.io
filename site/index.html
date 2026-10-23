@@ -1154,7 +1154,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
-      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>1区画だけ前後より低いV字の点（雲・かすみの疑い。前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上）と、同じ日の周りの圃場の中央値より、いつもの差で 0.12 以上低く15日以内にもどる点を、グラフと計算から外す</label></div>
+      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>雲・かすみの疑いの点を、グラフと計算から外す（1区画だけ前後より低いV字の点〔前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上〕、同じ日の周りの圃場よりいつもの差で 0.12 以上低い点、地域全体がそろって下がった日〔かすみの日〕に前後を結んだ線より 0.04 以上低い点。どれも、あとの点でもどるものだけ）</label></div>
       <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）の99%以上が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
@@ -2075,13 +2075,33 @@ function nbDips(s,C){ const out=new Set(); if(!C||!C.mem.length) return out; con
     if(pv>=0){ const rp=res(pv,win.filter(j=>j!==pv)); if(!rp.length||med(rp)<-NB_T/2) continue; }   // 前の点も低いなら、本物の変化かもしれない
     out.add(S2[i][0]); }
   return out; }
+// 地域全体がそろって下がった日（かすみの日）の点。2026-10-23 の利用者の指摘（7/18 のカクンが残る圃場があった）
+//   うすい雲・かすみの日は、地域の圃場がそろって少し下がり、圃場によっては大きく下がる。上の「周りとの比べ」は、そろって下がった分を引くので、その日そのものの低さは見えない。
+//   そこで、区画のまとまりの中央値（両方の日にデータのある圃場の差）が、前20日以内のどれかの日と、後20日以内のどれかの日の両方より 0.02 以上低い日（6/1〜8/31）を「かすみの日」とし、
+//   その日の Sentinel-2 の点で、自分の前後の点（Landsat も含む。各20日以内）を結んだ線より 0.04 以上低く、後ろの点で 0.03 以上もどるものを外す（前の点がなければ、後ろより 0.06 以上低いもの）。
+//   晴れていた圃場の点（前後と同じ高さ）と、下がったままの点（収穫など）は外さない。試算（福井市まわり7区画・2025〜2026年の6〜8月）で、外れるのは点の約6%（すべて、かすみの日の点）
+const HZ_R=0.02, HZ_WIN=20*864e5, HZ_FROM='06-01', HZ_TO='08-31';
+function hzOf(C){ if(C.haze) return C.haze; const cnt=new Map(); for(const m of C.mem) for(const d of m.keys()) cnt.set(d,(cnt.get(d)||0)+1);
+  const good=[...cnt].filter(x=>x[1]>=NB_MIN).map(x=>x[0]).sort(), T=good.map(tOf), out=new Set();
+  for(let i=0;i<good.length;i++){ const md=good[i].slice(5); if(md<HZ_FROM||md>HZ_TO) continue; let lb=Infinity, la=Infinity;
+    for(let j=0;j<good.length;j++){ if(j===i||Math.abs(T[i]-T[j])>HZ_WIN) continue; const v=nbPair(C,good[i],good[j]); if(v===null) continue; if(T[j]<T[i]) lb=Math.min(lb,v); else la=Math.min(la,v); }
+    if(lb<=-HZ_R&&la<=-HZ_R) out.add(good[i]); }   // 前のどれかの日より、後のどれかの日より、地域がそろって低い
+  return C.haze=out; }
+function hzDips(s,C){ const out=new Set(); if(!C||!C.mem.length) return out; const H=hzOf(C); if(!H.size) return out;
+  for(let i=0;i<s.length;i++){ const r=s[i]; if(r[3]==='L'||!H.has(r[0])) continue; const t=tOf(r[0]); let pv=null,nx=null;
+    for(let j=i-1;j>=0;j--){ if(t-tOf(s[j][0])<=HZ_WIN) pv=s[j]; break; } for(let j=i+1;j<s.length;j++){ if(tOf(s[j][0])-t<=HZ_WIN) nx=s[j]; break; }
+    if(!nx||nx[1]-r[1]<0.03) continue;   // 後ろの点で、もどっている（一時的）
+    if(pv){ const tp=tOf(pv[0]), it=pv[1]+(nx[1]-pv[1])*(t-tp)/(tOf(nx[0])-tp); if(r[1]>it-0.04) continue; }   // 前後を結んだ線より 0.04 以上低い
+    else if(nx[1]-r[1]<0.06) continue;
+    out.add(r[0]); }
+  return out; }
 // filtered rows per parcel, cached; rebuilt when threshold / excluded days / dip or Landsat filter / data change
 let clean=new Map(), cleanKey='', dataVer=0;
 function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); nbMed=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
   const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0])));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
-  const nb=dip?nbDips(s,nbOf(cell)):null, isD=s.map((r,i)=>dip&&(isDip(s,i)||(!!nb&&r[3]!=='L'&&nb.has(r[0])))), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
+  const C=dip?nbOf(cell):null, nb=C?nbDips(s,C):null, hz=C?hzDips(s,C):null, isD=s.map((r,i)=>dip&&(isDip(s,i)||(r[3]!=='L'&&((!!nb&&nb.has(r[0]))||(!!hz&&hz.has(r[0])))))), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
   if(radarOn()&&rad&&rad.length){ // レーダーの推定値は光の観測がない日だけ足す。前後のレーダーより急に上下した点（ノイズ）は除く
     const od=new Set(s.map(r=>r[0])), rs=rad.filter(r=>r[2]>=t&&!od.has(r[0])); rows=rows.concat(rs.filter((r,i)=>!radarSpike(rs,i))).sort((a,b)=>a[0]<b[0]?-1:1); }
