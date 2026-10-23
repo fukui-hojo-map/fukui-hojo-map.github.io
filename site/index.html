@@ -2016,7 +2016,7 @@ function loadPackage(p, label){
 // ---------- data access ----------
 function thr(){ return (+document.getElementById('thr').value||70)/100; }
 // 画面の一番下の出典の欄（2026-10-23）。出典の直し（土壌図の出典を2つ書く）と、ご利用にあたっての免責の文を足す。非公開の機能（priv.js）が使うデータの出典は、window.FOOT_EXTRA に入る
-const FOOT_DISC='ご利用にあたって: ここに出る追肥の判定・生育の予測・作業計画・AR表示などは、衛星・気象などのデータから作った参考情報です。実際の生育・収量・品質や作業の結果を保証するものではありません。実際の作業は、現地の観察や、JA・普及指導センターの指導とあわせて、ご自身でご判断ください。このページの利用で生じた損害について、運営者は責任を負いません。';
+const FOOT_DISC='ご利用にあたって: ここに出る追肥の判定・生育の予測・作業計画・AR表示などは、衛星・気象などのデータから作った参考情報です。実際の生育・収量・品質や作業の結果を保証するものではありません。実際の作業は、現地の観察や、JA・普及指導センターの指導とあわせて、ご自身でご判断ください。';
 function setFoot(t){ const f=document.getElementById('foot'); if(!f) return; f.textContent=t;
   f.insertAdjacentHTML('beforeend',' 地図の背景「土壌図」: 国土交通省 土地分類基本調査（20万分の1）の土壌図を加工して作成（田ごとの土の判定は、農研機構のデータが取れないときだけ、これを使う）。'+(window.FOOT_EXTRA||'')+'<div class="disc"></div>');
   f.querySelector('.disc').textContent=FOOT_DISC; }
