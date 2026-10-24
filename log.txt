@@ -1,0 +1,9 @@
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.17) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+13:19:26 全セルを調べる更新（週1回・初回・指定時）
+13:20:58 5450_2162: 新しい雲判定で計算し直し完了 (165日, 区画750)
+13:21:53 5450_2163: 新しい雲判定で計算し直し完了 (165日, 区画916)
+13:22:19 5451_2163: 新しい雲判定で計算し直し完了 (165日, 区画265)
+13:22:19 やり残し 634 セルは次回に続けます
+13:22:19 NDVI 完了: 3セル処理, 観測日を合計 501 追加
+13:22:19 完了: 3セル処理, 観測日を合計 501 追加（2.9分）
