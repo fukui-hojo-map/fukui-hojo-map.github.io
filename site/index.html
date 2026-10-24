@@ -2748,7 +2748,7 @@ document.getElementById('fillMode').onchange=()=>{ renderModeHead(); toLatest=fi
 function renderChips(){
   RAINACC.renderSel();   // 選んだ圃場に降った雨（12・24・48時間）。選んでいないときは消す
   const box=document.getElementById('chips'); box.innerHTML='';
-  if(!selected.length){ box.innerHTML='<span class="hint">地図の区画をタップすると、ここに並びます。2枚以上選ぶと比べられます。</span>'; return; }
+  if(!selected.length){ box.innerHTML='<span class="hint">地図の区画をタップすると、ここに並びます。</span>'; return; }
   for(const s of selected){ const c=document.createElement('span'); c.className='chip'; c.style.borderColor=s.color;
     c.innerHTML=`<i style="background:${s.color}"></i><span style="color:${s.color};font-weight:700">${selLabel(s.pid)}</span>${parcels[s.pid].crop?' <span class="hint">'+parcels[s.pid].crop+'</span>':''}<button title="外す">×</button>`;
     c.querySelector('button').onclick=()=>toggleSelect(s.pid); box.appendChild(c); }
