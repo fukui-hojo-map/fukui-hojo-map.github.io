@@ -930,7 +930,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .plan h3{font-size:14.5px;margin:8px 0 4px;color:var(--ink)} .plan .ctl{font-size:14.5px} .plan select{font-size:14.5px;padding:3px 4px;min-height:28px} .plan .ctl.pgo{margin-top:8px} .plan .ctl.pgo .btn{min-width:9em} .plan .btn.on{background:var(--ink);color:#fff}
   .topbox{margin:0 0 12px;border:1px solid #cfe3d6;border-radius:10px;overflow:hidden;background:#fbfdfb;user-select:none}
   .topbox .tbhead{padding:12px 14px 10px;color:#fff;background:linear-gradient(135deg,#1e5a38 0%,#2f7d4f 55%,#3f9a8c 100%)}
-  #modeHead:empty{display:none} #modeHead .topbox{margin:12px 0 0} #modeHead .mhow{margin:6px 0 0;padding-left:1.5em;font-size:13.5px;line-height:1.4} #modeHead .mhow li{margin:0} #modeHead .btn{margin-top:8px}
+  #modeHead:empty{display:none} #modeHead .topbox{margin:0 0 12px} #modeHead .mhow{margin:6px 0 0;padding-left:1.5em;font-size:13.5px;line-height:1.4} #modeHead .mhow li{margin:0} #modeHead .btn{margin-top:8px}
   .topbox .tbhead h2{margin:2px 0 3px;font-size:17px;color:#fff;letter-spacing:.03em} .topbox .tbsub{font-size:13.5px;line-height:1.4;opacity:.95}
   .topbox .tbsoon{display:inline-block;font:700 11px/1 sans-serif;letter-spacing:.12em;padding:4px 8px;border-radius:99px;background:#ffd54a;color:#3a2e00}
   .topbox .tbflow{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:9px;font-size:13px} .topbox .tbflow span{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:3px 7px} .topbox .tbflow i{font-style:normal;opacity:.8}
@@ -1137,17 +1137,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <div class="splitter" id="splitter" title="ドラッグで地図とグラフの幅を変えられます（ダブルクリックで元に戻す）"></div>
   <aside class="side">
     <div id="wxPanel" hidden></div>
+    <!-- 並び順（利用者の指定）: 1 緑の表示モード説明（#modeHead） → 2 推移グラフ → 3 期間の選択 → 4 選んだ圃場（チップ） → 5 保存ボタン → 6 雨・標高の欄 → （開発者の欄 #privBoxes・注記）→ 出典（#foot） -->
+    <div id="modeHead"></div>
     <div id="selArea">
-    <!-- ① 推移グラフ ② 選んだ圃場 ③ 期間 ④ 保存ボタン ⑤ 緑の表示モードの説明（#modeHead） ⑥ 出典（#foot） の順に、地図のすぐ下へ並べる -->
     <div class="svgwrap"><svg class="chart" id="chart" viewBox="0 0 560 340" role="img" aria-label="NDVI推移"></svg><div class="tip" id="tip"></div></div>
     <div class="status" id="status"></div>
-    <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
-    <div class="chips" id="chips"></div>
-    <div class="ctl">
-      <button class="btn small" id="btnClear">すべて解除</button>
-      <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
-    </div>
-    <div class="rankbox" id="rankBox"></div>
     <div class="ctl chartctl" style="margin-top:12px"><span id="modeCtl">
       <select id="mode">
         <option value="date">今年（5/10〜9/30）</option>
@@ -1155,13 +1149,19 @@ svg.leaflet-image-layer.leaflet-interactive path {
       </select></span>
     </div>
     <div class="hint" id="trendHint" style="display:none">生育傾向マップのときは、グラフは稲の年ごとに、いちばん茂った時の NDVI を「近くの、同じころに植えて同じころに刈った田」の平均とくらべた差を表示します（上ほど、その年よく育った）</div>
+    <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
+    <div class="chips" id="chips"></div>
+    <div class="ctl">
+      <button class="btn small" id="btnClear">すべて解除</button>
+      <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
+    </div>
+    <div class="rankbox" id="rankBox"></div>
     <div class="btnrow3"><button class="btn small" id="btnPng"><span>グラフを</span><span>画像で保存</span></button><button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button><button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）"><span>日付を選んで</span><span>地図を出力</span></button></div>
     <div class="raccbox" id="raccSel" hidden></div>
     <div class="raccbox" id="elevSel" hidden></div>
     <div class="ctl"><span class="hint" id="note"></span></div>
     </div>
-    <div id="modeHead"></div>
-    <div id="privBoxes"></div>   <!-- 開発者の端末だけ（priv.js が中身を入れる）: どの表示モードでも ①〜⑤ の次、⑥ 出典の前 -->
+    <div id="privBoxes"></div>   <!-- 開発者の端末だけ（priv.js が中身を入れる）: どの表示モードでも、1〜6 の次・出典の前 -->
     <!-- 詳細設定は画面に出さない（初期値のまま自動で働く） -->
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
@@ -2633,7 +2633,7 @@ if(DEV) window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); w
 // ホーム画面に追加したアプリは、端末の保存がブラウザと別なので、鍵をもう一度入れる欄を出す（鍵のない端末が、ホーム画面から開いたときだけ。鍵が合わなかったときにも出す）
 function keyBox(msg){ if(document.getElementById('keyBox')) return; const h=document.getElementById('modeHead'); if(!h) return; const b=document.createElement('div'); b.id='keyBox'; b.style.cssText='margin:0 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px';
   b.innerHTML=`<div>${msg||'鍵をお持ちの方は、ここに入れてください（英数字）'}</div><div style="display:flex;gap:6px;margin-top:6px"><input id="keyIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:0;font-size:16px;padding:7px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn" id="keyGo" type="button">開く</button></div>`;
-  h.parentNode.insertBefore(b,document.getElementById('wxPanel').nextSibling); document.getElementById('keyGo').onclick=()=>{ const k=document.getElementById('keyIn').value.trim(); if(k.length<12){ alert('鍵は12文字以上です。もう一度確かめてください'); return; } try{ localStorage.setItem('devkey',k); }catch(e){} location.reload(); }; }
+  h.parentNode.insertBefore(b,h); document.getElementById('keyGo').onclick=()=>{ const k=document.getElementById('keyIn').value.trim(); if(k.length<12){ alert('鍵は12文字以上です。もう一度確かめてください'); return; } try{ localStorage.setItem('devkey',k); }catch(e){} location.reload(); }; }
 if(!DEV&&(()=>{ try{ return (window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true; }catch(e){ return false; } })()) keyBox();
 function loadPriv(){ return new Promise(res=>{ if(!DEV) return res(false); if(window.BOOT) BOOT.stage(3,14,'',''); const sc=document.createElement('script'); sc.src=PRIV_URL+'?k='+encodeURIComponent(DEV_KEY);
   sc.onload=()=>res(true); sc.onerror=()=>{ setStatus('開発者の機能を読み込めませんでした（鍵を確かめてください）'); keyBox('鍵が合わないようです。もう一度入れてください'); res(false); }; document.head.appendChild(sc); }); }
@@ -3361,7 +3361,7 @@ function arPrepOpen(src,pid0,btn){ const $=id=>document.getElementById(id);
     arPrepField(pid); if(wiz&&AR_WIZ.sync) AR_WIZ.sync(); }); }
 const arWide=()=>matchMedia('(min-width:861px)').matches;   // パソコンの幅: 手順は右の欄に。スマホは地図の下に重ねる
 function arPlace(){ const box=document.getElementById('arPrep'); if(!box) return; const wide=arWide(), tg=document.querySelector(wide?'.side':'.mapwrap');
-  if(wide){ const wp=document.getElementById('wxPanel'); if(box.parentNode!==tg||box.previousElementSibling!==wp) tg.insertBefore(box,wp.nextSibling); } else if(box.parentNode!==tg) tg.appendChild(box);
+  if(wide){ const mh=document.getElementById('modeHead'); if(box.parentNode!==tg||box.previousElementSibling!==mh) tg.insertBefore(box,mh.nextSibling); } else if(box.parentNode!==tg) tg.appendChild(box);
   box.classList.toggle('inSide',wide); }
 let arWideNow=arWide(); addEventListener('resize',()=>{ const w=arWide(); if(w!==arWideNow){ arWideNow=w; if(arP.on) arPrepDraw(); } });
 function arPrepField(pid){ const V=arRing(pid), R=arRecommend(V,arSide), same=pid===arP.pid&&arP.V; Object.assign(arP,{pid,V,rec:R,err:''}); arSet1(R.c1,'');
