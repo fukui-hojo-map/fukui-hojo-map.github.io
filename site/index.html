@@ -914,7 +914,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .btnrow3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 4px} .btnrow3 .btn{min-height:42px;padding:4px 6px;font-size:13.5px;line-height:1.25;text-align:center;white-space:normal} .btnrow3 .btn span{display:inline-block}   /* グラフの下に、ボタンを1行に3つ（文字が長いものは2行にして、高さをそろえる） */
   .ctl select,.ctl input[type=date],.ctl input[type=number]{font:inherit;font-size:15px;padding:5px 6px;border:1px solid var(--line);border-radius:5px}
   .svgwrap{position:relative} svg.chart{width:100%;height:auto;display:block;font-family:var(--sans)}
-  .tip small{color:#8a8f8c;font-size:11px;margin-left:2px}
   .tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.14);padding:6px 9px;font-size:13.5px;display:none;min-width:150px;z-index:5}
   .tip b{display:block;margin-bottom:3px} .tip .r{display:flex;justify-content:space-between;gap:12px} .tip i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px}
   table{border-collapse:collapse;width:100%;font-size:14.5px} th,td{padding:4px 6px;border-bottom:1px solid var(--grid);text-align:left;white-space:nowrap} th{color:var(--ink2);border-bottom:1.5px solid var(--line)} td.num,th.num{text-align:right}
@@ -2136,7 +2135,6 @@ let clean=new Map(), cleanKey='', dataVer=0;
 function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); nbMed=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
   const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0])));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）
-  const cnRows=cn?(pkg.series[pid]||[]).filter(r=>r[2]>=t&&r[3]!=='L'&&!excluded.has(r[0])&&cnBad(cell,r[0])):[];   // 近くがほぼ雲の日（灰色の点に）
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
   const C=dip?nbOf(cell):null, nb=C?nbDips(s,C):null, hz=C?hzDips(s,C):null, pre=s.map((r,i)=>dip&&(isDip(s,i)||(r[3]!=='L'&&((!!nb&&nb.has(r[0]))||(!!hz&&hz.has(r[0]))))));
   // 大きな落ち込みは、ほかの判定で外したあとの前後で見る（隣のかすみの日の点に隠れないように）
@@ -2144,10 +2142,7 @@ function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
   if(radarOn()&&rad&&rad.length){ // レーダーの推定値は光の観測がない日だけ足す。前後のレーダーより急に上下した点（ノイズ）は除く
     const od=new Set(s.map(r=>r[0])), rs=rad.filter(r=>r[2]>=t&&!od.has(r[0])); rows=rows.concat(rs.filter((r,i)=>!radarSpike(rs,i))).sort((a,b)=>a[0]<b[0]?-1:1); }
-  // 灰色の点（参考。雲の影響で精度やや減）: 雲の近くの観測（pipeline）・近くがほぼ雲の日・雲かすみの疑いで外した点。同じ日に使う点があれば出さない
-  const gm=new Map(); for(const r of ((pkg.near||{})[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])).concat(cnRows,dips.filter(r=>r[3]!=='L'))) if(!by.has(r[0])&&!gm.has(r[0])) gm.set(r[0],[r[0],r[1]]);
-  const grey=[...gm.values()].sort((a,b)=>a[0]<b[0]?-1:1);
-  c={rows,by,dips,grey}; clean.set(pid,c); return c; }   // by（地図の色・近隣平均に使う値）は光の観測だけ
+  c={rows,by,dips}; clean.set(pid,c); return c; }   // by（地図の色・近隣平均に使う値）は光の観測だけ
 function radarOn(){ return document.getElementById('radarOn').checked; }
 function radarSpike(s,i){ if(i<=0||i>=s.length-1) return false; const pv=s[i-1],nx=s[i+1],tD=Date.parse(s[i][0]);
   if(tD-Date.parse(pv[0])>15*864e5||Date.parse(nx[0])-tD>15*864e5) return false; const a=s[i][1]-pv[1], b=s[i][1]-nx[1];
@@ -2165,7 +2160,6 @@ function seriesOf(pid){ const cell=parcels[pid]?.cell;
   return cleanOf(pid).rows.map(r=>{ const prov=!!provFrom&&r[0]>=provFrom&&r[3]!=='R';
     return {date:r[0],t:Date.parse(r[0]+'T00:00:00Z'),ndvi:r[1],ls:r[3]==='L',rad:r[3]==='R',prov,haze:prov&&provHaze.has(cell+'|'+r[0])}; }); }
 function val(pid,d){ const v=cleanOf(pid).by.get(d); return v===undefined?null:v; }
-function greyOf(pid){ return cleanOf(pid).grey.map(r=>({date:r[0],t:Date.parse(r[0]+'T00:00:00Z'),ndvi:r[1],near:true})); }   // 灰色の点（参考。雲の影響で精度やや減）
 let olAcc={t:null,done:new Set(),byDate:{}};   // 雲・かすみの日の判定の材料（読み足した区画の分だけ足す）
 function detectOutliers(){
   autoFlag={}; excluded=new Set(); const t=thr(); if(olAcc.t!==t) olAcc={t,done:new Set(),byDate:{}}; const byDate=olAcc.byDate;
@@ -2807,18 +2801,13 @@ function drawChart(){
     for(const p of s.pts){ const cx=X(p.x).toFixed(1), cy=Y(p.ndvi).toFixed(1);
       if(p.prov) g+=`<circle cx="${cx}" cy="${cy}" r="6" fill="none" stroke="${p.haze?'#d93025':'#1e3a2f'}" stroke-width="1.2" stroke-dasharray="2 2"/>`;   // 速報
       g+=p.rad?`<path d="M${cx},${cy-3.8}l3.8,3.8l-3.8,3.8l-3.8,-3.8z" fill="#fff" stroke="${s.color}" stroke-width="1.4"/>`:p.ls?`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="3" fill="#fff" stroke="${s.color}" stroke-width="1.6"/>`:`<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="${p.avg?1.6:2.8}" fill="${s.color}"/>`; hoverPts.push({px:X(p.x),x:p.x,s,p}); } }
-  // 灰色の点（参考）: 雲の近くなどで外した観測。小さく薄く。触ると「雲の影響で精度やや減」（2026-10-24 の利用者の指示）
-  let anyGrey=false;
-  for(const s of series){ if(!s.pid) continue; const y=s.yr||y0, first=s.pts.length?s.pts[0].x:-Infinity;
-    for(const p of greyOf(s.pid)){ const x=mode==='date'?p.t:(p.t-sStart(y))/864e5; if(x<xmin||x>xmax||x<first||(mode==='date'&&(p.t<sStart(y0)||p.t>sEnd(y0)))) continue; if(mode==='doy'&&(p.t<sStart(y)||p.t>sEnd(y))) continue;
-      g+=`<circle cx="${X(x).toFixed(1)}" cy="${Y(p.ndvi).toFixed(1)}" r="2.3" fill="#c3c7c3" opacity=".9"/>`; hoverPts.push({px:X(x),x,s,p}); anyGrey=true; } }
+  // 雲の近くなどで外した観測は、グラフに出さない（2026-10-24: 薄い灰色の点で出す案は、利用者の指示でやめた。計算・地図の色にも使わない）
   g+=`<line id="hl" x1="0" x2="0" y1="${MT}" y2="${H-MB}" stroke="#1e3a2f" stroke-dasharray="3 3" visibility="hidden"/>`;
   // legend inside svg (so PNG includes it)
   let lx=ML, ly=H-MB+40; for(const s of series){ const w=s.label.length*16+40; if(lx+w>W-MR){lx=ML;ly+=23;} g+=`<line x1="${lx}" x2="${lx+18}" y1="${ly-5}" y2="${ly-5}" stroke="${s.color}" stroke-width="2.5" stroke-dasharray="${s.dash}"/><text x="${lx+22}" y="${ly}" font-size="16.5" font-weight="700" fill="${s.color}">${s.label}</text>`; lx+=w; }
   if(series.some(s=>s.pts.some(p=>p.rad))){ ly+=23; g+=`<path d="M${ML+9},${ly-9}l4,4l-4,4l-4,-4z" fill="#fff" stroke="#4c5a52" stroke-width="1.4"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">ひし形はレーダー（Sentinel-1）からの推定</text>`; }
   if(series.some(s=>s.pts.some(p=>p.prov))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="6" fill="none" stroke="#1e3a2f" stroke-width="1.2" stroke-dasharray="2 2"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">点線の輪は速報（あとで変わることがあります。赤はもやの疑い）</text>`; }
   if(series.some(s=>s.pts.some(p=>p.ls))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="3.5" fill="#fff" stroke="#4c5a52" stroke-width="1.6"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">白抜きの点は Landsat（30m画素。Sentinel-2 相当に換算）</text>`; }
-  if(anyGrey){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="2.5" fill="#c3c7c3"/><text x="${ML+22}" y="${ly}" font-size="14" fill="#6b746e">薄い灰色の点は雲の近く（精度やや減。参考。計算には使いません）</text>`; }
   svg.setAttribute('viewBox',`0 0 ${W} ${ly+8}`); svg.innerHTML=g;
 
 }
@@ -2857,7 +2846,7 @@ let lastPick=null;
     if(!best||best.d>25){lastPick=null;tip.style.display='none';svg.querySelector('#hl')?.setAttribute('visibility','hidden');return;}
     lastPick=best.h.p.date;
     const rows=hoverPts.filter(h=>Math.abs(h.x-best.h.x)<1e-6).sort((a,b)=>b.p.ndvi-a.p.ndvi); const mode=document.getElementById('mode').value;
-    tip.innerHTML=`<b>${best.h.p.date}</b>`+rows.map(h=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}${h.p.near?'<small>（雲の影響で精度やや減）</small>':''}</span><span${h.p.near?' style="color:#8a8f8c"':''}>${h.p.ndvi.toFixed(2)}</span></div>`).join('');
+    tip.innerHTML=`<b>${best.h.p.date}</b>`+rows.map(h=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}</span><span>${h.p.ndvi.toFixed(2)}</span></div>`).join('');
     tip.style.display='block'; const hl=svg.querySelector('#hl'); hl.setAttribute('x1',best.h.px); hl.setAttribute('x2',best.h.px); hl.setAttribute('visibility','visible');
     const px=best.h.px*r.width/W; tip.style.left=(px+14+tip.offsetWidth>r.width?px-tip.offsetWidth-14:px+14)+'px'; tip.style.top=Math.max(0,(pt.clientY-r.top)-20)+'px'; };
   svg.addEventListener('mousemove',onMove); svg.addEventListener('touchstart',onMove,{passive:false}); svg.addEventListener('touchmove',onMove,{passive:false});
