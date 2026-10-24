@@ -201,7 +201,7 @@ def thumbs(ee, out, region_box, s2days, l30days):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", required=True); ap.add_argument("--out", required=True); ap.add_argument("--cells", required=True)
+    ap.add_argument("--data", required=True); ap.add_argument("--out", required=True); ap.add_argument("--cells", default="")
     ap.add_argument("--dates", default=""); ap.add_argument("--periods", default="2025-06-01:2025-10-01,2026-06-01:2026-10-01")
     ap.add_argument("--keep", default="50f6ec09-1cb9-4d11-8bbf-4c40bb9a759f"); ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--deadline", type=float, default=0); ap.add_argument("--parts", default="s2,s30,l30,modis,img")

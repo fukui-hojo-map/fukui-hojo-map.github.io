@@ -42,7 +42,7 @@ jobs:
           EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: |
-          python pipeline/diag_cloud.py --data published/data --out out --deadline $(( ${{ steps.t0.outputs.t0 }} + 290 * 60 )) $(cat .github/diag-cloud2-args.txt) 2>&1 | tee -a out/log.txt
+          set -o pipefail; python pipeline/diag_cloud.py --data published/data --out out --deadline $(( ${{ steps.t0.outputs.t0 }} + 290 * 60 )) $(cat .github/diag-cloud2-args.txt) 2>&1 | tee -a out/log.txt
       - name: 結果を diag-cloud2-out ブランチに置く
         if: always()
         run: |
