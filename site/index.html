@@ -2165,10 +2165,11 @@ function val(pid,d){ const v=cleanOf(pid).by.get(d); return v===undefined?null:v
 //   (1) 自分の前後の点（各20日以内）を結んだ線 ＋ 同じ区画のまとまりで、その日と前後の日に晴れていた「育ちの近い」稲の田
 //       （前後の日の値が自分と ±0.05 以内、20枚以上）の「線からのずれ」の中央値、
 //   (2) 後ろの点がまだないとき（最新の日など）は、7日以内の前の点 ＋ 育ちの近い田たち（前の日の値が ±0.05 以内）のその間の変化の中央値、で推定する。
+//       (2) は 7/21〜8/10 だけ（旬ごとの評価 neighbor_est5: 7月上旬は 0.05 超が 15%、中旬 8.6% で、7月下旬 4.4%・8月上旬 3.2%）。
 //   稲 約2.5万枚の1つ抜きの評価（neighbor_est4）: 7/1〜8/10 は (1) MAD 0.007〜0.008・0.05 を超えるのは 1.7〜2.2%、(2) MAD 0.009〜0.010・2.7〜3.6%。
 //   5〜6月は田植えの時期の差で、どの選び方でも 0.05 を超えるのが 30% 以上になるので推定しない。
 //   7/1〜8/10 の稲の田（crop_s.json で稲・確からしさ80以上）だけ。グラフに点線の小さな輪で出し、地図の色・近隣の平均・追肥などの計算には使わない
-const EST_FROM='07-01', EST_TO='08-10', EST_MIN=20, EST_SIM=0.05, EST_GAP=20*864e5, EST_PREV=7*864e5, EST_NEAR=2*864e5;
+const EST_FROM='07-01', EST_TO='08-10', EST_PREV_FROM='07-21', EST_MIN=20, EST_SIM=0.05, EST_GAP=20*864e5, EST_PREV=7*864e5, EST_NEAR=2*864e5;
 const csReady={}; let estMemo=new Map(), estCells=new Map();
 function csGet(cell){ if(cell in csReady) return csReady[cell]; csReady[cell]=undefined;   // 作物の見分け（読み込み中は undefined → 推定しない。読めたら描き直す）
   csLoad(cell).then(j=>{ csReady[cell]=j||null; estMemo=new Map(); estCells=new Map(); if(selected.some(x=>parcels[x.pid]?.cell===cell)) drawChart(); }); return undefined; }
@@ -2189,7 +2190,7 @@ function estOf(pid){ let e=estMemo.get(pid); if(e) return e; e=[];
       if(pv&&nx){ const w=(t-pv[0])/(nx[0]-pv[0]), mp=C.by.get(pv[2]), mn=C.by.get(nx[2]), a=[];
         if(mp&&mn) for(const [q,x] of m){ if(q===pid) continue; const p0=mp.get(q), p1=mn.get(q); if(p0!==undefined&&p1!==undefined&&Math.abs(p0-pv[1])<=EST_SIM&&Math.abs(p1-nx[1])<=EST_SIM) a.push(x-(p0+(p1-p0)*w)); }
         if(a.length>=EST_MIN){ v=pv[1]+(nx[1]-pv[1])*w+medOf(a); kind='line'; } }
-      if(v===null&&pv&&t-pv[0]<=EST_PREV){ const mp=C.by.get(pv[2]), a=[];
+      if(v===null&&pv&&t-pv[0]<=EST_PREV&&md>=EST_PREV_FROM){ const mp=C.by.get(pv[2]), a=[];
         if(mp) for(const [q,x] of m){ if(q===pid) continue; const p0=mp.get(q); if(p0!==undefined&&Math.abs(p0-pv[1])<=EST_SIM) a.push(x-p0); }
         if(a.length>=EST_MIN){ v=pv[1]+medOf(a); kind='prev'; } }
       if(v!==null) e.push({date:d,t:Date.parse(d+'T00:00:00Z'),ndvi:Math.max(-0.1,Math.min(1,v)),est:kind}); }
