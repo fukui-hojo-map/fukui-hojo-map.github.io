@@ -1137,7 +1137,6 @@ svg.leaflet-image-layer.leaflet-interactive path {
   <div class="splitter" id="splitter" title="ドラッグで地図とグラフの幅を変えられます（ダブルクリックで元に戻す）"></div>
   <aside class="side">
     <div id="wxPanel" hidden></div>
-    <div id="privBoxes"></div>
     <div id="selArea">
     <!-- ① 推移グラフ ② 選んだ圃場 ③ 期間 ④ 保存ボタン ⑤ 緑の表示モードの説明（#modeHead） ⑥ 出典（#foot） の順に、地図のすぐ下へ並べる -->
     <div class="svgwrap"><svg class="chart" id="chart" viewBox="0 0 560 340" role="img" aria-label="NDVI推移"></svg><div class="tip" id="tip"></div></div>
@@ -1162,6 +1161,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="ctl"><span class="hint" id="note"></span></div>
     </div>
     <div id="modeHead"></div>
+    <div id="privBoxes"></div>   <!-- 開発者の端末だけ（priv.js が中身を入れる）: どの表示モードでも ①〜⑤ の次、⑥ 出典の前 -->
     <!-- 詳細設定は画面に出さない（初期値のまま自動で働く） -->
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
