@@ -819,9 +819,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .side{overflow:auto;padding:12px 14px 30px;background:#fbfcfa}
   .splitter{cursor:col-resize;background:var(--line);border-left:3px solid #fbfcfa;border-right:3px solid #fbfcfa;touch-action:none}
   .splitter:hover,.splitter.drag{background:var(--accent)}
-  .mapbar{position:absolute;z-index:500;left:6px;bottom:6px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:13px;width:250px;max-width:calc(100% - 12px);box-shadow:0 1px 5px rgba(0,0,0,.12)}
+  .mapbar{position:absolute;z-index:500;left:6px;bottom:6px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:13px;width:min(346px,calc(100% - 12px));box-shadow:0 1px 5px rgba(0,0,0,.12)}
   .mapbar select{font:inherit;font-size:13.5px;padding:1px 2px;border:1px solid var(--line);border-radius:4px;max-width:165px}
   .mapbar .dsel{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13.5px;padding:1px 6px;border:1px solid var(--line);border-radius:4px;background:#fff;color:inherit;cursor:pointer;white-space:nowrap} .mapbar .dsel .car{font-size:11px;color:var(--ink2)} .mapbar .dsel:disabled{opacity:.5;cursor:default}
+  .mapbar .mbrow{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px} .mapbar #fillMode{field-sizing:content}   /* 選んでいる名前の幅にそろえる（対応していないブラウザは今までの幅で、入らなければ2段に折り返す） */   /* 日付と表示モードを横並びに（狭い画面では折り返して2段） */
   .mapbar .cloudnote{margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--ink2)}
   .dpk{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px}   /* 日付の一覧（雲の割合つき） */
   .dpkBox{background:#fff;border-radius:18px;max-height:84vh;overflow-y:auto;-webkit-overflow-scrolling:touch;width:min(440px,100%);box-shadow:0 8px 30px rgba(0,0,0,.3)}
@@ -1128,8 +1129,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="ctrX" aria-hidden="true"></div>
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
+      <div class="mbrow">
       <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません" hidden></select><button type="button" class="dsel" id="colorDateBtn" aria-haspopup="listbox" title="日付を選ぶ（雲で写らなかった日は出ません）"><span class="t">—</span><span class="car" aria-hidden="true">▾</span></button></span><input type="checkbox" id="colorOn" checked hidden></div>
-      <div class="ctl" style="margin:2px 0 0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      <div class="ctl" style="margin:0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      </div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><div class="cloudnote" id="cloudNote">雲（うすい雲・かすみ・雲の影）がかかると、NDVI が実際より低く出ることがあります。日付の一覧の（雲○%）は、まわり約3km（圃場を選んでいるときはその圃場のあたり、選んでいないときは地図の真ん中のあたり）の雲の割合です。雲の多い日の色は、参考程度に見てください。</div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
     </div>
