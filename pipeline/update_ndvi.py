@@ -336,7 +336,7 @@ def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_d
         inner = {"type": "FeatureCollection", "features": [f for f in inner["features"]
                  if (full.get(f["properties"]["pid"]) or 0) / S["div"] >= min_px]}
         if not inner["features"]:
-            return 0
+            return 0, False
     pids = [f["properties"]["pid"] for f in inner["features"]]
     have = set(nd[kd])
     start = start_default
@@ -388,7 +388,7 @@ def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=Non
     cid = cell["id"]; cdir = os.path.join(data_dir, "cells", cid)
     inner = read_json(os.path.join(cdir, "inner.geojson"))
     if not inner:
-        return cid, 0
+        return cid, 0, {}
     fname, nd, key = cell_state(cfg, cdir)
     if key.startswith(" "):
         targeted = False                        # 計算し直し中のセルは全部調べる
