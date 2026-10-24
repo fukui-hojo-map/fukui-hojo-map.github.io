@@ -45,6 +45,17 @@ def mask_id(cfg):
     return f"csplus{cfg.get('cloud_score_min', 0.6):.2f}" + (f"-scene{sc}" if sc else "")
 
 
+def near_m(cfg):
+    """雲から何 m 以内の画素を田の NDVI に使わないか（0 なら使う）。config の cloud_near_m"""
+    return int(cfg.get("cloud_near_m") or 0)
+
+
+def s2_mask_id(cfg):
+    """田の NDVI（ndvi.json の Sentinel-2）の雲判定の方式。雲の近くを除くときは、ほかのデータ（生育傾向・圃場内マップ）とは別の名前にする
+    （mask_id を変えると、それを使う過去の年のデータまで全部作り直しになるため）"""
+    return mask_id(cfg) + (f"-near{near_m(cfg)}" if near_m(cfg) else "")
+
+
 # ---------------- GEE backend ----------------
 class GEEBackend:
     def __init__(self, cfg):
@@ -58,11 +69,11 @@ class GEEBackend:
             ee.Initialize(project=project)
         self.cfg = cfg
 
-    def _col(self, bbox, start, end, src="s2"):
-        """NDVI（レーダーは VH）1バンドの画像の集まり"""
+    def _col(self, bbox, start, end, src="s2", near=False):
+        """NDVI（レーダーは VH）1バンドの画像の集まり。near なら、雲の画素の印（cld）も2つ目のバンドに入れる（day で雲の近くを除く）"""
         raw = self._raw(bbox, start, end, src)
-        return raw.linkCollection(self._csp(bbox, start, end), ["cs_cdf"]).map(self._prep_s2) if src == "s2" else raw.map(
-            {"ls": self._prep_ls, "s1": self._prep_s1}[src])
+        prep = (lambda i: self._prep_s2(i, near)) if src == "s2" else {"ls": self._prep_ls, "s1": self._prep_s1}[src]
+        return raw.linkCollection(self._csp(bbox, start, end), ["cs_cdf"]).map(prep) if src == "s2" else raw.map(prep)
 
     def _raw(self, bbox, start, end, src="s2"):
         """加工前の画像の集まり（画像のID・写っている範囲を調べるのにも使う）"""
@@ -98,19 +109,34 @@ class GEEBackend:
         return (img.normalizedDifference(["B5", "B4"]).rename("NDVI").updateMask(ok)
                 .copyProperties(img, ["system:time_start"]))
 
-    def _prep_s2(self, img):
+    def _prep_s2(self, img, near=False):
         """雲判定は Cloud Score+（cs_cdf がしきい値以上の画素だけ使う）。欠測・飽和・雪（SCL 0/1/11）も除く。
-        シーン全体の雲量では捨てない（max_scene_cloud が空欄のとき）ので、晴れ間の区画も拾える。"""
-        scl = img.select("SCL")
-        ok = img.select("cs_cdf").gte(self.cfg.get("cloud_score_min", 0.6)).And(scl.neq(0)).And(scl.neq(1)).And(scl.neq(11))
-        return (img.normalizedDifference(["B8", "B4"]).rename("NDVI").updateMask(ok)
-                .copyProperties(img, ["system:time_start"]))
+        シーン全体の雲量では捨てない（max_scene_cloud が空欄のとき）ので、晴れ間の区画も拾える。
+        near なら、雲の画素（cs_cdf がしきい値未満、または SCL 8・9・10＝雲・巻雲）の印 cld を2つ目のバンドに入れる"""
+        scl = img.select("SCL"); cdf = img.select("cs_cdf"); thr = self.cfg.get("cloud_score_min", 0.6)
+        ok = cdf.gte(thr).And(scl.neq(0)).And(scl.neq(1)).And(scl.neq(11))
+        out = img.normalizedDifference(["B8", "B4"]).rename("NDVI").updateMask(ok)
+        if near:
+            cld = cdf.lt(thr).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10)).updateMask(scl.neq(0))
+            out = out.addBands(cld.rename("cld").toByte())
+        return out.copyProperties(img, ["system:time_start"])
 
-    def day(self, col, d):
-        """その日の画像を1枚に合成。画像が1枚もない日でも、全部マスクされた NDVI バンドを返す（エラーにしない）"""
+    def day(self, col, d, near=False):
+        """その日の画像を1枚に合成。画像が1枚もない日でも、全部マスクされた NDVI バンドを返す（エラーにしない）。
+        near（col も near で作ったもの）なら、雲から cloud_near_m 以内の画素の NDVI を除く（雲の縁の薄い雲・雲の照り返しで NDVI が下がるため。T19）"""
         ee = self.ee
         base = ee.Image.constant(0).toFloat().rename("NDVI").updateMask(0)
-        return ee.ImageCollection([base]).merge(col.filterDate(d, ee.Date(d).advance(1, "day"))).mosaic()
+        if near:
+            base = base.addBands(ee.Image.constant(0).toByte().rename("cld").updateMask(0))
+        img = ee.ImageCollection([base]).merge(col.filterDate(d, ee.Date(d).advance(1, "day"))).mosaic()
+        if not near:
+            return img
+        # 30m の格子で、4分の1以上が雲の画素から、何 m 離れているか（福井県は UTM 53帯）。近くに雲がなければ（範囲外・雲なし）使う
+        m = near_m(self.cfg); p10 = ee.Projection("EPSG:32653").atScale(10); p30 = p10.atScale(30)
+        c30 = img.select("cld").unmask(0).reproject(p10).reduceResolution(ee.Reducer.mean(), False, 64).reproject(p30).gte(0.25)
+        dist = c30.fastDistanceTransform(int(math.ceil(m / 30)) + 2, "pixels", "squared_euclidean").sqrt().multiply(30).reproject(p30)
+        far = dist.gte(m).unmask(1)
+        return img.select("NDVI").updateMask(far)
 
     def images(self, bbox, start, end, src="s2"):
         """期間内の画像の一覧 [{id, t(ミリ秒), geom(写っている範囲 GeoJSON)}]。毎日の更新で新しい画像を探すのに使う"""
@@ -131,8 +157,9 @@ class GEEBackend:
         ee = self.ee
         fc = ee.FeatureCollection(inner_fc_geojson)
         scale = SOURCES[src]["scale"]
-        col = self._col(bbox, dates[0], (dt.date.fromisoformat(dates[-1]) + dt.timedelta(days=1)).isoformat(), src)
-        imgs = [self.day(col, d).set("date", d) for d in dates]
+        near = src == "s2" and near_m(self.cfg) > 0
+        col = self._col(bbox, dates[0], (dt.date.fromisoformat(dates[-1]) + dt.timedelta(days=1)).isoformat(), src, near)
+        imgs = [self.day(col, d, near).set("date", d) for d in dates]
         daily = ee.ImageCollection(imgs)
         stat = "median" if src == "s1" else "mean"
         reducer = (ee.Reducer.median() if src == "s1" else ee.Reducer.mean()).combine(ee.Reducer.count(), "", True)
@@ -206,7 +233,7 @@ def in_window(cfg, d):
 
 def cell_state(cfg, cdir):
     """(書き込み先, ndvi データ, 並べ替えキー)。方式が変わったセルは ndvi_next.json に計算し直す。"""
-    mid = mask_id(cfg)
+    mid = s2_mask_id(cfg)
     cur = read_json(os.path.join(cdir, "ndvi.json"))
     if cur and cur.get("v") == 2 and cur.get("mask") == mid:
         fname, nd = "ndvi.json", cur
@@ -214,6 +241,12 @@ def cell_state(cfg, cdir):
         nxt = read_json(os.path.join(cdir, "ndvi_next.json"))
         if not (nxt and nxt.get("v") == 2 and nxt.get("mask") == mid):
             nxt = {"v": 2, "mask": mid, "dates": [], "p": {}}
+            # Sentinel-2 の方式だけが変わったときは、Landsat・レーダーは今のものを引き継ぐ（方式が同じなら計算し直さない）
+            if cur and cur.get("v") == 2:
+                if cur.get("lmask") == LANDSAT_MASK:
+                    nxt.update({k: cur[k] for k in ("lmask", "ldates", "lp") if k in cur})
+                if cur.get("rmask") == RADAR_MASK:
+                    nxt.update({k: cur[k] for k in ("rmask", "rdates", "rp") if k in cur})
         fname, nd = "ndvi_next.json", nxt
     lfresh = "ls" in sources(cfg) and nd.get("lmask") != LANDSAT_MASK
     if lfresh:                                   # Landsat は初回・方式変更時に全期間を計算
