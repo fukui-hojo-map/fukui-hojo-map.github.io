@@ -304,7 +304,7 @@ def update_hist(backend, cfg, data_dir, cell, today, mask, log, deadline=None, f
     for y in todo:
         if deadline and time.time() > deadline:
             break
-        update_source(backend, cfg, cdir, fname, h, cell, inner, full, src, f"{y}-{window[0]}", f"{y}-{window[1]}")
+        update_source(backend, cfg, cdir, fname, h, cell, inner, full, src, f"{y}-{window[0]}", f"{y}-{window[1]}", near=False)   # 過去の推移は、雲の近くの判定を足さない（mask が mask_id のままなので、方式を変えない）
         h["years"] = sorted(set(h["years"]) | {y}); made.append(y)
         write_json(os.path.join(cdir, fname), h)
     if made:

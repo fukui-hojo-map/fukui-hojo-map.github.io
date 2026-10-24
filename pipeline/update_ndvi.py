@@ -9,6 +9,8 @@ ndvi.json の形式（v2）:
    "dates": ["2025-09-25", ...],                     # 計算済みの観測日（昇順）
    "p": {"<pid>": [i, ndvi1000, pct, i, ndvi1000, pct, ...]}}
     i = dates の添字, ndvi1000 = NDVI×1000 の整数, pct = 有効画素率(%)
+    pct が負の数（−50〜−100）の観測は「雲の近く」（cloud_near_m 以内に雲があり、遠い画素だけでは足りない）。値は全部の画素の平均で、
+    参考（画面は薄い灰色の点で出す。計算・地図の色には使わない。有効画素率で選ぶ古い読み手は、負の数なので自然に使わない）
   Landsat は "lmask", "ldates", "lp" に同じ形で入れる（Sentinel-2 と別の並び）。
   有効画素率が MIN_PCT 未満の観測は保存しない（表示側の下限も同じ）。
   Landsat は 30m 画素が landsat_min_pixels 未満しか入らない小さい区画には使わない。
@@ -45,6 +47,30 @@ def mask_id(cfg):
     return f"csplus{cfg.get('cloud_score_min', 0.6):.2f}" + (f"-scene{sc}" if sc else "")
 
 
+def near_m(cfg):
+    """雲から何 m 以内の画素を田の NDVI に使わないか（0 なら使う）。config の cloud_near_m"""
+    return int(cfg.get("cloud_near_m") or 0)
+
+
+def cs_min(cfg):
+    """Cloud Score+ の cs（晴れ度そのもの。cs_cdf より、うすい雲・かすみで下がりやすい）の下限。0 なら使わない。config の cloud_cs_min"""
+    return float(cfg.get("cloud_cs_min") or 0)
+
+
+NEAR_RULE = "a"                    # 雲の近くの規則の版（起点: cs_cdf<しきい値 または SCL 8・9・10、30m 格子で 4分の1以上、UTM）。規則を変えたら上げる（計算し直しになる）
+
+
+def s2_mask_id(cfg):
+    """田の NDVI（ndvi.json の Sentinel-2）の雲判定の方式。雲の近く・cs を使うときは、ほかのデータ（生育傾向・圃場内マップ）とは別の名前にする
+    （mask_id を変えると、それを使う過去の年のデータまで全部作り直しになるため）"""
+    return mask_id(cfg) + (f"-near{near_m(cfg)}{NEAR_RULE}" if near_m(cfg) else "") + (f"-cs{cs_min(cfg):.2f}" if cs_min(cfg) else "")
+
+
+def utm_epsg(bbox):
+    """範囲の中心の経度から UTM 帯（北半球）の EPSG。福井県は 53帯（EPSG:32653）"""
+    return f"EPSG:{32600 + int(((bbox[0] + bbox[2]) / 2 + 180) // 6) + 1}"
+
+
 # ---------------- GEE backend ----------------
 class GEEBackend:
     def __init__(self, cfg):
@@ -58,11 +84,11 @@ class GEEBackend:
             ee.Initialize(project=project)
         self.cfg = cfg
 
-    def _col(self, bbox, start, end, src="s2"):
-        """NDVI（レーダーは VH）1バンドの画像の集まり"""
+    def _col(self, bbox, start, end, src="s2", near=False):
+        """NDVI（レーダーは VH）1バンドの画像の集まり。near なら、雲の画素の印（cld）も2つ目のバンドに入れる（day で雲の近くを除く）"""
         raw = self._raw(bbox, start, end, src)
-        return raw.linkCollection(self._csp(bbox, start, end), ["cs_cdf"]).map(self._prep_s2) if src == "s2" else raw.map(
-            {"ls": self._prep_ls, "s1": self._prep_s1}[src])
+        prep = (lambda i: self._prep_s2(i, near)) if src == "s2" else {"ls": self._prep_ls, "s1": self._prep_s1}[src]
+        return raw.linkCollection(self._csp(bbox, start, end), ["cs", "cs_cdf"]).map(prep) if src == "s2" else raw.map(prep)
 
     def _raw(self, bbox, start, end, src="s2"):
         """加工前の画像の集まり（画像のID・写っている範囲を調べるのにも使う）"""
@@ -98,19 +124,41 @@ class GEEBackend:
         return (img.normalizedDifference(["B5", "B4"]).rename("NDVI").updateMask(ok)
                 .copyProperties(img, ["system:time_start"]))
 
-    def _prep_s2(self, img):
+    def _prep_s2(self, img, near=False):
         """雲判定は Cloud Score+（cs_cdf がしきい値以上の画素だけ使う）。欠測・飽和・雪（SCL 0/1/11）も除く。
-        シーン全体の雲量では捨てない（max_scene_cloud が空欄のとき）ので、晴れ間の区画も拾える。"""
-        scl = img.select("SCL")
-        ok = img.select("cs_cdf").gte(self.cfg.get("cloud_score_min", 0.6)).And(scl.neq(0)).And(scl.neq(1)).And(scl.neq(11))
-        return (img.normalizedDifference(["B8", "B4"]).rename("NDVI").updateMask(ok)
-                .copyProperties(img, ["system:time_start"]))
+        シーン全体の雲量では捨てない（max_scene_cloud が空欄のとき）ので、晴れ間の区画も拾える。
+        near なら、雲の画素（cs_cdf がしきい値未満、または SCL 8・9・10＝雲・巻雲）の印 cld を2つ目のバンドに入れる"""
+        scl = img.select("SCL"); cdf = img.select("cs_cdf"); thr = self.cfg.get("cloud_score_min", 0.6)
+        ok = cdf.gte(thr).And(scl.neq(0)).And(scl.neq(1)).And(scl.neq(11))
+        if near and cs_min(self.cfg):             # 田の NDVI だけ（near のとき）: cs も見る
+            ok = ok.And(img.select("cs").gte(cs_min(self.cfg)))
+        out = img.normalizedDifference(["B8", "B4"]).rename("NDVI").updateMask(ok)
+        if near:
+            cld = cdf.lt(thr).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10)).updateMask(scl.neq(0))
+            out = out.addBands(cld.rename("cld").toByte())
+        return out.copyProperties(img, ["system:time_start"])
 
-    def day(self, col, d):
-        """その日の画像を1枚に合成。画像が1枚もない日でも、全部マスクされた NDVI バンドを返す（エラーにしない）"""
+    def day(self, col, d, near=False, epsg="EPSG:32653"):
+        """その日の画像を1枚に合成。画像が1枚もない日でも、全部マスクされた NDVI バンドを返す（エラーにしない）。
+        near（col も near で作ったもの）なら、雲から cloud_near_m 以内の画素の NDVI を除く（雲の縁の薄い雲・雲の照り返しで NDVI が下がるため。T19:
+        県の生育調査との照合で、雲の印が田の中・隣にある観測は現地より −0.17、150m 以内 −0.085、150〜300m −0.016、300m より遠いと雑音の中）"""
         ee = self.ee
         base = ee.Image.constant(0).toFloat().rename("NDVI").updateMask(0)
-        return ee.ImageCollection([base]).merge(col.filterDate(d, ee.Date(d).advance(1, "day"))).mosaic()
+        if near:
+            base = base.addBands(ee.Image.constant(0).toByte().rename("cld").updateMask(0))
+        img = ee.ImageCollection([base]).merge(col.filterDate(d, ee.Date(d).advance(1, "day"))).mosaic()
+        if not near:
+            return img
+        if not near_m(self.cfg):                  # cs の判定だけ（距離は見ない）
+            return img.select("NDVI").addBands(img.select("NDVI").rename("NDVIf"))
+        # 30m の格子で、4分の1以上が雲の画素から、何 m 離れているか（UTM。福井県は 53帯）。近くに雲がなければ（範囲外・雲なし）使う。
+        # fastDistanceTransform の neighborhood は探す最大距離（画素）。それより遠い画素は飽和した値になり far=1（診断 T19 で 150 画素=4500m の上限として確認）
+        m = near_m(self.cfg); p10 = ee.Projection(epsg).atScale(10); p30 = p10.atScale(30)
+        c30 = img.select("cld").unmask(0).reproject(p10).reduceResolution(ee.Reducer.mean(), False, 64).reproject(p30).gte(0.25)
+        dist = c30.fastDistanceTransform(int(math.ceil(m / 30)) + 2, "pixels", "squared_euclidean").sqrt().multiply(30).reproject(p30)
+        far = dist.gte(m).unmask(1)
+        # 全部の画素の NDVI（雲の近くの観測の「参考の値」に使う）と、雲から遠い画素だけの NDVIf
+        return img.select("NDVI").addBands(img.select("NDVI").updateMask(far).rename("NDVIf"))
 
     def images(self, bbox, start, end, src="s2"):
         """期間内の画像の一覧 [{id, t(ミリ秒), geom(写っている範囲 GeoJSON)}]。毎日の更新で新しい画像を探すのに使う"""
@@ -126,23 +174,32 @@ class GEEBackend:
         ts = with_retry(lambda: self._col(bbox, start, end, src).aggregate_array("system:time_start").getInfo())
         return sorted({dt.datetime.fromtimestamp(t / 1000, dt.timezone.utc).strftime("%Y-%m-%d") for t in ts})
 
-    def stats(self, bbox, inner_fc_geojson, dates, src="s2"):
-        """dates（同日は1枚に合成）ごとの区画平均（レーダーは中央値）→ {date: {pid: [値, count]}}"""
+    def stats(self, bbox, inner_fc_geojson, dates, src="s2", near=None):
+        """dates（同日は1枚に合成）ごとの区画平均（レーダーは中央値）→ {date: {pid: [値, count]}}。
+        near: 雲の近く・cs の判定を足すか。None なら config で決める（田の NDVI。trend.py の過去の推移は False で呼ぶ＝方式を変えない）"""
         ee = self.ee
         fc = ee.FeatureCollection(inner_fc_geojson)
         scale = SOURCES[src]["scale"]
-        col = self._col(bbox, dates[0], (dt.date.fromisoformat(dates[-1]) + dt.timedelta(days=1)).isoformat(), src)
-        imgs = [self.day(col, d).set("date", d) for d in dates]
+        if near is None:
+            near = src == "s2" and (near_m(self.cfg) > 0 or cs_min(self.cfg) > 0)
+        col = self._col(bbox, dates[0], (dt.date.fromisoformat(dates[-1]) + dt.timedelta(days=1)).isoformat(), src, near)
+        imgs = [self.day(col, d, near, utm_epsg(bbox)).set("date", d) for d in dates]
         daily = ee.ImageCollection(imgs)
         stat = "median" if src == "s1" else "mean"
         reducer = (ee.Reducer.median() if src == "s1" else ee.Reducer.mean()).combine(ee.Reducer.count(), "", True)
         def per_img(img):
             return img.reduceRegions(collection=fc, reducer=reducer, scale=scale).map(lambda f: f.set("date", img.get("date")))
-        table = daily.map(per_img).flatten().filter(ee.Filter.notNull([stat]))
-        res = with_retry(lambda: table.select(["pid", "date", stat, "count"], None, False).getInfo())
+        # near のときは 2 バンド（NDVI・NDVIf）なので、列の名前に バンド名_ がつく
+        cols = ["NDVI_mean", "NDVI_count", "NDVIf_mean", "NDVIf_count"] if near else [stat, "count"]
+        table = daily.map(per_img).flatten().filter(ee.Filter.notNull([cols[0]]))
+        res = with_retry(lambda: table.select(["pid", "date"] + cols, None, False).getInfo())
         out = {d: {} for d in dates}
         for f in res["features"]:
             p = f["properties"]
+            if near:   # [雲から遠い画素の値, その数, 全部の画素の値, その数]（遠い画素がないときは値 None・数 0）
+                fv = p.get("NDVIf_mean")
+                out[p["date"]][p["pid"]] = [None if fv is None else round(float(fv), 3), int(p.get("NDVIf_count") or 0), round(float(p["NDVI_mean"]), 3), int(p["NDVI_count"])]
+                continue
             # レーダーの線形の値は 0.001〜0.02 ほどなので、小数3桁に丸めると dB が −20.0/−20.5/−21.0… のとびとびになる。桁を残す
             out[p["date"]][p["pid"]] = [round(float(p[stat]), 7 if src == "s1" else 3), int(p["count"])]
         return out
@@ -163,7 +220,7 @@ class FakeBackend:
     def images(self, bbox, start, end, src="s2"):          # 写っている範囲は県全体とみなす（geom なし）
         return [{"id": i, "t": int(dt.datetime.fromisoformat(d + "T01:30:00+00:00").timestamp() * 1000), "geom": None}
                 for d, ids in self.imgs.get(src, {}).items() if start <= d < end for i in sorted(ids)]
-    def stats(self, bbox, inner_fc_geojson, dates, src="s2"):
+    def stats(self, bbox, inner_fc_geojson, dates, src="s2", near=None):
         pids = {f["properties"]["pid"] for f in inner_fc_geojson["features"]}
         out = {}
         for d in dates:
@@ -206,15 +263,27 @@ def in_window(cfg, d):
 
 def cell_state(cfg, cdir):
     """(書き込み先, ndvi データ, 並べ替えキー)。方式が変わったセルは ndvi_next.json に計算し直す。"""
-    mid = mask_id(cfg)
+    mid = s2_mask_id(cfg)
     cur = read_json(os.path.join(cdir, "ndvi.json"))
     if cur and cur.get("v") == 2 and cur.get("mask") == mid:
         fname, nd = "ndvi.json", cur
+        nxt_p = os.path.join(cdir, "ndvi_next.json")        # 設定を戻したときなどに残った、途中の計算は捨てる
+        if os.path.exists(nxt_p):
+            os.remove(nxt_p)
     else:
         nxt = read_json(os.path.join(cdir, "ndvi_next.json"))
         if not (nxt and nxt.get("v") == 2 and nxt.get("mask") == mid):
             nxt = {"v": 2, "mask": mid, "dates": [], "p": {}}
+            # Sentinel-2 の方式だけが変わったときは、Landsat・レーダーは今のものを引き継ぐ（方式が同じなら計算し直さない）
+            if cur and cur.get("v") == 2:
+                if cur.get("lmask") == LANDSAT_MASK:
+                    nxt.update({k: cur[k] for k in ("lmask", "ldates", "lp") if k in cur})
+                if cur.get("rmask") == RADAR_MASK:
+                    nxt.update({k: cur[k] for k in ("rmask", "rdates", "rp") if k in cur})
         fname, nd = "ndvi_next.json", nxt
+    for k, kd, kp in (("lmask", "ldates", "lp"), ("rmask", "rdates", "rp")):   # 壊れたファイル（方式だけあって中身がない）に備える
+        if k in nd:
+            nd.setdefault(kd, []); nd.setdefault(kp, {})
     lfresh = "ls" in sources(cfg) and nd.get("lmask") != LANDSAT_MASK
     if lfresh:                                   # Landsat は初回・方式変更時に全期間を計算
         nd.update({"lmask": LANDSAT_MASK, "ldates": [], "lp": {}})
@@ -257,9 +326,10 @@ def drop_dates(nd, src, drop):
     return len(drop)
 
 
-def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_default, end, only_dates=None):
+def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_default, end, only_dates=None, near=None, deadline=None):
     """1つの観測元について、まだ計算していない観測日を足す。足した日数を返す。
-    only_dates を渡すと（毎日の更新）、観測日を調べ直さずにその日だけ計算する。"""
+    only_dates を渡すと（毎日の更新）、観測日を調べ直さずにその日だけ計算する。
+    near: 雲の近くの判定（None なら config）。deadline（time.time() の値）を過ぎたら、途中でやめる（ここまでの分は保存済み。残りは次回）"""
     S = SOURCES[src]; kd, kp = S["dates"], S["p"]
     min_px = cfg.get("landsat_min_pixels", 2) if src == "ls" else 1
     if src == "ls":                              # 30m画素が十分入る区画だけ計算する
@@ -276,19 +346,32 @@ def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_d
         start = max(start_default, min(nxt, back))
     cand = sorted(d for d in only_dates if start_default <= d < end) if only_dates is not None else backend.list_dates(cell["bbox"], start, end, src)
     dates = [d for d in cand if d not in have and (src != "s1" or in_window(cfg, d))]
-    added = 0
+    added = 0; timed_out = False
     per_call = max(1, MAX_FEATURES_PER_CALL // max(1, len(pids)))
     for i in range(0, len(dates), per_call):
+        if deadline and time.time() > deadline:
+            timed_out = True
+            break
         chunk = dates[i:i + per_call]
-        res = backend.stats(cell["bbox"], inner, chunk, src)
+        res = backend.stats(cell["bbox"], inner, chunk, src, near)
         for d in chunk:
             di = len(nd[kd]); nd[kd].append(d)
             for pid in pids:
                 v = res.get(d, {}).get(pid)
-                if not v or v[1] < min_px:
+                if not v:
                     continue
-                f = (full.get(pid) or 0) / S["div"] or v[1] or 1
-                pct = int(100 * min(1.0, v[1] / f) + 1e-6)   # 切り捨て（しきい値の判定を従来と同じにする）
+                f = (full.get(pid) or 0) / S["div"] or (v[3] if len(v) == 4 else v[1]) or 1
+                pct_of = lambda n: int(100 * min(1.0, n / f) + 1e-6)   # 切り捨て（しきい値の判定を従来と同じにする）
+                if len(v) == 4:   # 雲の近くの判定つき: [遠い画素の値, 数, 全部の値, 数]
+                    pf, pa = pct_of(v[1]), pct_of(v[3])
+                    if v[0] is not None and pf >= MIN_PCT:          # 雲から遠い画素が十分ある: その平均を使う
+                        nd[kp].setdefault(pid, []).extend([di, round(v[0] * 1000), pf])
+                    elif v[3] >= min_px and pa >= MIN_PCT:           # 雲の近く: 全部の画素の平均を「参考」として残す（有効画素率を負の数に。画面は薄い灰色で出し、計算には使わない）
+                        nd[kp].setdefault(pid, []).extend([di, round(v[2] * 1000), -pa])
+                    continue
+                if v[1] < min_px:
+                    continue
+                pct = pct_of(v[1])
                 if pct >= MIN_PCT:
                     val = 10 * math.log10(max(v[0], 1e-6)) if src == "s1" else v[0]   # レーダーは dB
                     nd[kp].setdefault(pid, []).extend([di, round(val * 1000), pct])
@@ -296,10 +379,10 @@ def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_d
         sort_dates(nd, src)
         # 途中で落ちても進捗を失わないよう都度保存
         write_json(os.path.join(cdir, fname), nd)
-    return added
+    return added, timed_out
 
 
-def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=None, targeted=False):
+def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=None, targeted=False, deadline=None):
     """plan = {src: {"dates": 新しい画像がある日, "redo": 計算し直す日}}。
     targeted（毎日の更新）なら plan の日だけ計算する。そうでなければ観測日を調べて足りない日をすべて計算する。"""
     cid = cell["id"]; cdir = os.path.join(data_dir, "cells", cid)
@@ -309,10 +392,15 @@ def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=Non
     fname, nd, key = cell_state(cfg, cdir)
     if key.startswith(" "):
         targeted = False                        # 計算し直し中のセルは全部調べる
+    if fname == "ndvi_next.json":               # 方式を変えて計算し直すときは、今のファイルの最初の日まで遡る（古い日が消えないように）
+        cur = read_json(os.path.join(cdir, "ndvi.json"))
+        if cur and cur.get("dates"):
+            start_default = min(start_default, cur["dates"][0])
     plan = plan or {}
     redone = 0
     full = load_full(cdir)
     got = {}
+    timed_out = False
     for src in sources(cfg):
         if targeted and src not in plan:
             continue
@@ -320,10 +408,13 @@ def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=Non
         # （計算が失敗したら保存されないので、前の値が残る）
         if SOURCES[src]["dates"] in nd:
             redone += drop_dates(nd, src, plan.get(src, {}).get("redo", ()))
-        got[src] = update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_default, end,
-                                 only_dates=sorted(plan[src]["dates"]) if targeted else None)
+        got[src], to = update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_default, end,
+                                     only_dates=sorted(plan[src]["dates"]) if targeted else None, deadline=deadline)
+        timed_out = timed_out or to
     added = sum(got.values())
     npar = len(inner["features"])
+    if fname == "ndvi_next.json" and timed_out:   # 計算し直しの途中で時間切れ: 入れ替えず、次回に続ける（ここまでの分は ndvi_next.json に保存済み。main が「エラー」として次回に持ち越す）
+        raise RuntimeError(f"計算し直しの途中で時間切れ（{len(nd['dates'])}日まで）。次回に続けます")
     if fname == "ndvi_next.json":              # 最新まで追いついたので入れ替える
         write_json(os.path.join(cdir, "ndvi.json"), nd)
         if os.path.exists(os.path.join(cdir, "ndvi_next.json")):
@@ -396,7 +487,7 @@ def main():
             while pending and len(futs) < args.workers and (time.time() - t0) < args.max_minutes * 60:
                 c = pending.pop(0)
                 futs[ex.submit(process_cell, backend, cfg, data_dir, c, start_default, end, log,
-                               plans.get(c["id"]), not full and c["id"] not in redo_full)] = c["id"]
+                               plans.get(c["id"]), not full and c["id"] not in redo_full, t0 + args.max_minutes * 60)] = c["id"]
             if not futs:
                 break
             for f in as_completed(list(futs)):
