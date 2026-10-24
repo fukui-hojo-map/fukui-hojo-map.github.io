@@ -24,8 +24,8 @@ def parse_cells(spec):
         out += [f"{x}_{y}" for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]
     return out
 
-def load_fields(data, cells, keep):
-    """稲（2025 か 2026 に確信度80以上）の田と、keep の田。[(pid, geometry, rice25, rice26)]"""
+def load_fields(data, cells, keep, only=None):
+    """稲（2025 か 2026 に確信度80以上）の田と、keep の田。[(pid, geometry, rice25, rice26)]。only（セル→田の集合）があれば、その田だけ"""
     feats, bbox = [], [999, 999, -999, -999]
     for c in cells:
         fi, fc = os.path.join(data, "cells", c, "inner.geojson"), os.path.join(data, "cells", c, "crop_s.json")
@@ -35,7 +35,9 @@ def load_fields(data, cells, keep):
             pid = f["properties"]["pid"]; v = cs["p"].get(pid)
             r = lambda y: bool(v) and y in yrs and v[yrs.index(y)][0] == "稲" and v[yrs.index(y)][1] >= 80
             r25, r26 = r(2025), r(2026)
-            if not (r25 or r26 or pid in keep): continue
+            if only is not None:
+                if pid not in only.get(c, ()): continue
+            elif not (r25 or r26 or pid in keep): continue
             feats.append((pid, f["geometry"], r25, r26))
             for x, y in _coords(f["geometry"]):
                 bbox = [min(bbox[0], x), min(bbox[1], y), max(bbox[2], x), max(bbox[3], y)]
@@ -91,13 +93,14 @@ def s2_stack(ee, d, region):
     f1k = frac(cloud, 30).reduceNeighborhood(ee.Reducer.mean(), ee.Kernel.circle(1000, "meters")).reproject(proj.atScale(30)).rename("f1k")
     f3k = frac(cloud, 90).reduceNeighborhood(ee.Reducer.mean(), ee.Kernel.circle(3000, "meters")).reproject(proj.atScale(90)).rename("f3k")
     one = img.select("B4").gte(-1e9).rename("one")
-    stack = (one.addBands(ndvi.updateMask(ok0).rename("ndvi0")).addBands(refl.updateMask(ok0))
+    b10 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED").filterBounds(region).filterDate(d0, d1).mosaic().select("B10").multiply(1e-4).rename("b10")
+    stack = (one.addBands(ndvi.updateMask(ok0).rename("ndvi0")).addBands(refl.updateMask(ok0)).addBands(b10)
              .addBands(cs.rename("cs")).addBands(cdf.rename("cdf")).addBands(img.select("AOT").multiply(0.001).rename("aot"))
              .addBands(dist(cloud).rename("dc")).addBands(dist(cloud_scl).rename("dcs")).addBands(dist(shadow).rename("ds"))
              .addBands(f1k).addBands(f3k))
     return stack, img, ndvi.updateMask(ok0), dist(cloud)
 
-S2_COLS = ["pid", "n_all", "n0", "ndvi0", "b2", "b3", "b4", "b8", "b11", "cs", "cdf", "aot", "dc", "dcs", "ds", "f1k", "f3k"]
+S2_COLS = ["pid", "n_all", "n0", "ndvi0", "b2", "b3", "b4", "b8", "b11", "cs", "cdf", "aot", "dc", "dcs", "ds", "f1k", "f3k", "b10"]
 
 def s2_rows(ee, d, region, fc):
     stack, *_ = s2_stack(ee, d, region)
@@ -204,10 +207,20 @@ def main():
     ap.add_argument("--deadline", type=float, default=0); ap.add_argument("--parts", default="s2,s30,l30,modis,img")
     ap.add_argument("--img-box", default="136.235,36.035,136.32,36.09"); ap.add_argument("--img-s2", default="2026-07-08,2026-07-18,2026-07-23,2026-08-04,2026-08-07")
     ap.add_argument("--img-l30", default="2026-07-08,2026-07-24")
+    ap.add_argument("--pids-file", default="", help="「セルID,田のID」の行の一覧。あれば、その田だけ（--cells は不要）")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     ee = init_ee(); parts = set(a.parts.split(","))
-    cells = parse_cells(a.cells)
-    feats, bbox = load_fields(a.data, cells, set(a.keep.split(",")))
+    only = None
+    if a.pids_file:
+        only = {}
+        for ln in open(a.pids_file, encoding="utf-8"):
+            ln = ln.strip()
+            if ln and "," in ln:
+                c, p = ln.split(",", 1); only.setdefault(c, set()).add(p)
+        cells = sorted(only)
+    else:
+        cells = parse_cells(a.cells)
+    feats, bbox = load_fields(a.data, cells, set(a.keep.split(",")), only)
     print(f"セル {len(cells)}、田 {len(feats)}、範囲 {bbox}", flush=True)
     cur = {"cells": cells, "fields": [[p, r25, r26] for p, _, r25, r26 in feats], "bbox": bbox}
     fpath = os.path.join(a.out, "fields.json"); old = None

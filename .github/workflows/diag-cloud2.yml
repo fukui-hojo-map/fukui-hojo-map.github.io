@@ -1,0 +1,51 @@
+# T19 診断（探索）: 積雲の近くの圃場で Sentinel-2 の NDVI が下がるか。結果は diag-cloud2-out ブランチに置く（公開サイトには出さない）。
+# diag-s2 ブランチに、このファイル・pipeline/diag_cloud.py・.github/diag-cloud2-args.txt を push したときだけ動く。時間切れのときは、次の push で続きから
+name: diag-cloud2
+on:
+  push:
+    branches: [diag-s2]
+    paths: ['.github/workflows/diag-cloud2.yml', 'pipeline/diag_cloud.py', '.github/diag-cloud2-args.txt']
+permissions:
+  contents: write
+concurrency:
+  group: diag-cloud2
+  cancel-in-progress: false
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - id: t0
+        run: echo "t0=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: published
+          sparse-checkout: |
+            data/cells/*/inner.geojson
+            data/cells/*/crop_s.json
+          sparse-checkout-cone-mode: false
+      - name: 前回の結果（あれば、続きから）
+        run: |
+          if git ls-remote --exit-code --heads origin diag-cloud2-out >/dev/null 2>&1; then
+            git clone -q --depth 1 --branch diag-cloud2-out "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" out && rm -rf out/.git
+          fi
+          mkdir -p out; ls out | wc -l
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q earthengine-api requests
+      - name: 診断
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: |
+          python pipeline/diag_cloud.py --data published/data --out out --deadline $(( ${{ steps.t0.outputs.t0 }} + 290 * 60 )) $(cat .github/diag-cloud2-args.txt) 2>&1 | tee -a out/log.txt
+      - name: 結果を diag-cloud2-out ブランチに置く
+        if: always()
+        run: |
+          du -sh out; ls out | wc -l
+          cd out && git init -q && git checkout -q -b diag-cloud2-out && git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add . && git commit -qm "診断の結果（雲の近くの NDVI）" && git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" diag-cloud2-out
