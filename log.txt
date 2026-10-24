@@ -1,0 +1,627 @@
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.17) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+セル 4、田 1964、範囲 [136.24989385839618, 36.040176660873065, 136.3002063607783, 36.07413074653718]
+S2 の日 2
+s30 の日 2
+済 ('s30', '2026-07-23') 1962 6s
+済 ('s30', '2026-07-08') 1962 6s
+済 ('s2', '2026-07-23') 1964 10s
+済 ('s2', '2026-07-08') 1964 12s
+画像 img_2026-07-23_s2_true.png 891167
+画像 img_2026-07-23_s2_ndvi.png 395085
+画像 img_2026-07-23_s2_dist.png 60211
+画像 img_2026-07-24_l30_true.png 182251
+画像 img_2026-07-24_l30_true2500.png 1056
+画像 img_2026-07-24_l30_ndvi.png 108762
+完了
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.17) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+セル 48、田 25976、範囲 [136.14924297776318, 35.94015846568008, 136.5754158528884, 36.22428916496006]
+S2 の日 108
+s30 の日 89
+l30 の日 53
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.17) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+セル 48、田 25976、範囲 [136.14924297776318, 35.94015846568008, 136.5754158528884, 36.22428916496006]
+S2 の日 108
+s30 の日 89
+l30 の日 53
+済 ('s2', '2025-06-06') 636 50s
+済 ('s2', '2025-06-01') 0 51s
+済 ('s2', '2025-06-11') 34 52s
+済 ('s2', '2025-06-08') 25976 75s
+済 ('s2', '2025-06-13') 25976 80s
+済 ('s2', '2025-06-03') 25976 81s
+済 ('s2', '2025-06-16') 1139 139s
+済 ('s2', '2025-06-18') 25976 149s
+済 ('s2', '2025-06-21') 387 152s
+済 ('s2', '2025-06-26') 387 167s
+済 ('s2', '2025-06-20') 25976 186s
+済 ('s2', '2025-06-23') 25976 214s
+済 ('s2', '2025-07-01') 0 238s
+済 ('s2', '2025-06-28') 25976 249s
+済 ('s2', '2025-07-06') 141 252s
+済 ('s2', '2025-07-03') 25976 286s
+済 ('s2', '2025-07-08') 25976 304s
+済 ('s2', '2025-07-11') 0 323s
+済 ('s2', '2025-07-10') 25976 335s
+済 ('s2', '2025-07-16') 211 337s
+済 ('s2', '2025-07-13') 25976 364s
+済 ('s2', '2025-07-21') 0 393s
+済 ('s2', '2025-07-26') 760 415s
+済 ('s2', '2025-07-18') 25976 416s
+済 ('s2', '2025-07-28') 25976 457s
+済 ('s2', '2025-07-23') 25976 465s
+済 ('s2', '2025-07-30') 25976 468s
+済 ('s2', '2025-07-31') 0 492s
+済 ('s2', '2025-08-05') 899 506s
+済 ('s2', '2025-08-15') 307 559s
+済 ('s2', '2025-08-02') 25976 573s
+済 ('s2', '2025-08-07') 25976 590s
+済 ('s2', '2025-08-12') 25976 599s
+済 ('s2', '2025-08-19') 6720 620s
+済 ('s2', '2025-08-17') 25976 644s
+済 ('s2', '2025-08-20') 4 649s
+済 ('s2', '2025-08-25') 255 699s
+済 ('s2', '2025-08-30') 0 707s
+済 ('s2', '2025-08-22') 25976 730s
+済 ('s2', '2025-08-27') 25976 733s
+済 ('s2', '2025-09-04') 617 739s
+済 ('s2', '2025-09-01') 25976 800s
+済 ('s2', '2025-09-14') 369 822s
+済 ('s2', '2025-09-06') 25976 826s
+済 ('s2', '2025-09-08') 25976 834s
+済 ('s2', '2025-09-16') 25976 881s
+済 ('s2', '2025-09-19') 658 889s
+済 ('s2', '2025-09-11') 25976 891s
+済 ('s2', '2025-09-24') 416 911s
+済 ('s2', '2025-09-26') 25976 966s
+済 ('s2', '2025-09-29') 5 968s
+済 ('s2', '2026-06-01') 1286 978s
+済 ('s2', '2025-09-21') 25976 981s
+済 ('s2', '2025-09-28') 25976 1004s
+済 ('s2', '2026-06-03') 25976 1044s
+済 ('s2', '2026-06-06') 282 1064s
+済 ('s2', '2026-06-11') 641 1079s
+済 ('s2', '2026-06-05') 25976 1086s
+済 ('s2', '2026-06-08') 25976 1100s
+済 ('s2', '2026-06-13') 25976 1125s
+済 ('s2', '2026-06-16') 212 1141s
+済 ('s2', '2026-06-21') 627 1168s
+済 ('s2', '2026-06-18') 25976 1179s
+済 ('s2', '2026-06-25') 25976 1211s
+済 ('s2', '2026-06-26') 500 1217s
+済 ('s2', '2026-07-08') あり 1217s
+済 ('s2', '2026-06-23') 25976 1218s
+済 ('s2', '2026-07-01') 1319 1237s
+済 ('s2', '2026-06-28') 25976 1260s
+済 ('s2', '2026-07-06') 513 1284s
+済 ('s2', '2026-07-11') 699 1287s
+済 ('s2', '2026-07-03') 25976 1288s
+済 ('s2', '2026-07-23') あり 1288s
+済 ('s2', '2026-07-13') 25976 1311s
+済 ('s2', '2026-07-16') 154 1330s
+済 ('s2', '2026-07-15') 25976 1333s
+済 ('s2', '2026-07-26') 42 1358s
+済 ('s2', '2026-07-21') 303 1362s
+済 ('s2', '2026-07-31') 308 1401s
+済 ('s2', '2026-07-18') 25976 1406s
+済 ('s2', '2026-07-28') 25976 1421s
+済 ('s2', '2026-08-05') 115 1427s
+済 ('s2', '2026-08-02') 25976 1432s
+済 ('s2', '2026-08-04') 25976 1446s
+済 ('s2', '2026-08-10') 641 1477s
+済 ('s2', '2026-08-07') 25976 1492s
+済 ('s2', '2026-08-15') 526 1506s
+済 ('s2', '2026-08-12') 25976 1517s
+済 ('s2', '2026-08-20') 1379 1524s
+済 ('s2', '2026-08-17') 25976 1537s
+済 ('s2', '2026-08-22') 25976 1573s
+済 ('s2', '2026-08-25') 528 1582s
+済 ('s2', '2026-08-24') 25976 1590s
+済 ('s2', '2026-08-30') 631 1594s
+済 ('s2', '2026-08-27') 25976 1613s
+済 ('s2', '2026-09-01') 25976 1638s
+済 ('s2', '2026-09-04') 77 1644s
+済 ('s2', '2026-09-09') 236 1662s
+済 ('s2', '2026-09-11') 25976 1679s
+済 ('s2', '2026-09-06') 25976 1680s
+済 ('s2', '2026-09-13') 25976 1706s
+済 ('s2', '2026-09-14') 192 1719s
+済 ('s2', '2026-09-19') 240 1730s
+済 ('s2', '2026-09-16') 25976 1737s
+済 ('s2', '2026-09-24') 17 1744s
+済 ('s2', '2026-09-21') 25976 1761s
+済 ('s30', '2025-06-01') 0 1768s
+済 ('s30', '2025-06-08') 25964 1776s
+済 ('s30', '2025-06-13') 25964 1783s
+済 ('s2', '2026-09-29') 184 1786s
+済 ('s2', '2026-09-26') 25976 1799s
+済 ('s30', '2025-06-16') 1098 1800s
+済 ('s30', '2025-06-18') 25964 1804s
+済 ('s30', '2025-06-20') 25964 1818s
+済 ('s30', '2025-06-21') 371 1819s
+済 ('s30', '2025-06-26') 362 1826s
+済 ('s30', '2025-07-01') 0 1837s
+済 ('s30', '2025-06-28') 25964 1843s
+済 ('s30', '2025-07-03') 25964 1846s
+済 ('s30', '2025-07-06') 120 1858s
+済 ('s30', '2025-07-08') 25964 1859s
+済 ('s30', '2025-07-10') 25964 1866s
+済 ('s30', '2025-07-11') 0 1874s
+済 ('s30', '2025-07-13') 25964 1883s
+済 ('s30', '2025-07-16') 200 1883s
+済 ('s30', '2025-07-21') 0 1897s
+済 ('s30', '2025-07-18') 25964 1902s
+済 ('s30', '2025-07-23') 25964 1911s
+済 ('s30', '2025-07-26') 717 1913s
+済 ('s30', '2025-07-28') 6719 1922s
+済 ('s30', '2025-07-30') 25964 1925s
+済 ('s30', '2025-07-31') 0 1935s
+済 ('s30', '2025-08-02') 25961 1942s
+済 ('s30', '2025-08-07') 12638 1950s
+済 ('s30', '2025-08-05') 854 1952s
+済 ('s30', '2025-08-15') 282 1962s
+済 ('s30', '2025-08-17') 25964 1966s
+済 ('s30', '2025-08-19') 25964 1977s
+済 ('s30', '2025-08-20') 3 1983s
+済 ('s30', '2025-08-22') 25964 1991s
+済 ('s30', '2025-08-25') 234 1992s
+済 ('s30', '2025-08-27') 6719 1999s
+済 ('s30', '2025-08-30') 0 2004s
+済 ('s30', '2025-09-04') 589 2020s
+済 ('s30', '2025-09-01') 25964 2024s
+済 ('s30', '2025-09-08') 0 2029s
+済 ('s30', '2025-09-06') 25964 2032s
+済 ('s30', '2025-09-11') 12638 2038s
+済 ('s30', '2025-09-16') 25964 2047s
+済 ('s30', '2025-09-19') 636 2061s
+済 ('s30', '2025-09-21') 25964 2063s
+済 ('s30', '2025-09-24') 394 2069s
+済 ('s30', '2025-09-26') 25964 2075s
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/ee/data.py:335: UserWarning: Your project has exceeded its noncommercial compute quota and is now in restricted mode. Visit https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode to learn more.
+  warnings.warn(
+済 ('s30', '2025-09-28') 25964 2082s
+済 ('s30', '2025-09-29') 3 2085s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-05 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-01 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-11 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-06 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-05 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-01 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-06 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-01') 0 2200s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-05 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-06') 270 2225s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-13 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-13') 25964 2240s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-18 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-08 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-05') 12638 2263s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-11 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-08') 16336 2273s
+済 ('s30', '2026-06-11') 617 2276s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-21 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-23') 12638 2309s
+済 ('s30', '2026-07-08') あり 2309s
+やり直し hls NASA/HLS/HLSS30/v002 2026-06-18 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-06-21') 596 2328s
+済 ('s30', '2026-07-03') 25964 2338s
+済 ('s30', '2026-06-18') 25964 2349s
+済 ('s30', '2026-06-28') 851 2360s
+済 ('s30', '2026-07-06') 501 2371s
+済 ('s30', '2026-07-23') あり 2371s
+済 ('s30', '2026-07-13') 6719 2383s
+済 ('s30', '2026-07-15') 25964 2386s
+済 ('s30', '2026-07-21') 284 2418s
+済 ('s30', '2026-07-11') 674 2425s
+済 ('s30', '2026-07-18') 25964 2428s
+済 ('s30', '2026-07-26') 35 2437s
+やり直し hls NASA/HLS/HLSS30/v002 2026-07-28 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSS30/v002 2026-08-02 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-07-31') 288 2463s
+済 ('s30', '2026-08-04') 25964 2479s
+済 ('s30', '2026-08-05') 102 2480s
+済 ('s30', '2026-08-07') 12638 2504s
+済 ('s30', '2026-08-10') 612 2512s
+済 ('s30', '2026-08-02') 25964 2517s
+済 ('s30', '2026-08-15') 522 2561s
+済 ('s30', '2026-08-12') 25964 2564s
+済 ('s30', '2026-07-28') 0 2570s
+済 ('s30', '2026-08-22') 25964 2596s
+済 ('s30', '2026-08-20') 1339 2600s
+済 ('s30', '2026-08-24') 25964 2605s
+済 ('s30', '2026-08-17') 17143 2608s
+済 ('s30', '2026-08-30') 608 2642s
+やり直し hls NASA/HLS/HLSS30/v002 2026-09-06 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-09-01') 25964 2658s
+済 ('s30', '2026-09-13') 25964 2660s
+やり直し hls NASA/HLS/HLSS30/v002 2026-08-25 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('s30', '2026-08-25') 521 2678s
+済 ('s30', '2026-09-11') 6719 2695s
+済 ('s30', '2026-09-19') 223 2700s
+済 ('s30', '2026-09-06') 12638 2701s
+済 ('s30', '2026-09-21') 12638 2715s
+やり直し hls NASA/HLS/HLSS30/v002 2026-09-24 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+やり直し hls NASA/HLS/HLSL30/v002 2025-06-19 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('l30', '2025-06-04') 25964 2763s
+済 ('l30', '2025-06-19') 19101 2776s
+済 ('l30', '2025-06-20') 25964 2784s
+やり直し hls NASA/HLS/HLSL30/v002 2025-06-12 Too Many Requests: Exceeded Earth Engine concurrency limit. Your project is in Restricted Mode. Learn more at https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode
+済 ('l30', '2025-06-12') 25964 2804s
+済 ('l30', '2025-06-28') 25964 2808s
+済 ('s30', '2026-09-24') 11 2817s
+済 ('l30', '2025-07-05') 20932 2844s
+済 ('l30', '2025-07-06') 25964 2858s
+済 ('l30', '2025-07-14') 25964 2859s
+済 ('l30', '2025-07-13') 23342 2864s
+済 ('l30', '2025-07-21') 21098 2879s
+済 ('l30', '2025-06-27') 20242 2884s
+済 ('l30', '2025-07-22') 25955 2896s
+済 ('l30', '2025-07-29') 23245 2902s
+済 ('l30', '2025-07-30') 25964 2904s
+済 ('l30', '2025-08-14') 20043 2923s
+済 ('l30', '2025-08-06') 21348 2927s
+済 ('l30', '2025-08-15') 25957 2933s
+済 ('l30', '2025-08-22') 21460 2947s
+済 ('l30', '2025-08-30') 21599 2951s
+済 ('l30', '2025-08-23') 23045 2962s
+済 ('l30', '2025-09-07') 20612 2972s
+済 ('l30', '2025-08-31') 25964 2979s
+済 ('l30', '2025-09-08') 25964 2986s
+済 ('l30', '2025-09-15') 20456 3006s
+済 ('l30', '2025-09-16') 25964 3006s
+済 ('l30', '2025-09-24') 25961 3012s
+済 ('l30', '2026-06-06') 21059 3024s
+済 ('l30', '2026-06-07') 25964 3025s
+済 ('l30', '2026-06-14') 21858 3035s
+済 ('l30', '2026-06-30') 20347 3049s
+済 ('l30', '2026-06-23') 25964 3061s
+済 ('l30', '2026-06-15') 25964 3062s
+済 ('l30', '2026-07-01') 25964 3076s
+済 ('l30', '2026-07-08') 12638 3099s
+済 ('l30', '2026-07-09') 25964 3103s
+済 ('l30', '2026-07-16') 20940 3106s
+済 ('l30', '2026-07-24') 21205 3110s
+済 ('l30', '2026-07-25') 25959 3116s
+済 ('l30', '2026-07-17') 25963 3120s
+済 ('l30', '2026-08-01') 18830 3143s
+済 ('l30', '2026-08-02') 25964 3145s
+済 ('l30', '2026-08-10') 25934 3155s
+済 ('l30', '2026-08-18') 25964 3176s
+済 ('l30', '2026-08-09') 21814 3180s
+済 ('l30', '2026-08-17') 22230 3181s
+済 ('l30', '2026-08-26') 25964 3194s
+済 ('l30', '2026-09-02') 21423 3203s
+済 ('l30', '2026-08-25') 21109 3217s
+済 ('l30', '2026-09-11') 25964 3220s
+済 ('l30', '2026-09-10') 23898 3220s
+済 ('l30', '2026-09-18') 22425 3228s
+済 ('l30', '2026-09-19') 25935 3235s
+済 ('l30', '2026-09-27') 25964 3241s
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+MODIS 失敗 Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+MODIS 失敗 Image.reduceRegion: Object too large (170298016 bytes).
+MODIS 0
+画像 img_2026-07-08_s2_true.png 1099528
+画像 img_2026-07-08_s2_ndvi.png 517260
+画像 img_2026-07-08_s2_dist.png 2539
+画像 img_2026-07-18_s2_true.png 969621
+画像 img_2026-07-18_s2_ndvi.png 347421
+画像 img_2026-07-18_s2_dist.png 70026
+画像 img_2026-07-23_s2_true.png 891167
+画像 img_2026-07-23_s2_ndvi.png 395085
+画像 img_2026-07-23_s2_dist.png 60211
+画像 img_2026-08-04_s2_true.png 1084399
+画像 img_2026-08-04_s2_ndvi.png 444222
+画像 img_2026-08-04_s2_dist.png 84584
+画像 img_2026-08-07_s2_true.png 1045847
+画像 img_2026-08-07_s2_ndvi.png 358472
+画像 img_2026-08-07_s2_dist.png 70480
+画像 img_2026-07-08_l30_true.png 144378
+画像 img_2026-07-08_l30_true2500.png 2225
+画像 img_2026-07-08_l30_ndvi.png 77277
+画像 img_2026-07-24_l30_true.png 182251
+画像 img_2026-07-24_l30_true2500.png 1056
+画像 img_2026-07-24_l30_ndvi.png 108762
+完了
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/google/api_core/_python_version_support.py:254: FutureWarning: You are using a Python version (3.11.17) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2027-10-24). Please upgrade to the latest Python version, or at least Python 3.12, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/ee/data.py:335: UserWarning: Your project has exceeded its noncommercial compute quota and is now in restricted mode. Visit https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode to learn more.
+  warnings.warn(
+セル 48、田 25976、範囲 [136.14924297776318, 35.94015846568008, 136.5754158528884, 36.22428916496006]
+/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/ee/data.py:335: UserWarning: Your project has exceeded its noncommercial compute quota and is now in restricted mode. Visit https://developers.google.com/earth-engine/guides/noncommercial_tiers#restricted_mode to learn more.
+  warnings.warn(
+S2 の日 108
+s30 の日 89
+l30 の日 53
+済 ('s2', '2025-06-16') あり 0s
+済 ('s2', '2025-07-06') あり 0s
+済 ('s2', '2025-06-21') あり 0s
+済 ('s2', '2025-06-20') あり 0s
+済 ('s2', '2025-06-11') あり 0s
+済 ('s2', '2025-06-08') あり 0s
+済 ('s2', '2025-06-06') あり 0s
+済 ('s2', '2025-06-18') あり 0s
+済 ('s2', '2025-07-03') あり 0s
+済 ('s2', '2025-06-13') あり 0s
+済 ('s2', '2025-06-01') あり 0s
+済 ('s2', '2025-07-01') あり 0s
+済 ('s2', '2025-06-03') あり 0s
+済 ('s2', '2025-07-11') あり 0s
+済 ('s2', '2025-06-28') あり 0s
+済 ('s2', '2025-07-10') あり 0s
+済 ('s2', '2025-06-26') あり 0s
+済 ('s2', '2025-06-23') あり 0s
+済 ('s2', '2025-07-08') あり 0s
+済 ('s2', '2025-07-13') あり 0s
+済 ('s2', '2025-07-16') あり 0s
+済 ('s2', '2025-07-18') あり 0s
+済 ('s2', '2025-07-21') あり 0s
+済 ('s2', '2025-07-23') あり 0s
+済 ('s2', '2025-07-26') あり 0s
+済 ('s2', '2025-07-28') あり 0s
+済 ('s2', '2025-07-30') あり 0s
+済 ('s2', '2025-07-31') あり 0s
+済 ('s2', '2025-08-02') あり 0s
+済 ('s2', '2025-08-05') あり 0s
+済 ('s2', '2025-08-07') あり 0s
+済 ('s2', '2025-08-12') あり 0s
+済 ('s2', '2025-08-15') あり 0s
+済 ('s2', '2025-08-17') あり 0s
+済 ('s2', '2025-08-19') あり 0s
+済 ('s2', '2025-08-20') あり 0s
+済 ('s2', '2025-08-22') あり 0s
+済 ('s2', '2025-08-25') あり 0s
+済 ('s2', '2025-08-27') あり 0s
+済 ('s2', '2025-08-30') あり 0s
+済 ('s2', '2025-09-01') あり 0s
+済 ('s2', '2025-09-04') あり 0s
+済 ('s2', '2025-09-06') あり 0s
+済 ('s2', '2025-09-08') あり 0s
+済 ('s2', '2025-09-11') あり 0s
+済 ('s2', '2025-09-14') あり 0s
+済 ('s2', '2025-09-16') あり 0s
+済 ('s2', '2025-09-19') あり 0s
+済 ('s2', '2025-09-21') あり 0s
+済 ('s2', '2025-09-24') あり 0s
+済 ('s2', '2025-09-26') あり 0s
+済 ('s2', '2025-09-28') あり 0s
+済 ('s2', '2025-09-29') あり 0s
+済 ('s2', '2026-06-01') あり 0s
+済 ('s2', '2026-06-03') あり 0s
+済 ('s2', '2026-06-05') あり 0s
+済 ('s2', '2026-06-06') あり 0s
+済 ('s2', '2026-06-08') あり 0s
+済 ('s2', '2026-06-11') あり 0s
+済 ('s2', '2026-06-13') あり 0s
+済 ('s2', '2026-06-16') あり 0s
+済 ('s2', '2026-06-18') あり 0s
+済 ('s2', '2026-06-21') あり 0s
+済 ('s2', '2026-06-23') あり 0s
+済 ('s2', '2026-06-25') あり 0s
+済 ('s2', '2026-06-26') あり 0s
+済 ('s2', '2026-06-28') あり 0s
+済 ('s2', '2026-07-01') あり 0s
+済 ('s2', '2026-07-03') あり 0s
+済 ('s2', '2026-07-06') あり 0s
+済 ('s2', '2026-07-08') あり 0s
+済 ('s2', '2026-07-11') あり 0s
+済 ('s2', '2026-07-13') あり 0s
+済 ('s2', '2026-07-15') あり 0s
+済 ('s2', '2026-07-16') あり 0s
+済 ('s2', '2026-07-18') あり 0s
+済 ('s2', '2026-07-21') あり 0s
+済 ('s2', '2026-07-23') あり 0s
+済 ('s2', '2026-07-26') あり 0s
+済 ('s2', '2026-07-28') あり 0s
+済 ('s2', '2026-07-31') あり 0s
+済 ('s2', '2026-08-02') あり 0s
+済 ('s2', '2026-08-04') あり 0s
+済 ('s2', '2026-08-05') あり 0s
+済 ('s2', '2026-08-07') あり 0s
+済 ('s2', '2026-08-10') あり 0s
+済 ('s2', '2026-08-12') あり 0s
+済 ('s2', '2026-08-15') あり 0s
+済 ('s2', '2026-08-17') あり 0s
+済 ('s2', '2026-08-20') あり 0s
+済 ('s2', '2026-08-22') あり 0s
+済 ('s2', '2026-08-24') あり 0s
+済 ('s2', '2026-08-25') あり 0s
+済 ('s2', '2026-08-27') あり 0s
+済 ('s2', '2026-08-30') あり 0s
+済 ('s2', '2026-09-01') あり 0s
+済 ('s2', '2026-09-04') あり 0s
+済 ('s2', '2026-09-06') あり 0s
+済 ('s2', '2026-09-09') あり 0s
+済 ('s2', '2026-09-11') あり 0s
+済 ('s2', '2026-09-13') あり 0s
+済 ('s2', '2026-09-14') あり 0s
+済 ('s2', '2026-09-16') あり 0s
+済 ('s2', '2026-09-19') あり 0s
+済 ('s2', '2026-09-21') あり 0s
+済 ('s2', '2026-09-24') あり 0s
+済 ('s2', '2026-09-26') あり 0s
+済 ('s2', '2026-09-29') あり 0s
+済 ('s30', '2025-06-01') あり 0s
+済 ('s30', '2025-06-08') あり 0s
+済 ('s30', '2025-06-13') あり 0s
+済 ('s30', '2025-06-16') あり 0s
+済 ('s30', '2025-06-18') あり 0s
+済 ('s30', '2025-06-20') あり 0s
+済 ('s30', '2025-06-21') あり 0s
+済 ('s30', '2025-06-26') あり 0s
+済 ('s30', '2025-06-28') あり 0s
+済 ('s30', '2025-07-01') あり 0s
+済 ('s30', '2025-07-03') あり 0s
+済 ('s30', '2025-07-06') あり 0s
+済 ('s30', '2025-07-08') あり 0s
+済 ('s30', '2025-07-10') あり 0s
+済 ('s30', '2025-07-11') あり 0s
+済 ('s30', '2025-07-13') あり 0s
+済 ('s30', '2025-07-16') あり 0s
+済 ('s30', '2025-07-18') あり 0s
+済 ('s30', '2025-07-21') あり 0s
+済 ('s30', '2025-07-23') あり 0s
+済 ('s30', '2025-07-26') あり 0s
+済 ('s30', '2025-07-28') あり 0s
+済 ('s30', '2025-07-30') あり 0s
+済 ('s30', '2025-07-31') あり 0s
+済 ('s30', '2025-08-02') あり 0s
+済 ('s30', '2025-08-05') あり 0s
+済 ('s30', '2025-08-07') あり 0s
+済 ('s30', '2025-08-15') あり 0s
+済 ('s30', '2025-08-17') あり 0s
+済 ('s30', '2025-08-19') あり 0s
+済 ('s30', '2025-08-20') あり 0s
+済 ('s30', '2025-08-22') あり 0s
+済 ('s30', '2025-08-25') あり 0s
+済 ('s30', '2025-08-27') あり 0s
+済 ('s30', '2025-08-30') あり 0s
+済 ('s30', '2025-09-01') あり 0s
+済 ('s30', '2025-09-04') あり 0s
+済 ('s30', '2025-09-06') あり 0s
+済 ('s30', '2025-09-08') あり 0s
+済 ('s30', '2025-09-11') あり 0s
+済 ('s30', '2025-09-16') あり 0s
+済 ('s30', '2025-09-19') あり 0s
+済 ('s30', '2025-09-21') あり 0s
+済 ('s30', '2025-09-24') あり 0s
+済 ('s30', '2025-09-26') あり 0s
+済 ('s30', '2025-09-28') あり 0s
+済 ('s30', '2025-09-29') あり 0s
+済 ('s30', '2026-06-01') あり 0s
+済 ('s30', '2026-06-05') あり 0s
+済 ('s30', '2026-06-06') あり 0s
+済 ('s30', '2026-06-08') あり 0s
+済 ('s30', '2026-06-11') あり 0s
+済 ('s30', '2026-06-13') あり 0s
+済 ('s30', '2026-06-18') あり 0s
+済 ('s30', '2026-06-21') あり 0s
+済 ('s30', '2026-06-23') あり 0s
+済 ('s30', '2026-06-28') あり 0s
+済 ('s30', '2026-07-03') あり 0s
+済 ('s30', '2026-07-06') あり 0s
+済 ('s30', '2026-07-08') あり 0s
+済 ('s30', '2026-07-11') あり 0s
+済 ('s30', '2026-07-13') あり 0s
+済 ('s30', '2026-07-15') あり 0s
+済 ('s30', '2026-07-18') あり 0s
+済 ('s30', '2026-07-21') あり 0s
+済 ('s30', '2026-07-23') あり 0s
+済 ('s30', '2026-07-26') あり 0s
+済 ('s30', '2026-07-28') あり 0s
+済 ('s30', '2026-07-31') あり 0s
+済 ('s30', '2026-08-02') あり 0s
+済 ('s30', '2026-08-04') あり 0s
+済 ('s30', '2026-08-05') あり 0s
+済 ('s30', '2026-08-07') あり 0s
+済 ('s30', '2026-08-10') あり 0s
+済 ('s30', '2026-08-12') あり 0s
+済 ('s30', '2026-08-15') あり 0s
+済 ('s30', '2026-08-17') あり 0s
+済 ('s30', '2026-08-20') あり 0s
+済 ('s30', '2026-08-22') あり 0s
+済 ('s30', '2026-08-24') あり 0s
+済 ('s30', '2026-08-25') あり 0s
+済 ('s30', '2026-08-30') あり 0s
+済 ('s30', '2026-09-01') あり 0s
+済 ('s30', '2026-09-06') あり 0s
+済 ('s30', '2026-09-11') あり 0s
+済 ('s30', '2026-09-13') あり 0s
+済 ('s30', '2026-09-19') あり 0s
+済 ('s30', '2026-09-21') あり 0s
+済 ('s30', '2026-09-24') あり 0s
+済 ('l30', '2025-06-04') あり 0s
+済 ('l30', '2025-06-12') あり 0s
+済 ('l30', '2025-06-19') あり 0s
+済 ('l30', '2025-06-20') あり 0s
+済 ('l30', '2025-06-27') あり 0s
+済 ('l30', '2025-06-28') あり 0s
+済 ('l30', '2025-07-05') あり 0s
+済 ('l30', '2025-07-13') あり 0s
+済 ('l30', '2025-07-14') あり 0s
+済 ('l30', '2025-07-21') あり 0s
+済 ('l30', '2025-07-22') あり 0s
+済 ('l30', '2025-07-29') あり 0s
+済 ('l30', '2025-07-30') あり 0s
+済 ('l30', '2025-08-06') あり 0s
+済 ('l30', '2025-08-14') あり 0s
+済 ('l30', '2025-08-15') あり 0s
+済 ('l30', '2025-08-22') あり 0s
+済 ('l30', '2025-08-23') あり 0s
+済 ('l30', '2025-08-30') あり 0s
+済 ('l30', '2025-08-31') あり 0s
+済 ('l30', '2025-09-07') あり 0s
+済 ('l30', '2025-09-08') あり 0s
+済 ('l30', '2025-09-15') あり 0s
+済 ('l30', '2025-09-16') あり 0s
+済 ('l30', '2025-09-24') あり 0s
+済 ('l30', '2026-06-06') あり 0s
+済 ('l30', '2026-06-07') あり 0s
+済 ('l30', '2026-06-14') あり 0s
+済 ('l30', '2026-06-15') あり 0s
+済 ('l30', '2026-06-23') あり 0s
+済 ('l30', '2026-06-30') あり 0s
+済 ('l30', '2026-07-01') あり 0s
+済 ('l30', '2026-07-08') あり 0s
+済 ('l30', '2026-07-09') あり 0s
+済 ('l30', '2026-07-16') あり 0s
+済 ('l30', '2026-07-17') あり 0s
+済 ('l30', '2026-07-24') あり 0s
+済 ('l30', '2026-07-25') あり 0s
+済 ('l30', '2026-08-01') あり 0s
+済 ('l30', '2026-08-02') あり 0s
+済 ('l30', '2026-08-09') あり 0s
+済 ('l30', '2026-08-10') あり 0s
+済 ('l30', '2026-08-17') あり 0s
+済 ('l30', '2026-08-18') あり 0s
+済 ('l30', '2026-08-25') あり 0s
+済 ('l30', '2026-08-26') あり 0s
+済 ('l30', '2026-09-02') あり 0s
+済 ('l30', '2026-09-10') あり 0s
+済 ('l30', '2026-09-11') あり 0s
+済 ('l30', '2026-09-18') あり 0s
+済 ('l30', '2026-09-19') あり 0s
+済 ('l30', '2026-09-27') あり 0s
+済 ('l30', '2025-07-06') あり 0s
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+MODIS 失敗 Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+やり直し modis MOD Image.reduceRegion: Object too large (170298016 bytes).
+MODIS 失敗 Image.reduceRegion: Object too large (170298016 bytes).
+MODIS 0
+画像 img_2026-07-08_s2_true.png 1099528
+画像 img_2026-07-08_s2_ndvi.png 517260
+画像 img_2026-07-08_s2_dist.png 2539
+画像 img_2026-07-18_s2_true.png 969621
+画像 img_2026-07-18_s2_ndvi.png 347421
+画像 img_2026-07-18_s2_dist.png 70026
+画像 img_2026-07-23_s2_true.png 891167
+画像 img_2026-07-23_s2_ndvi.png 395085
+画像 img_2026-07-23_s2_dist.png 60211
+画像 img_2026-08-04_s2_true.png 1084399
+画像 img_2026-08-04_s2_ndvi.png 444222
+画像 img_2026-08-04_s2_dist.png 84584
+画像 img_2026-08-07_s2_true.png 1045847
+画像 img_2026-08-07_s2_ndvi.png 358472
+画像 img_2026-08-07_s2_dist.png 70480
+画像 img_2026-07-08_l30_true.png 144378
+画像 img_2026-07-08_l30_true2500.png 2225
+画像 img_2026-07-08_l30_ndvi.png 77277
+画像 img_2026-07-24_l30_true.png 182251
+画像 img_2026-07-24_l30_true2500.png 1056
+画像 img_2026-07-24_l30_ndvi.png 108762
+完了
