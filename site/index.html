@@ -1195,6 +1195,8 @@ let allDates=[];
 // ---------- map ----------
 const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true,maxZoom:22,doubleClickZoom:false})   // doubleClickZoom:false: 圃場を続けて素早くタップして選ぶと、ダブルタップ（＝拡大）と判定されて無駄に拡大していた（2026-10-24 の利用者の指摘）。拡大は、ピンチ・ホイール（パソコン）で   // 区画は canvas で描く（数千枚の SVG より動かしたときに軽い）.setView([36.06,136.28],15);
 map.attributionControl.setPrefix(false);   // 地図の右下の「Leaflet」（旗つき）の表示は消す（利用者の指示）。地理院タイル・地名の出典は残す（国土地理院の利用の条件）
+{ const bar=document.querySelector('.mapbar'), at=map.attributionControl.getContainer(), fit=()=>{ if(bar&&at) bar.style.bottom=(6+(at.offsetHeight||0))+'px'; };   // 右下の出典の帯に、左下の枠（日付・表示モード・凡例）が重ならないよう、帯の高さだけ枠を持ち上げる（出典の字が増えて帯が2行になっても追いかける。2026-10-24 の利用者の指摘）
+  if(window.ResizeObserver&&at) new ResizeObserver(fit).observe(at); fit(); map.on('resize',fit); }
 map.createPane('pxPane').style.zIndex=390;
 // ---------- 地図の回転（2本の指でひねる。出てくるコンパスで北を上にもどす） ----------
 // Leaflet には回転がないので、地図の層（mapPane）を回転用の枠（rotpane）に入れ、枠を CSS で回す。回した分だけ、画面の位置と地図の中の位置の
