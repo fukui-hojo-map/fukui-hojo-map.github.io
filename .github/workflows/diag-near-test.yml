@@ -13,7 +13,7 @@ jobs:
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
-      - name: 設定（引数のファイル: 1行目 セル, 2行目 cloud_near_m）
+      - name: "設定（引数のファイル: 1行目 セル、2行目 cloud_near_m）"
         id: a
         run: |
           echo "cells=$(sed -n 1p .github/diag-near-args.txt)" >> "$GITHUB_OUTPUT"
@@ -38,12 +38,7 @@ jobs:
           mkdir -p site/data/cells
           cp published/data/index.json site/data/
           for c in $(echo "${{ steps.a.outputs.cells }}" | tr ',' ' '); do cp -r published/data/cells/$c site/data/cells/; done
-          python - <<'PY'
-          import yaml
-          c = yaml.safe_load(open("config.yaml", encoding="utf-8"))
-          c.update({"cloud_near_m": int("${{ steps.a.outputs.near }}"), "pixel_maps": False, "radar": False})
-          yaml.safe_dump(c, open("config.yaml", "w", encoding="utf-8"), allow_unicode=True)
-          PY
+          python -c "import yaml; c=yaml.safe_load(open('config.yaml',encoding='utf-8')); c.update({'cloud_near_m': int('${{ steps.a.outputs.near }}'), 'pixel_maps': False, 'radar': False}); yaml.safe_dump(c, open('config.yaml','w',encoding='utf-8'), allow_unicode=True)"
           grep -n "cloud_near_m\|pixel_maps\|radar:" config.yaml
       - name: 計算（選んだセルだけ）
         env:
