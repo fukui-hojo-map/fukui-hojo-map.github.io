@@ -209,7 +209,16 @@ def main():
     cells = parse_cells(a.cells)
     feats, bbox = load_fields(a.data, cells, set(a.keep.split(",")))
     print(f"セル {len(cells)}、田 {len(feats)}、範囲 {bbox}", flush=True)
-    json.dump({"cells": cells, "fields": [[p, r25, r26] for p, _, r25, r26 in feats], "bbox": bbox}, open(os.path.join(a.out, "fields.json"), "w"))
+    cur = {"cells": cells, "fields": [[p, r25, r26] for p, _, r25, r26 in feats], "bbox": bbox}
+    fpath = os.path.join(a.out, "fields.json"); old = None
+    if os.path.exists(fpath):
+        try: old = json.load(open(fpath))
+        except Exception: old = None
+    if old is not None and old.get("fields") != cur["fields"]:     # 前回と田の組が違う: 前回の結果は使えない
+        for f in glob.glob(os.path.join(a.out, "*.csv.gz")) + glob.glob(os.path.join(a.out, "img_*.png")) + glob.glob(os.path.join(a.out, "s2_meta.json")):
+            os.remove(f)
+        print("前回の結果は、田の組が違うので消した", flush=True)
+    json.dump(cur, open(fpath, "w"))
     region = ee.Geometry.Rectangle(bbox)
     chunks = [ee.FeatureCollection([ee.Feature(g, {"pid": p}) for p, g, _, _ in feats[i:i + CHUNK]]) for i in range(0, len(feats), CHUNK)]
     periods = [p.split(":") for p in a.periods.split(",")]
