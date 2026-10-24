@@ -2071,6 +2071,7 @@ function isDip(s,i){ // one parcel only: lower than both neighbours (each within
   if(i<=0||i>=s.length-1) return false; const pv=s[i-1],nx=s[i+1],tD=tOf(s[i][0]);
   if(tD-tOf(pv[0])>15*864e5||tOf(nx[0])-tD>15*864e5) return false;
   const th=pv[1]>=DIP_HI_AT&&nx[1]>=DIP_HI_AT?DIP_HI:DIP;
+  if(nx[1]<pv[1]-0.10) return false;   // 後ろの点が前の水準近くまで戻らないもの（収穫→ひこばえ、麦刈り→大豆 など本物の変化）は外さない（2026-10-24。雲なら前の水準近くまで戻る）
   return pv[1]-s[i][1]>=th-1e-9&&nx[1]-s[i][1]>=th-1e-9;
 }
 // 同じ日の「周りの圃場」（同じ区画のまとまり）より、その圃場だけ極端に下がった点（雲・かすみの疑い）。2026-10-23 の利用者の指示
@@ -2169,8 +2170,9 @@ let olAcc={t:null,done:new Set(),byDate:{}};   // 雲・かすみの日の判定
 function detectOutliers(){
   autoFlag={}; excluded=new Set(); const t=thr(); if(olAcc.t!==t) olAcc={t,done:new Set(),byDate:{}}; const byDate=olAcc.byDate;
   for(const pid in pkg.series){ if(olAcc.done.has(pid)) continue; olAcc.done.add(pid);
-    const s=pkg.series[pid].filter(r=>r[2]>=t-1e-9);
-    for(let i=1;i<s.length-1;i++){ const pv=s[i-1],nx=s[i+1],tD=tOf(s[i][0]); if(tD-tOf(pv[0])>25*864e5||tOf(nx[0])-tD>25*864e5) continue;
+    const s=pkg.series[pid].filter(r=>r[2]>=t-1e-9&&r[3]!=='L');   // Sentinel-2 だけ（Landsat の ±0.07 のばらつきを数えない）
+    for(let i=1;i<s.length-1;i++){ const pv=s[i-1],nx=s[i+1],tD=tOf(s[i][0]), md=s[i][0].slice(5); if(md<'06-01'||md>'08-31') continue;   // 6〜8月だけ（9月の収穫→ひこばえを「日ごとの雲」と見ないため）
+      if(tD-tOf(pv[0])>25*864e5||tOf(nx[0])-tD>25*864e5||nx[1]<pv[1]-0.10) continue;   // 次の点が前の水準近くまで戻るものだけ
       (byDate[s[i][0]]=byDate[s[i][0]]||[]).push((pv[1]+nx[1])/2-s[i][1]); }
   }
   for(const d of allDates){
