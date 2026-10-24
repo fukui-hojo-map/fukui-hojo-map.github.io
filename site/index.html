@@ -969,6 +969,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .glbIcon{background:none;border:0} .glb{position:absolute;left:0;top:0;white-space:nowrap;pointer-events:none;font:600 12px/1.15 'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif;color:#fff;text-shadow:0 0 2px #000,0 0 3px #000,0 0 5px rgba(0,0,0,.85);transform:translate(-50%,-50%) rotate(var(--unrot,0deg))}   /* 航空写真の上の地名・施設名（白い字に黒いふち）。地図を回しても立てたまま */
   .glb.k1{font-size:15px;font-weight:700;letter-spacing:.1em} .glb.k2{font-size:13px;letter-spacing:.06em} .glb.k3{opacity:.92} .glb.k4{color:#fff3b8} .glb.k5{color:#bfe6ff;font-style:italic} .glb.k6{color:#e6e6e6}
   .glb.k4{transform-origin:0 50%;transform:translate(0,-50%) rotate(var(--unrot,0deg))} .glb.k4::before{content:'';display:inline-block;width:7px;height:7px;margin:0 3px 0 -4px;border-radius:50%;background:#ffd54a;border:1px solid #333;vertical-align:0}   /* 施設は、点（位置）の右に名前。点を軸に、立てたまま */
+  .leaflet-control-attribution{display:none!important}   /* 地図の右下の出典の帯は出さない（利用者の指示 2026-10-24）。出典は、画面の一番下の欄と、ハザードマップの欄に書く */
   .rotpane{position:absolute;left:0;top:0;width:100%;height:100%;z-index:400;transform-origin:50% 50%}   /* 地図の層を入れて回す枠（回転は JS）。名札は --unrot で逆に回して立てる */
   .compassCtl .compassBtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:5px;background:#fff;cursor:pointer}
   .leaflet-touch .compassCtl .compassBtn{width:44px;height:44px} .compassBtn svg{width:26px;height:26px} .leaflet-touch .compassBtn svg{width:32px;height:32px}
@@ -1127,7 +1128,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="ctrX" aria-hidden="true"></div>
     <div class="maphint" id="maphint">地図を拡大すると区画が表示されます</div>
     <div class="mapbar">
-      <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません" hidden></select><button type="button" class="dsel" id="colorDateBtn" aria-haspopup="listbox" title="日付を選ぶ（雲で写らなかった日は出ません）"><span class="t">—</span><span class="car" aria-hidden="true">▾</span></button><span class="hint" style="font-size:12.5px;white-space:nowrap">晴れた日のみ</span></span><input type="checkbox" id="colorOn" checked hidden></div>
+      <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません" hidden></select><button type="button" class="dsel" id="colorDateBtn" aria-haspopup="listbox" title="日付を選ぶ（雲で写らなかった日は出ません）"><span class="t">—</span><span class="car" aria-hidden="true">▾</span></button></span><input type="checkbox" id="colorOn" checked hidden></div>
       <div class="ctl" style="margin:2px 0 0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><div class="cloudnote" id="cloudNote">雲（うすい雲・かすみ・雲の影）がかかると、NDVI が実際より低く出ることがあります。日付の一覧の（雲○%）は、まわり約3km（圃場を選んでいるときはその圃場のあたり、選んでいないときは地図の真ん中のあたり）の雲の割合です。雲の多い日の色は、参考程度に見てください。</div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
@@ -1301,7 +1302,7 @@ const HZ=(function(){
     setTimeout(()=>{ FL.forEach(f=>{ if(f[1]!==e.layer&&on(f[1])) map.removeLayer(f[1]); }); if(lc) lc._update(); refresh(); },0); });   // 洪水は1つだけ。欄の操作が終わってから、ほかを外す（欄のチェックも合わせる）
   map.on('overlayremove',refresh);
   return {ov, FL, setBox(c){ lc=c; box=document.createElement('div'); box.className='hz-x'; box.hidden=true;
-      box.innerHTML='<div class="hz-n">河川の氾濫などの想定であり、実際の浸水と異なる場合があります。田んぼの排水不良は含まれません。『想定最大規模』は極めてまれな豪雨を想定したものです。</div>'
+      box.innerHTML='<div class="hz-n">河川の氾濫などの想定であり、実際の浸水と異なる場合があります。田んぼの排水不良は含まれません。出典：ハザードマップポータルサイト（国土交通省・国土地理院）。『想定最大規模』は極めてまれな豪雨を想定したものです。</div>'
         +'<label class="hz-o">透け具合 <input type="range" min="0.2" max="1" step="0.05" value="'+op+'"><span class="hz-ov">'+Math.round(op*100)+'%</span></label><div class="hz-lg"></div>';
       box.querySelector('input').oninput=e=>{ op=+e.target.value; box.querySelector('.hz-ov').textContent=Math.round(op*100)+'%'; tiles.forEach(l=>l.setOpacity(op)); };
       lc._section.appendChild(box); refresh(); }};
@@ -2021,7 +2022,7 @@ function loadPackage(p, label){
   allDates=[...new Set(Object.values(p.series||{}).flat().map(r=>r[0]))].sort();
   detectOutliers();
   document.getElementById('meta').textContent=`${label||p.meta?.name||''}：${feats.length}区画 / ${allDates.length}観測日${allDates.length?'（'+allDates[0]+'〜'+allDates[allDates.length-1]+'）':''}`;
-  setFoot((p.meta?.source?'データ: '+p.meta.source+'。':'')+(p.meta?.attribution||'Contains modified Copernicus Sentinel data')+'。地図: 国土地理院。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。');
+  setFoot((p.meta?.source?'データ: '+p.meta.source+'。':'')+(p.meta?.attribution||'Contains modified Copernicus Sentinel data')+'。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。');
   buildColorDates(); refresh();
 }
 
@@ -2844,7 +2845,9 @@ let lastPick=null;
   svg.addEventListener('mousemove',onMove); svg.addEventListener('touchstart',onMove,{passive:false}); svg.addEventListener('touchmove',onMove,{passive:false});
   const pick=()=>{ const d=lastPick; if(!d) return; const sel=document.getElementById('colorDate'); if([...sel.options].some(o=>o.value===d)&&sel.value!==d){ sel.value=d; paintMap(); } };   // グラフの点をタップ → その日で地図を塗る
   svg.addEventListener('click',pick); svg.addEventListener('touchend',pick);
-  svg.addEventListener('mouseleave',()=>{tip.style.display='none';svg.querySelector('#hl')?.setAttribute('visibility','hidden');}); })();
+  const hideTip=()=>{ lastPick=null; tip.style.display='none'; svg.querySelector('#hl')?.setAttribute('visibility','hidden'); };
+  svg.addEventListener('mouseleave',hideTip);
+  document.addEventListener('pointerdown',e=>{ if(tip.style.display==='none'||(e.target.closest&&e.target.closest('#chart,#tip'))) return; hideTip(); },true); })();   // グラフの外の何もない所を押したら、吹き出しを消す（スマホは、指を離しても出たままだったため。グラフの上の、点から遠い所を押したときは、もとから消える）
 
 // ---------- Excel に保存（選んだ田の一覧・番号つきの地図・NDVI の推移） ----------
 // 地図: 航空写真（地理院タイル）の上に、いまの色分けと田の形を描き、選んだ田に ①② … の番号をつけた画像。表は同じ番号で並べる
@@ -3140,7 +3143,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   const md=x=>x?`${+x.slice(5,7)}/${+x.slice(8,10)}`:'', LT=index.latest||{}, chk=index.checked||index.updated||'';
   document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+``;
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
-  setFoot('データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。');
+  setFoot('データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。');
   const h=parseHash();
   const hm=HOME.get();   // 本拠地を決めてあれば、開くたびにそこから（共有・Excel の「地図」のリンクなど、#c= のある開き方は、その場所）
   if(h.c) map.setView(h.c,h.z||15); else if(hm) map.setView([hm.lat,hm.lng],hm.z); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]],{maxZoom:18});
