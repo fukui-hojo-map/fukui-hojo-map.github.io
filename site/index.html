@@ -2657,7 +2657,7 @@ function cropOf(row,sp,au){   // その年の作物（'稲' / '休'=休耕か草
 // {"years":[..],"reasons":[..],"p":{pid:[[作物, 稲の確からしさ%, 暫定1/0, 理由の番号] | null（年ごと）]}}。ない田・年だけ上の簡単な決まりで見分ける
 function cropInfo(pid,r){   // {年: {c: 作物, p: 稲の確からしさ%, prov: 暫定か, why: 理由}}（crop_s.json にある年だけ）
   const cs=r&&r.cs, a=cs&&cs.p&&cs.p[pid], out={}; if(!a) return out;
-  cs.years.forEach((y,i)=>{ const v=a[i]; if(v) out[y]={c:v[0],p:v[1],prov:!!v[2],why:cs.reasons[v[3]]||''}; }); return out; }
+  cs.years.forEach((y,i)=>{ const v=a[i]; if(v) out[y]={c:v[0],p:v[1],prov:!!v[2],why:cs.reasons[v[3]]||'',ev:v.length>4?v[4]:null}; }); return out; }   // ev: 1=水の証拠, 2=刈り取りの証拠（古い行はなし）
 function cropsOf(pid,r){   // {年: 作物}
   const rows=(r&&r.m.p[pid])||{}, ci=cropInfo(pid,r), sm=seasonMins(pid,r), out={};
   for(const y in rows) out[y]=y in ci?ci[y].c:cropOf(rows[y],sm.sp[y],sm.au[y]); return out; }

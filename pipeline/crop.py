@@ -74,8 +74,12 @@ def _prev_rows(prev_dir, cell, want):
         if p in P and str(y) in ys:
             v = P[p][ys.index(str(y))]
             if v:
-                out[(p, y)] = [v[0], None if v[1] is None else v[1] / 100, bool(v[2]), rt[v[3]] if v[3] < len(rt) else ''] + \
-                              [None] * (len(CC.OUT_KEYS) - 5) + ['']
+                row = [None] * len(CC.OUT_KEYS)
+                row[:4] = [v[0], None if v[1] is None else v[1] / 100, bool(v[2]), rt[v[3]] if v[3] < len(rt) else '']
+                row[CC.OUT_KEYS.index('regime')] = ''
+                if len(v) > 4 and v[4] is not None:                 # evidence bits of the slim row -> wev / hev (0 or 1)
+                    row[CC.OUT_KEYS.index('wev')] = float(v[4] & 1); row[CC.OUT_KEYS.index('hev')] = float((v[4] >> 1) & 1)
+                out[(p, y)] = row
     return out
 
 

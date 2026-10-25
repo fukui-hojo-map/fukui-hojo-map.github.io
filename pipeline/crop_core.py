@@ -899,9 +899,11 @@ def stage2(R1, model, season_year=None, only_cells=None, context=True, exclude_i
     # back to the record order of R1
     sel = np.ones(len(fi), bool) if only_cells is None else np.isin(R1['cell'], list(only_cells))
     f_, t_ = fi[sel], ti[sel]
+    water = A(R1['water'], 0)
     out = dict(cell=R1['cell'][sel], pid=R1['pid'][sel], year=R1['year'][sel], label=lab[f_, t_],
                p_rice=PF[f_, t_], provisional=prov[f_, t_], p1=P1[f_, t_], d=d[f_, t_],
-               flood=fl[f_, t_], vigour=vig[f_, t_], grass=grass[f_, t_], incomplete=inc[f_, t_])
+               flood=fl[f_, t_], vigour=vig[f_, t_], grass=grass[f_, t_], incomplete=inc[f_, t_],
+               water=water[f_, t_], harvest=harv[f_, t_])
     out['reason'] = reasons(out, R1['contrib'][sel])
     for k in ('reg', 'R', 'vh_frac', 'wmin', 'bare_o', 'ju_o', 'aug_o', 'harv_doy', 'area_m2', 'full'):
         out[k] = R1[k][sel]
@@ -972,7 +974,10 @@ def _mmdd(doy, year):
 
 
 OUT_KEYS = ['label', 'p_rice', 'provisional', 'reason', 'p_own', 'flood', 'R', 'vh_frac', 'water', 'bare', 'jul',
-            'aug', 'harvest', 'regime']
+            'aug', 'harvest', 'regime', 'wev', 'hev']
+# ('water' = optical minimum 4/15-6/20, 'harvest' = harvest date; the evidence scores of stage 2 are 'wev' = water evidence
+#  (radar flooding / trend R / open water / late puddling, 0..1) and 'hev' = rice-time harvest drop seen (0/1).  2026-10-25:
+#  the vigour map (vigor.py) uses only rice years with water or harvest evidence; see docs/trend/作物の見分け点検_2026-10-25.md)
 
 
 def cell_index(o):
@@ -994,16 +999,20 @@ def to_crop_json(o, cell, idx=None, override=None):
         P.setdefault(str(o['pid'][k]), {})[str(y)] = [
             str(o['label'][k]), _r(o['p_rice'][k]), bool(o['provisional'][k]), str(o['reason'][k]),
             _r(o['p1'][k]), _r(o['flood'][k]), _r(o['R'][k], 1), _r(o['vh_frac'][k]), _r(o['wmin'][k]),
-            _r(o['bare_o'][k]), _r(o['ju_o'][k]), _r(o['aug_o'][k]), _mmdd(o['harv_doy'][k], y), str(o['reg'][k])]
+            _r(o['bare_o'][k]), _r(o['ju_o'][k]), _r(o['aug_o'][k]), _mmdd(o['harv_doy'][k], y), str(o['reg'][k]),
+            _r(o['water'][k]), _r(o['harvest'][k])]
     return dict(v=VERSION, keys=OUT_KEYS, p=P)
 
 
 def to_crop_slim(full_json):
-    """Viewer file (crop_s.json): label, p_rice (%), provisional, reason as an index into a per-cell reason table.
-    {"v", "years": [..], "keys": ["label", "p", "prov", "r"], "reasons": [...], "p": {pid: [[L, p, prov, r] | null per year]}}"""
+    """Viewer file (crop_s.json): label, p_rice (%), provisional, reason as an index into a per-cell reason table, and
+    (when the row carries them) the evidence bits e = 1 (water evidence >= 0.5) | 2 (rice-time harvest drop seen).
+    {"v", "years": [..], "keys": ["label", "p", "prov", "r", "e"], "reasons": [...], "p": {pid: [[L, p, prov, r, e] | null per year]}}
+    Rows kept from an older crop_s.json have no e (4 items): readers treat a missing e as unknown (= counts as rice)."""
     P = full_json['p']
     years = sorted({int(y) for d in P.values() for y in d})
     rt, ri, out = [], {}, {}
+    iw, ih = OUT_KEYS.index('wev'), OUT_KEYS.index('hev')
     for pid, d in P.items():
         row = []
         for y in years:
@@ -1013,6 +1022,9 @@ def to_crop_slim(full_json):
             r = v[3]
             if r not in ri:
                 ri[r] = len(rt); rt.append(r)
-            row.append([v[0], None if v[1] is None else int(round(v[1] * 100)), int(bool(v[2])), ri[r]])
+            item = [v[0], None if v[1] is None else int(round(v[1] * 100)), int(bool(v[2])), ri[r]]
+            if len(v) > ih and v[iw] is not None and v[ih] is not None:
+                item.append((1 if v[iw] >= 0.5 else 0) | (2 if v[ih] >= 0.5 else 0))
+            row.append(item)
         out[pid] = row
-    return dict(v=full_json['v'], years=years, keys=['label', 'p', 'prov', 'r'], reasons=rt, p=out)
+    return dict(v=full_json['v'], years=years, keys=['label', 'p', 'prov', 'r', 'e'], reasons=rt, p=out)
