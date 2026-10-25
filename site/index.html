@@ -2724,7 +2724,7 @@ function polyArea(geom){ const ring=c=>{ const k=Math.cos(c[0][1]*Math.PI/180); 
   return (geom.type==='Polygon'?[geom.coordinates]:geom.coordinates).reduce((a,p)=>a+ring(p[0])-p.slice(1).reduce((b,h)=>b+ring(h),0),0); }
 let SHOW_PLAN=false;   // 作付計画（開発者の端末だけ。priv.js が読み込まれたら true）
 function onParcelTap(pid){ if(window.__ote&&window.__ote.tap(pid)) return;   // お手本にする圃場を、地図で選んでいる間
-  if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid){ arNote(document.getElementById('arPrepX'),'ほかの田にするときは、その田をタップ。この田をやめるときは「圃場を再選択」'); return; }   // AR の角を選んでいる間: ほかの田のタップ → その田に切り替える（角の点のタップのつもりで同じ田に当たっても、何も変えない）
+  if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid){ const wz=AR_WIZ&&AR_WIZ.on(); arNote(document.getElementById('arPrepX')||document.querySelector('#arPrep [data-k=exit]'),wz?`ほかの田にするときは、その田をタップ。やめるときは「${AR_TITLE}をやめる」`:'ほかの田にするときは、その田をタップ。この田をやめるときは「圃場を再選択」'); return; }   // AR の角を選んでいる間: ほかの田のタップ → その田に切り替える（角の点のタップのつもりで同じ田に当たっても、何も変えない）
     selected=[]; toggleSelect(pid); return; }
   if(SHOW_PLAN&&fillMode()==='plan'&&typeof planTap==='function') return planTap(pid); toggleSelect(pid); }
 async function renderTrend(gen,mode,note,lbl){
