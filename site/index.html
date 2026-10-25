@@ -924,6 +924,54 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .foot{font-size:12.5px;color:#888;margin-top:14px}
   .pbig{font-size:16px;font-weight:700;margin:2px 0 4px} .pratio{width:auto} .pratio input{width:5.5em;font-size:15px;margin-right:3px} .pratio td{padding:3px 6px 3px 0} .psum{width:auto;margin:6px 0} .ptab .rc{font-size:11.5px;color:#fff;background:#2f7d4f;border-radius:3px;padding:0 3px} .ptab input.pv-p,.ptab input.pv-h{width:4.2em;font-size:13.5px} details.pset{margin-top:4px}
   #mode{font:inherit;font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#f0f1f3} .chartctl{align-items:stretch;flex-wrap:wrap}
+  /* お手本の生育曲線（OTE）: 期間の横のボタン・期間の下の欄・登録の画面・地図の札 */
+  #modeCtl{display:flex;gap:8px;align-items:stretch}
+  .otebtn{position:relative;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;padding:3px 14px;min-height:40px;font-size:14px;font-weight:700;line-height:1.2;color:#6b4e00;background:#fff7dc;border:1.5px solid #b8860b;border-radius:8px;white-space:nowrap}
+  .otebtn:hover{background:#ffefb8} .otebtn.on{background:#b8860b;color:#fff;border-color:#8a6508} .otebtn.on:hover{background:#a57808}
+  .otebtn .otec{position:absolute;top:-8px;right:-8px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#c62828;color:#fff;font-size:12px;line-height:20px;text-align:center;box-shadow:0 0 0 2px #fff}
+  #oteBar{margin:10px 0 4px} .chartctl[hidden]+#oteBar{display:none!important} .otechips{display:flex;flex-wrap:wrap;gap:6px}   /* 追肥マップ・AR の手順の画面では、グラフと期間の欄と一緒に隠す（priv.js の arChartUi） */
+  .otechip{display:inline-flex;align-items:center;border:1.5px solid var(--c);border-radius:20px;background:#fff;max-width:100%}
+  .otechip i{flex:none;width:16px;height:7px;margin-left:10px;border-radius:2px;background:var(--c);outline:4px solid rgba(184,134,11,.15)}
+  .otechip .on{border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--c);padding:4px 2px 4px 7px;cursor:pointer;text-align:left;min-width:0} .otechip .on small{font-weight:400;color:var(--ink2);margin-left:5px;font-size:12px}
+  .otechip .x{border:0;background:none;font-size:17px;line-height:1;color:var(--ink2);padding:4px 10px 4px 5px;cursor:pointer}
+  .otesh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:8px 0 0;font-size:13.5px;color:var(--ink2)} .otesh button{font:inherit;font-size:13px;min-width:32px;height:30px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+  .otesh b{min-width:3.4em;text-align:center;color:var(--ink);font-size:14.5px} .otesh .lk{border:0;background:none;color:var(--accent);text-decoration:underline;min-width:0;padding:0 4px} .otesh small{flex-basis:100%;font-size:12px;color:#7a837d}
+  .otediff{margin-top:8px;border:1px solid #e6d9a8;background:#fffbea;border-radius:10px;padding:8px 10px}
+  .otediff .odh{font-weight:700;color:#6b4e00;font-size:14.5px} .otediff .odh small{display:block;font-weight:400;font-size:12px;color:var(--ink2);margin-top:1px}
+  .otediff .odw{overflow-x:auto;margin-top:6px;-webkit-overflow-scrolling:touch} .otediff table{border-collapse:collapse;font-size:13.5px;min-width:100%}
+  .otediff th{font-size:12.5px;padding:3px 8px;text-align:center;white-space:nowrap} .otediff td{padding:5px 8px;text-align:center;border-top:1px solid #efe4bd;white-space:nowrap} .otediff td.f{text-align:left} .otediff td small{display:block;font-size:11.5px;font-weight:400;color:var(--ink2)}
+  .otediff td b{font-size:15px} .otediff td.eq b{color:#2e7d32} .otediff td.lo b{color:#e65100} .otediff td.lo2 b{color:#c62828} .otediff td.hi b,.otediff td.hi2 b{color:#1565c0} .otediff td.na{color:#9aa39d}
+  .odn{font-size:12px;color:#7a837d;margin-top:6px;line-height:1.5}
+  .otesx>div{max-width:480px} .otesx p{font-size:13.5px}
+  .otesx .oth{display:flex;align-items:center;justify-content:space-between;gap:8px} .otesx .oth h3{margin:0;color:#6b4e00;font-size:17px} .otesx .otx{border:0;background:none;font-size:26px;line-height:1;color:var(--ink2);cursor:pointer;padding:0 4px}
+  .otesx .otmsg{margin:8px 0;padding:6px 10px;border-radius:8px;background:#e8f3e8;color:#1e5a38;font-size:13.5px}
+  .otesx .otl{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+  .otesx .otr{display:flex;align-items:flex-start;gap:8px;border:1.5px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:8px 8px 8px 6px;background:#fff} .otesx .otr.on{background:#fffaf0;border-color:var(--c)}
+  .otesx .otck{display:flex;align-items:center;padding:2px 2px 0;cursor:pointer} .otesx .otck input{width:22px;height:22px;accent-color:var(--c);margin:0;cursor:pointer}
+  .otesx .otm{flex:1;min-width:0} .otesx .otm b{display:block;color:var(--c);font-size:15px;overflow-wrap:anywhere} .otesx .otm small{display:block;color:var(--ink2);font-size:12.5px;margin-top:1px}
+  .otesx .ota{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px} .otesx .ota button{border:0;background:none;padding:3px 0;font:inherit;font-size:13px;color:var(--accent);text-decoration:underline;cursor:pointer}
+  .otesx .ota .del{color:#b8442c} .otesx .ota .del.sure{font-weight:700;background:#fdecea;border-radius:4px;padding:3px 6px;text-decoration:none}
+  .otesx .otsp{width:72px;height:30px;flex:none;background:#f7f8f5;border-radius:6px}
+  .otesx .ote0{margin:12px 0;padding:14px;border:1.5px dashed #e0c870;border-radius:10px;background:#fffbea;text-align:center;color:#6b4e00;font-size:14px;line-height:1.6}
+  .otesx .otf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 4px} .otesx .otego{background:#b8860b;border-color:#8a6508;color:#fff;font-weight:700;min-height:42px} .otesx .otego:hover{background:#a57808} .otesx .otego:disabled{background:#d8cfb4;border-color:#d8cfb4;cursor:default}
+  .otesx .ots{display:flex;gap:10px;margin:14px 0} .otesx .otsn{flex:none;width:26px;height:26px;border-radius:50%;background:#b8860b;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .otesx .ots>div:last-child{flex:1;min-width:0} .otesx .ots>div>b{font-size:15px;color:var(--ink)}
+  .otesx .otpk,.otesx .otys,.otesx .otsg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .otesx .otc{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--c,#9aa39d);border-radius:20px;background:#fff;padding:6px 12px;font:inherit;font-size:14px;font-weight:700;color:var(--c,var(--ink));cursor:pointer}
+  .otesx .otc i{width:10px;height:10px;border-radius:50%;background:var(--c)} .otesx .otc.on{background:var(--c);color:#fff} .otesx .otc.on i{background:#fff} .otesx .otc.map{--c:#8a6508;border-style:dashed;font-weight:400}
+  .otesx .otsel{margin-top:6px;font-size:13.5px;color:var(--ink2)}
+  .otesx .oty{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:10px;background:#fff;padding:6px 10px;font:inherit;cursor:pointer;text-align:left}
+  .otesx .oty svg{width:64px;height:26px;background:#f7f8f5;border-radius:4px} .otesx .oty span{font-weight:700;font-size:15px;color:var(--ink)} .otesx .oty small{display:block;font-weight:400;font-size:12px;color:var(--ink2)}
+  .otesx .oty.on{border-color:#b8860b;background:#fff7dc;box-shadow:inset 0 0 0 1.5px #b8860b}
+  .otesx .otnm{width:100%;box-sizing:border-box;margin-top:6px;font:inherit;font-size:16px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px}
+  .otesx .otsg button{border:1px dashed #c9a74a;background:#fffbea;color:#6b4e00;border-radius:16px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
+  .otesx .otw{margin-top:6px;color:#b8442c;font-size:13.5px} .otesx .otcrop{margin-top:6px;font-size:13px} .otesx .otcrop.ok{color:#2e7d32} .otesx .otcrop.ng{color:#b8442c}
+  .otesx .otrn{display:flex;gap:6px} .otesx .otrn input{flex:1;min-width:0;font:inherit;font-size:16px;padding:5px 8px;border:1.5px solid var(--c);border-radius:6px}
+  #otePick{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:1100;display:flex;align-items:center;gap:10px;background:#fff7dc;border:2px solid #b8860b;border-radius:12px;padding:8px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14.5px;font-weight:700;color:#6b4e00;width:max-content;max-width:calc(100% - 24px)}
+  .otelbl{pointer-events:none} .otelbl span{position:absolute;transform:translate(-50%,calc(-100% - 5px)) rotate(var(--unrot,0deg));transform-origin:50% calc(100% + 5px);font:700 11.5px/1 sans-serif;color:#fff;background:var(--c);border:1.5px solid #fff;border-radius:9px;padding:3px 6px;white-space:nowrap;opacity:.8;box-shadow:0 1px 3px rgba(0,0,0,.35)} .otelbl.on span{opacity:1;font-size:12.5px}
+  .otefl{animation:otefl .65s ease-in-out 4} @keyframes otefl{50%{stroke-width:10px;stroke-opacity:.35}}
+  .tip .od{font-style:normal;font-size:12px;font-weight:700;margin-left:4px} .tip .od.eq{color:#2e7d32} .tip .od.lo{color:#e65100} .tip .od.lo2{color:#c62828} .tip .od.hi,.tip .od.hi2{color:#1565c0}
+  .tip .r.ot span:first-child{font-weight:700} .tip .on2{margin-top:3px;font-size:11px;color:#8a8f8c} .tip b small{font-weight:400;font-size:11.5px;color:#6b746e}
   .btn.gogo{font-weight:700;font-size:15px;padding:7px 20px;color:#fff;border:1px solid #1e3a2f;border-radius:6px;background:linear-gradient(180deg,#2f7d4f,#1e5a38);box-shadow:0 1px 3px rgba(0,0,0,.2);letter-spacing:.05em}
   .btn.gogo:hover{background:linear-gradient(180deg,#358a58,#22663f)} .btn.gogo:disabled{opacity:.6}
   .plno span{position:absolute;transform:translate(-50%,-50%) rotate(var(--unrot,0deg));font:700 11px/1 sans-serif;color:#222;background:rgba(255,255,255,.88);border:1.5px solid #e0b800;border-radius:9px;padding:2px 5px;white-space:nowrap}
@@ -1149,8 +1197,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <select id="mode">
         <option value="date">今年（5/10〜9/30）</option>
         <option value="doy">前年と重ねる（5/10〜9/30）</option>
-      </select></span>
+      </select><button type="button" class="btn otebtn" id="btnOte" aria-haspopup="dialog" title="お手本にする圃場の生育曲線を登録して、グラフでくらべます"><span>お手本</span><span>生育曲線</span><b class="otec" id="oteCount" hidden></b></button></span>
     </div>
+    <div id="oteBar" hidden></div>   <!-- 表示中のお手本・お手本をずらす・お手本とのちがい（OTE.bar） -->
     <div class="hint" id="trendHint" style="display:none">生育傾向マップのときは、グラフは稲の年ごとに、いちばん茂った時の NDVI を「近くの、同じころに植えて同じころに刈った田」の平均とくらべた差を表示します（上ほど、その年よく育った）</div>
     <h2>選んだ圃場 <span class="hint">（地図をタップ・最大10枚）</span></h2>
     <div class="chips" id="chips"></div>
@@ -2650,7 +2699,8 @@ const medOf=a=>{ if(!a.length) return null; const s=a.slice().sort((x,y)=>x-y), 
 function polyArea(geom){ const ring=c=>{ const k=Math.cos(c[0][1]*Math.PI/180); let s=0; for(let i=0;i<c.length;i++){ const [x1,y1]=c[i],[x2,y2]=c[(i+1)%c.length]; s+=x1*y2-x2*y1; } return Math.abs(s)/2*111320*k*110540; };
   return (geom.type==='Polygon'?[geom.coordinates]:geom.coordinates).reduce((a,p)=>a+ring(p[0])-p.slice(1).reduce((b,h)=>b+ring(h),0),0); }
 let SHOW_PLAN=false;   // 作付計画（開発者の端末だけ。priv.js が読み込まれたら true）
-function onParcelTap(pid){ if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid){ arNote(document.getElementById('arPrepX'),'ほかの田にするときは、その田をタップ。この田をやめるときは「圃場を再選択」'); return; }   // AR の角を選んでいる間: ほかの田のタップ → その田に切り替える（角の点のタップのつもりで同じ田に当たっても、何も変えない）
+function onParcelTap(pid){ if(window.__ote&&window.__ote.tap(pid)) return;   // お手本にする圃場を、地図で選んでいる間
+  if(typeof arP!=='undefined'&&arP.on){ if(pid===arP.pid){ arNote(document.getElementById('arPrepX'),'ほかの田にするときは、その田をタップ。この田をやめるときは「圃場を再選択」'); return; }   // AR の角を選んでいる間: ほかの田のタップ → その田に切り替える（角の点のタップのつもりで同じ田に当たっても、何も変えない）
     selected=[]; toggleSelect(pid); return; }
   if(SHOW_PLAN&&fillMode()==='plan'&&typeof planTap==='function') return planTap(pid); toggleSelect(pid); }
 async function renderTrend(gen,mode,note,lbl){
@@ -2775,10 +2825,10 @@ function fromFlood(pts,y){ const a=Date.UTC(y,4,10), b=Date.UTC(y,5,15), i=pts.f
 function drawChart(){
   const svg=document.getElementById('chart'); const mode=document.getElementById('mode').value;
   const now=allDates.length?Date.parse(allDates[allDates.length-1]+'T00:00:00Z'):Date.now();
-  if(!selected.length) setStatus('圃場を選ぶとグラフが出ます。'); else setStatus('');
+  if(!selected.length) setStatus(window.__ote&&window.__ote.act().length?'圃場を選ぶと、お手本とくらべられます。':'圃場を選ぶとグラフが出ます。'); else setStatus('');
   let xmin,xmax; const series=[]; const tmode=isTrend(fillMode());
   document.getElementById('modeCtl').style.display=tmode?'none':''; document.getElementById('trendHint').style.display=tmode?'':'none';
-  if(tmode){ setStatus(selected.length?'':'圃場を選ぶとグラフが出ます。'); drawVigChart(svg); return; }
+  if(tmode){ setStatus(selected.length?'':'圃場を選ぶとグラフが出ます。'); if(window.__ote) window.__ote.bar(0,true); drawVigChart(svg); return; }
   const src=tmode?[]:selected.map(s=>({label:selLabel(s.pid),color:s.color,dash:'',pts:seriesOf(s.pid),pid:s.pid}));
   if(document.getElementById('nbOn').checked&&selected.length){ const nb=neighborSeries(); if(nb.n) src.push({label:`近隣の田の平均（${nb.n}枚）`,color:'#8a8f8c',dash:'6 4',pts:nb.pts}); }
   // 期間は 5/10〜9/30（今年＝最新の観測がある年）。前年と重ねるときは各年の 5/10 からの日数で並べる
@@ -2789,6 +2839,7 @@ function drawChart(){
   else if(mode==='doy'){ xmin=0; xmax=(sEnd(y0)-sStart(y0))/864e5;
     for(const s of src) for(const [k,y] of [[0,y0],[1,y0-1]]){ const pts=fromFlood(s.pts.filter(p=>p.t>=sStart(y)&&p.t<=sEnd(y)),y).map(p=>({x:(p.t-sStart(y))/864e5,...p})); if(pts.length) series.push({...s,label:`${s.label} ${y}`,dash:k?(s.dash||'6 4'):s.dash,pts,yr:y}); } }
   const xfC=mode==='date'?t=>t:t=>(t-sStart(y0))/864e5, TC=tmode?null:fillMode()==='top'?topChart(xfC):fillMode()==='gp'?gpChart(xfC):null; if(TC) series.push(...TC.series);   // 追肥マップ: 目標曲線・基肥の溶け方・生育の目印
+  const O=window.__ote, OQ=O?O.curves(mode,y0,sStart(y0)):[];   // お手本の生育曲線（月日をそろえて今年の軸に）
   const X=v=>ML+(v-xmin)/(xmax-xmin)*(W-ML-MR), Y=v=>MT+(1-Math.max(-0.05,Math.min(1,v)))/1.05*(H-MT-MB);
   let g='';
   for(let v=0;v<=1.0001;v+=0.2) g+=`<line x1="${ML}" x2="${W-MR}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e6eae3"/><text x="${ML-6}" y="${Y(v)+5}" text-anchor="end" font-size="15" fill="#4c5a52">${v.toFixed(1)}</text>`;
@@ -2796,6 +2847,7 @@ function drawChart(){
   g+=`<line x1="${ML}" x2="${W-MR}" y1="${Y(0)}" y2="${Y(0)}" stroke="#4c5a52"/>`;
   if(TC) g+=TC.svg(X,Y,ML,W,MR,MT,H,MB);
   hoverPts=[];
+  const OD=OQ.length?O.draw(X,Y,xmin,xmax):null; if(OD) g+=OD.g;   // お手本は、選んだ圃場の線より下に描く
   for(const s of series){ if(!s.pts.length) continue; g+=`<path d="${s.pts.map((p,i)=>`${i?'L':'M'}${X(p.x).toFixed(1)},${Y(p.ndvi).toFixed(1)}`).join('')}" fill="none" stroke="${s.color}" stroke-width="${s.ideal?2.4:2}" stroke-dasharray="${s.dash}" stroke-linejoin="round"${s.ideal?' opacity=".85"':''}/>`;
     if(s.ideal) continue;
     for(const p of s.pts){ const cx=X(p.x).toFixed(1), cy=Y(p.ndvi).toFixed(1);
@@ -2805,11 +2857,12 @@ function drawChart(){
   g+=`<line id="hl" x1="0" x2="0" y1="${MT}" y2="${H-MB}" stroke="#1e3a2f" stroke-dasharray="3 3" visibility="hidden"/>`;
   // legend inside svg (so PNG includes it)
   let lx=ML, ly=H-MB+40; for(const s of series){ const w=s.label.length*16+40; if(lx+w>W-MR){lx=ML;ly+=23;} g+=`<line x1="${lx}" x2="${lx+18}" y1="${ly-5}" y2="${ly-5}" stroke="${s.color}" stroke-width="2.5" stroke-dasharray="${s.dash}"/><text x="${lx+22}" y="${ly}" font-size="16.5" font-weight="700" fill="${s.color}">${s.label}</text>`; lx+=w; }
+  if(OD&&OD.shown.length){ const r=O.legend(OD.shown,ML,ly); g+=r.g; ly=r.ly; }
   if(series.some(s=>s.pts.some(p=>p.rad))){ ly+=23; g+=`<path d="M${ML+9},${ly-9}l4,4l-4,4l-4,-4z" fill="#fff" stroke="#4c5a52" stroke-width="1.4"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">ひし形はレーダー（Sentinel-1）からの推定</text>`; }
   if(series.some(s=>s.pts.some(p=>p.prov))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="6" fill="none" stroke="#1e3a2f" stroke-width="1.2" stroke-dasharray="2 2"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">点線の輪は速報（あとで変わることがあります。赤はもやの疑い）</text>`; }
   if(series.some(s=>s.pts.some(p=>p.ls))){ ly+=23; g+=`<circle cx="${ML+9}" cy="${ly-5}" r="3.5" fill="#fff" stroke="#4c5a52" stroke-width="1.6"/><text x="${ML+22}" y="${ly}" font-size="15" fill="#4c5a52">白抜きの点は Landsat（30m画素。Sentinel-2 相当に換算）</text>`; }
   svg.setAttribute('viewBox',`0 0 ${W} ${ly+8}`); svg.innerHTML=g;
-
+  if(O) O.bar(y0,false);
 }
 function drawVigChart(svg){   // 生育傾向マップのときのグラフ: 稲の年ごとの「近くの同じ作期の田との差」（いちばん茂った時の NDVI）と、例年の値（地図の色）
   hoverPts=[]; const rows=[]; let wait=0;
@@ -2844,9 +2897,10 @@ let lastPick=null;
   const onMove=ev=>{ if(!hoverPts.length) return; const pt=ev.touches?ev.touches[0]:ev; if(ev.touches) ev.preventDefault();
     const r=svg.getBoundingClientRect(); const mx=(pt.clientX-r.left)*W/r.width; let best=null; for(const h of hoverPts){const d=Math.abs(h.px-mx); if(!best||d<best.d) best={d,h};}
     if(!best||best.d>25){lastPick=null;tip.style.display='none';svg.querySelector('#hl')?.setAttribute('visibility','hidden');return;}
-    lastPick=best.h.p.date;
+    lastPick=best.h.s.ote?null:best.h.p.date;   // お手本の点は、ほかの年の日なので、押しても地図の日付を変えない
     const rows=hoverPts.filter(h=>Math.abs(h.x-best.h.x)<1e-6).sort((a,b)=>b.p.ndvi-a.p.ndvi); const mode=document.getElementById('mode').value;
-    tip.innerHTML=`<b>${best.h.p.date}</b>`+rows.map(h=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}</span><span>${h.p.ndvi.toFixed(2)}</span></div>`).join('');
+    const fmtRow=(h,ex)=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}</span><span>${h.p.ndvi.toFixed(2)}${ex||''}</span></div>`, O=window.__ote;
+    tip.innerHTML=O&&O.act().length?O.tip(best,rows,fmtRow):`<b>${best.h.p.date}</b>`+rows.map(h=>fmtRow(h)).join('');   // お手本を重ねているときは、お手本の値と差も
     tip.style.display='block'; const hl=svg.querySelector('#hl'); hl.setAttribute('x1',best.h.px); hl.setAttribute('x2',best.h.px); hl.setAttribute('visibility','visible');
     const px=best.h.px*r.width/W; tip.style.left=(px+14+tip.offsetWidth>r.width?px-tip.offsetWidth-14:px+14)+'px'; tip.style.top=Math.max(0,(pt.clientY-r.top)-20)+'px'; };
   svg.addEventListener('mousemove',onMove); svg.addEventListener('touchstart',onMove,{passive:false}); svg.addEventListener('touchmove',onMove,{passive:false});
@@ -2855,6 +2909,176 @@ let lastPick=null;
   const hideTip=()=>{ lastPick=null; tip.style.display='none'; svg.querySelector('#hl')?.setAttribute('visibility','hidden'); };
   svg.addEventListener('mouseleave',hideTip);
   document.addEventListener('pointerdown',e=>{ if(tip.style.display==='none'||(e.target.closest&&e.target.closest('#chart,#tip'))) return; hideTip(); },true); })();   // グラフの外の何もない所を押したら、吹き出しを消す（スマホは、指を離しても出たままだったため。グラフの上の、点から遠い所を押したときは、もとから消える）
+
+// ---------- お手本の生育曲線（2026-10-25 利用者の指示: 期間の横の「お手本 生育曲線」のボタン） ----------
+// よく育った圃場の、ある年の NDVI の推移を「お手本」として、この端末（localStorage）に10個まで覚える。農家が品種ごとの理想と、自分の圃場の今を見くらべるため。
+// 登録: 圃場（選んだ圃場から、または地図でタップ）・年・名前（例: コシヒカリ理想生育曲線）。その年の 5/10〜9/30 の点（グラフと同じ選び方: seriesOf。レーダーの推定は入れない）と、
+//   田の形も一緒に覚えるので、その田のまとまりを読み込んでいなくても、グラフに重なり、地図に枠が出る。読み込んであるときは、いまのデータで点を更新する（sync）。
+// グラフ: チェックを入れたお手本を、月日をそろえて今年の軸に重ねる（太い線と ±0.03 の帯＝ほぼ同じとみなす幅）。吹き出しに、お手本の値と、選んだ圃場との差。
+// 地図: お手本の圃場に、お手本の色の点線の枠と「★ 名前」の札（表示中は太く）。押しても、区画を選ぶじゃまをしない。
+// お手本とのちがい: 選んだ圃場のいちばん新しい観測の日の値と、お手本の同じ月日の値の差（±0.03 未満は「お手本並み」、0.08 からは「下回る・上回る」）。
+// お手本をずらす（日数）: 田植えの日がちがう圃場とくらべるため、お手本を左右にずらせる（この端末に覚える）。
+const OTE=(function(){
+  const K='fhm_ote1', MAX=10, BAND=0.03, D=864e5;
+  const COLORS=['#b8860b','#00897b','#8e24aa','#d81b60','#2e7d32','#ef6c00','#3949ab','#6d4c41','#0288d1','#7cb342'];
+  const SUG=['コシヒカリ理想生育曲線','いちほまれ理想生育曲線','ハナエチゼン理想生育曲線'];
+  const short=(s,n)=>{ s=String(s||''); return s.length>n?s.slice(0,n-1)+'…':s; };
+  const inSeas=d=>{ const md=d.slice(5); return md>='05-10'&&md<='09-30'; };
+  const tOf=(y,md)=>Date.UTC(y,+md.slice(0,2)-1,+md.slice(3,5));
+  let st=load(), picking=false, draft=null, hov=[], blink='';
+  function load(){ try{ const o=JSON.parse(localStorage.getItem(K)||'null');
+      if(o&&Array.isArray(o.list)) return {list:o.list.filter(x=>x&&x.id&&x.pid&&Array.isArray(x.pts)).slice(0,MAX),shift:Math.max(-30,Math.min(30,Math.round(+o.shift||0)))}; }catch(e){}
+    return {list:[],shift:0}; }
+  function save(){ try{ localStorage.setItem(K,JSON.stringify(st)); return true; }catch(e){ return false; } }
+  const act=()=>st.list.filter(o=>o.on);
+  const nameOf=pid=>selected.some(s=>s.pid===pid)?selLabel(pid):'区画 '+(parcels[pid]?parcels[pid].name:pid.slice(0,8));
+  // その圃場の、ある年の 5/10〜9/30 の点 [月日, NDVI, 'L'（Landsat）| '']
+  function ptsOf(pid,y){ return seriesOf(pid).filter(p=>!p.rad&&+p.date.slice(0,4)===y&&inSeas(p.date)).map(p=>[p.date.slice(5),Math.round(p.ndvi*1000)/1000,p.ls?'L':'']); }
+  function yearsOf(pid){ const c={}; for(const p of seriesOf(pid)) if(!p.rad&&inSeas(p.date)){ const y=+p.date.slice(0,4); c[y]=(c[y]||0)+1; }
+    return Object.keys(c).map(Number).filter(y=>c[y]>=3).sort((a,b)=>b-a).map(y=>({y,n:c[y]})); }
+  function geomOf(pid){ const g=parcels[pid]&&parcels[pid].feature&&parcels[pid].feature.geometry; if(!g) return null;
+    const P=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[]; return P.map(p=>p[0].map(([x,y])=>[+x.toFixed(6),+y.toFixed(6)])); }
+  // 読み込んである田は、いまのデータで点を更新する（登録したあとの観測・データの直しを入れる）
+  function sync(){ let ch=false; for(const o of st.list){ if(!pkg||!pkg.series||!pkg.series[o.pid]) continue; const p=ptsOf(o.pid,o.y);
+      if(p.length>=3&&JSON.stringify(p)!==JSON.stringify(o.pts)){ o.pts=p; ch=true; } } if(ch) save(); }
+  // 月日をそろえて、y0 年の軸にのせた点。田植えの前の点は、グラフと同じく落とす（fromFlood）。x: 'date' は日時、'doy' は 5/10 からの日数
+  function placed(o,y0,mode,s0){ const sh=st.shift*D;
+    return fromFlood(o.pts.map(([md,v,s])=>({md,ndvi:v,ls:s==='L',rad:false,t:tOf(o.y,md)})).sort((a,b)=>a.t-b.t),o.y)
+      .map(p=>{ const t=tOf(y0,p.md)+sh; return {...p,date:`${o.y}-${p.md}`,x:mode==='doy'?(t-s0)/D:t}; }); }
+  function curves(mode,y0,s0){ sync(); hov=act().map(o=>({o,pts:placed(o,y0,mode,s0)})); return hov; }
+  function at(pts,x){ if(!pts.length||x<pts[0].x-1e-9||x>pts[pts.length-1].x+1e-9) return null;
+    for(let i=1;i<pts.length;i++){ const a=pts[i-1], b=pts[i]; if(x<=b.x+1e-9) return b.x===a.x?b.ndvi:a.ndvi+(b.ndvi-a.ndvi)*(x-a.x)/(b.x-a.x); }
+    return pts[pts.length-1].ndvi; }
+  const valsAt=x=>hov.map(q=>({o:q.o,v:at(q.pts,x)})).filter(z=>z.v!=null);
+  const lvl=d=>Math.abs(d)<BAND?{c:'eq',t:'お手本並み'}:d<=-0.08?{c:'lo2',t:'下回る'}:d<0?{c:'lo',t:'やや下回る'}:d>=0.08?{c:'hi2',t:'上回る'}:{c:'hi',t:'やや上回る'};
+  const sgn=d=>(d>=0?'+':'−')+Math.abs(d).toFixed(2);
+  // グラフ: 帯（±0.03）と太い線。選んだ圃場の線より下に描く
+  function draw(X,Y,xmin,xmax){ let g=''; const shown=[], f=v=>v.toFixed(1);
+    for(const q of hov){ const P=q.pts.filter(p=>p.x>=xmin&&p.x<=xmax); if(P.length<2) continue; const c=q.o.color;
+      const up=P.map(p=>`${f(X(p.x))},${f(Y(p.ndvi+BAND))}`), dn=P.slice().reverse().map(p=>`${f(X(p.x))},${f(Y(p.ndvi-BAND))}`);
+      g+=`<polygon points="${up.concat(dn).join(' ')}" fill="${c}" opacity=".15"/>`
+        +`<path d="${P.map((p,i)=>`${i?'L':'M'}${f(X(p.x))},${f(Y(p.ndvi))}`).join('')}" fill="none" stroke="${c}" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>`;
+      for(const p of P) hoverPts.push({px:X(p.x),x:p.x,s:{label:'★ '+q.o.name,color:c,ote:q.o},p});   // 点は描かない（白抜きは Landsat の印なので、まぎらわしい）。吹き出しのためだけに覚える
+      shown.push(q); }
+    return {g,shown}; }
+  function legend(shown,ML,ly){ let g='';
+    for(const q of shown){ ly+=24; const c=q.o.color;
+      g+=`<rect x="${ML}" y="${ly-13}" width="20" height="14" rx="2" fill="${c}" opacity=".18"/><line x1="${ML}" x2="${ML+20}" y1="${ly-6}" y2="${ly-6}" stroke="${c}" stroke-width="3.2"/>`
+        +`<text x="${ML+26}" y="${ly}" font-size="16" font-weight="700" fill="${c}">★ ${escH(short(q.o.name,22))}（${q.o.y}年${st.shift?`・${st.shift>0?'+':''}${st.shift}日ずらし`:''}）</text>`; }
+    if(shown.length){ ly+=21; g+=`<text x="${ML}" y="${ly}" font-size="14" fill="#4c5a52">★ はお手本（月日をそろえて重ねる）。帯は ±0.03</text>`; }
+    return {g,ly}; }
+  // 吹き出し: お手本の値と、選んだ圃場の値との差（いちばん上のお手本とくらべる）
+  function tip(best,rows,fmtRow){ const fr=rows.filter(h=>!h.s.ote), ov=valsAt(best.h.x), ref=ov[0], o=best.h.s.ote;
+    const hd=o?`★ ${+best.h.p.md.slice(0,2)}/${+best.h.p.md.slice(3,5)}<small>（お手本 ${o.y}年の観測）</small>`:best.h.p.date;
+    return `<b>${hd}</b>`+fr.map(h=>fmtRow(h,ref?(()=>{ const d=h.p.ndvi-ref.v, k=lvl(d); return ` <em class="od ${k.c}" title="${escH(ref.o.name)}との差">${sgn(d)}</em>`; })():'')).join('')
+      +ov.map(z=>`<div class="r ot"><span><i style="background:${z.o.color}"></i>★ ${escH(short(z.o.name,14))}</span><span>${z.v.toFixed(2)}</span></div>`).join('')
+      +(fr.length&&ref&&ov.length>1?`<div class="on2">差は ★${escH(short(ref.o.name,10))} とくらべた値</div>`:''); }
+  // 期間の下の欄: 表示中のお手本（×でグラフから外す）・お手本をずらす・お手本とのちがい
+  function bar(y0,tmode){ const el=document.getElementById('oteBar'), A=act(), btn=document.getElementById('btnOte'), cnt=document.getElementById('oteCount');
+    if(btn) btn.classList.toggle('on',A.length>0); if(cnt){ cnt.hidden=!A.length; cnt.textContent=A.length; }
+    if(!el) return; if(tmode||!A.length){ el.hidden=true; el.innerHTML=''; return; }
+    let h=`<div class="otechips">${A.map(o=>`<span class="otechip" style="--c:${o.color}"><i></i><button type="button" class="on" data-ote="open" title="お手本の一覧を開く">★ ${escH(short(o.name,16))}<small>${o.y}年</small></button><button type="button" class="x" data-ote="hide" data-id="${o.id}" title="グラフから外す（登録は残ります）" aria-label="${escH(o.name)}をグラフから外す">×</button></span>`).join('')}</div>`
+      +`<div class="otesh"><span>お手本を</span><button type="button" data-ote="sh" data-d="-1" aria-label="お手本を左に1日ずらす">◀</button><b>${st.shift?`${st.shift>0?'+':''}${st.shift}日`:'0日'}</b><button type="button" data-ote="sh" data-d="1" aria-label="お手本を右に1日ずらす">▶</button><span>ずらす</span>${st.shift?'<button type="button" class="lk" data-ote="sh0">もどす</button>':''}<small>田植えがお手本より遅い圃場とくらべるときは、その日数だけ ▶</small></div>`;
+    const rows=selected.filter(s=>parcels[s.pid]).map(s=>{ const ps=seriesOf(s.pid).filter(p=>!p.rad&&+p.date.slice(0,4)===y0&&inSeas(p.date)); return {s,p:ps[ps.length-1]}; });
+    if(rows.length){ const cur=A.map(o=>({o,pts:placed(o,y0,'date',0)}));
+      h+=`<div class="otediff"><div class="odh">お手本とのちがい<small>選んだ圃場のいちばん新しい観測の日の値と、お手本の同じ月日の値の差</small></div><div class="odw"><table><tr><th></th>${cur.map(c=>`<th style="color:${c.o.color}">★ ${escH(short(c.o.name,9))}</th>`).join('')}</tr>`
+        +rows.map(({s,p})=>`<tr><td class="f"><b style="color:${s.color}">${escH(selLabel(s.pid))}</b><small>${p?`${+p.date.slice(5,7)}/${+p.date.slice(8,10)}　NDVI ${p.ndvi.toFixed(2)}`:`${y0}年の観測なし`}</small></td>`
+          +cur.map(c=>{ const v=p?at(c.pts,p.t):null; if(v==null) return `<td class="na" title="${p?'お手本に、その月日の値がありません':''}">—</td>`; const d=p.ndvi-v, k=lvl(d); return `<td class="${k.c}"><b>${sgn(d)}</b><small>${k.t}</small></td>`; }).join('')+'</tr>').join('')
+        +`</table></div><div class="odn">±0.03 未満は「お手本並み」。差は、田植えの日・品種・水の管理・天気などでも出ます。現地の様子とあわせて見てください。</div></div>`; }
+    else h+=`<div class="odn">圃場を選ぶと、お手本とのちがい（差）が出ます。</div>`;
+    el.innerHTML=h; el.hidden=false; }
+  // ---- 地図の枠と札 ----
+  const pane=map.createPane('otePane'); pane.style.zIndex=415; pane.style.pointerEvents='none';
+  const lpane=map.createPane('oteLblPane'); lpane.style.zIndex=468; lpane.style.pointerEvents='none';
+  const rend=L.svg({pane:'otePane'}), lay=L.layerGroup().addTo(map); let lblOn=null;
+  function frames(){ lay.clearLayers(); lblOn=map.getZoom()>=16;   // 札は、田が見分けられる拡大のときだけ
+    for(const o of st.list){ if(!o.geom||!o.geom.length) continue; const ll=o.geom.map(r=>r.map(([x,y])=>[y,x]));
+      L.polygon(ll,{renderer:rend,pane:'otePane',color:'#fff',weight:o.on?7:5,opacity:o.on?.9:.6,dashArray:o.on?'10 6':'5 5',fill:false,interactive:false}).addTo(lay);   // ふちも点線にして、すき間から選んだ圃場の線が見えるように
+      L.polygon(ll,{renderer:rend,pane:'otePane',color:o.color,weight:o.on?4:2.2,opacity:o.on?1:.75,dashArray:o.on?'10 6':'5 5',fill:false,interactive:false,className:o.id===blink?'otefl':''}).addTo(lay);
+      if(lblOn){ const bb=L.latLngBounds(ll.flat());   // 札は田の上（北）のふちの外に出す（田の色を隠さない）
+        L.marker([bb.getNorth(),bb.getCenter().lng],{pane:'oteLblPane',interactive:false,keyboard:false,icon:L.divIcon({className:'otelbl'+(o.on?' on':''),html:`<span style="--c:${o.color}">★ ${escH(short(o.name,10))}</span>`,iconSize:null})}).addTo(lay); } } }
+  map.on('zoomend',()=>{ if((map.getZoom()>=16)!==lblOn) frames(); });
+  function flash(id){ blink=id; frames(); setTimeout(()=>{ if(blink===id){ blink=''; frames(); } },2800); }
+  const mapIntoView=()=>{ const m=document.getElementById('map'), r=m.getBoundingClientRect(); if(r.top<0||r.top>innerHeight*0.4) m.scrollIntoView({behavior:'smooth',block:'start'}); };   // スマホで、グラフの方へ下がっているときは、地図が見える所まで上げる
+  function goTo(o){ if(!o.geom||!o.geom.length) return; mapIntoView(); map.fitBounds(L.latLngBounds(o.geom.flat().map(([x,y])=>[y,x])).pad(1.5),{maxZoom:17}); flash(o.id); }
+  function changed(){ frames(); drawChart(); }
+  // ---- 一覧・登録の画面 ----
+  function spark(pts,c){ const a=Date.UTC(2000,4,10), b=Date.UTC(2000,8,30), P=pts.map(([md,v])=>[(tOf(2000,md)-a)/(b-a)*60+2,24-Math.max(0,Math.min(1,v))*22]);
+    return P.length>1?`<path d="${P.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('')}" fill="none" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/>`:''; }
+  function rowHtml(o){ const ren=draft&&draft.ren===o.id;
+    return `<div class="otr${o.on?' on':''}" style="--c:${o.color}"><label class="otck" title="グラフに重ねる"><input type="checkbox" data-ote="tg" data-id="${o.id}"${o.on?' checked':''} aria-label="${escH(o.name)}をグラフに重ねる"></label>`
+      +`<div class="otm">${ren?`<div class="otrn"><input type="text" maxlength="24" value="${escH(o.name)}" data-ote="rnin" aria-label="お手本の名前"><button type="button" class="btn small primary" data-ote="rnok" data-id="${o.id}">決める</button></div>`:`<b>★ ${escH(o.name)}</b>`}`
+      +`<small>${o.y}年・区画 ${escH(o.pn||o.pid.slice(0,8))}・観測 ${o.pts.length}回</small>`
+      +`<span class="ota"><button type="button" data-ote="go" data-id="${o.id}">地図で見る</button><button type="button" data-ote="ren" data-id="${o.id}">名前を変える</button><button type="button" class="del" data-ote="del" data-id="${o.id}">消す</button></span></div>`
+      +`<svg class="otsp" viewBox="0 0 64 26" aria-hidden="true">${spark(o.pts,o.color)}</svg></div>`; }
+  function listHtml(msg){ const n=st.list.length;
+    return `<div class="oth"><h3>★ お手本の生育曲線</h3><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
+      +`<p>よく育った圃場の生育を「お手本」にして、自分の圃場とグラフでくらべられます。品種ごとに作っておくと便利です。<b>${MAX}個まで</b>、この端末に保存します。</p>`
+      +(msg?`<div class="otmsg">${msg}</div>`:'')
+      +(n?`<div class="otl">${st.list.map(rowHtml).join('')}</div>`:`<div class="ote0">まだ、お手本がありません。<br>下のボタンから、お手本にする圃場を選んで登録します。</div>`)
+      +`<div class="otf"><button type="button" class="btn primary otego" data-ote="new"${n>=MAX?' disabled':''}>＋ 新しいお手本を登録する</button><span class="hint">${n}/${MAX}${n>=MAX?'（いっぱいです。使わないお手本を消してください）':''}</span></div>`
+      +(n?`<p class="hint">チェックを入れたお手本が、グラフに重なります。地図では、お手本の圃場がお手本の色の点線の枠で囲まれます（グラフに重ねているものは太く）。</p>`:''); }
+  function newHtml(){ const d=draft||(draft={pid:'',y:0,name:''}), cand=selected.filter(s=>parcels[s.pid]&&pkg.series[s.pid]), ys=d.pid?yearsOf(d.pid):[];
+    if(d.pid&&!ys.some(x=>x.y===d.y)) d.y=ys.length?ys[0].y:0; const ok=!!(d.pid&&d.y);
+    return `<div class="oth"><h3>★ 新しいお手本</h3><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
+      +`<div class="ots"><div class="otsn">1</div><div><b>お手本にする圃場</b><div class="otpk">${cand.map(s=>`<button type="button" class="otc${d.pid===s.pid?' on':''}" data-ote="pid" data-pid="${escH(s.pid)}" style="--c:${s.color}"><i></i>${escH(selLabel(s.pid))}</button>`).join('')}<button type="button" class="otc map${d.pid&&!cand.some(s=>s.pid===d.pid)?' on':''}" data-ote="pick">${d.pid&&!cand.some(s=>s.pid===d.pid)?'✓ 地図で選んだ圃場（選び直す）':'地図でタップして選ぶ'}</button></div>`
+        +(d.pid?`<div class="otsel">選んだ圃場: <b>${escH(nameOf(d.pid))}</b></div>`:`<div class="hint">「選んだ圃場」から選ぶか、地図でタップしてください</div>`)+`</div></div>`
+      +`<div class="ots"><div class="otsn">2</div><div><b>年</b>`+(d.pid?(ys.length?`<div class="otys">${ys.map(x=>`<button type="button" class="oty${d.y===x.y?' on':''}" data-ote="y" data-y="${x.y}"><svg viewBox="0 0 64 26" aria-hidden="true">${spark(ptsOf(d.pid,x.y),'#1e3a2f')}</svg><span>${x.y}年<small>観測 ${x.n}回</small></span></button>`).join('')}</div><div class="otcrop" id="oteCrop"></div>`
+          :`<div class="otw">この圃場は、5/10〜9/30 の観測が少なく、お手本にできません。ほかの圃場を選んでください。</div>`):`<div class="hint">圃場を選ぶと、選べる年が出ます</div>`)+`</div></div>`
+      +`<div class="ots"><div class="otsn">3</div><div><b>名前</b><input type="text" class="otnm" maxlength="24" placeholder="例: コシヒカリ理想生育曲線" value="${escH(d.name)}" data-ote="nm" aria-label="お手本の名前">`
+        +`<div class="otsg">${SUG.map(t=>`<button type="button" data-ote="sg" data-t="${t}">${t}</button>`).join('')}</div></div></div>`
+      +`<div class="otf"><button type="button" class="btn primary otego" data-ote="add"${ok?'':' disabled'}>この内容で登録する</button><button type="button" class="btn" data-ote="${st.list.length?'list':'close'}">${st.list.length?'もどる':'やめる'}</button></div>`; }
+  // 作物の見分け（crop_s.json）で、その年が稲かどうかを添える（稲でなければ、お手本に向かないかもしれないと知らせる）
+  function cropNote(){ const d=draft, el=document.getElementById('oteCrop'); if(!el||!d||!d.pid||!d.y) return; const cell=parcels[d.pid]&&parcels[d.pid].cell; if(!cell) return; const want=d.pid+'|'+d.y;
+    csLoad(cell).then(cs=>{ const e=document.getElementById('oteCrop'); if(!e||!draft||draft.pid+'|'+draft.y!==want) return; const i=cs&&cs.years?cs.years.indexOf(d.y):-1, v=i>=0&&cs.p&&cs.p[d.pid]?cs.p[d.pid][i]:null;
+      if(!v){ e.textContent=''; return; } const rice=v[0]==='稲'; e.className='otcrop '+(rice?'ok':'ng');
+      e.textContent=rice?`✓ ${d.y}年は、稲と見分けています`:`⚠ ${d.y}年は「${v[0]}」と見分けています。稲のお手本には向かないかもしれません`; }); }
+  function render(view,msg){ const box=document.querySelector('#oteDlg>div'); if(!box) return; box.dataset.v=view; box.innerHTML=view==='new'?newHtml():listHtml(msg); if(view==='new') cropNote(); }
+  function open(view){ const old=document.getElementById('oteDlg'); if(old) old.remove(); if(picking) endPick();
+    const ov=document.createElement('div'); ov.className='sx otesx'; ov.id='oteDlg'; ov.innerHTML='<div role="dialog" aria-modal="true" aria-label="お手本の生育曲線"></div>'; document.body.appendChild(ov);
+    ov.addEventListener('click',onDlg); ov.addEventListener('input',e=>{ if(e.target.dataset.ote==='nm'&&draft) draft.name=e.target.value; });
+    ov.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.dataset.ote==='rnin'){ e.preventDefault(); const b=ov.querySelector('[data-ote=rnok]'); if(b) b.click(); } });
+    view=view||(st.list.length?'list':'new'); if(view==='new'&&!draft) draft={pid:selected.length===1&&pkg&&pkg.series[selected[0].pid]?selected[0].pid:'',y:0,name:''};   // 選んだ圃場が1枚なら、それを最初から選んでおく
+    render(view); }
+  function close(){ const o=document.getElementById('oteDlg'); if(o) o.remove(); draft=null; }
+  function onDlg(e){ const ov=document.getElementById('oteDlg'); if(e.target===ov){ close(); return; } const b=e.target.closest('[data-ote]'); if(!b) return;
+    const k=b.dataset.ote, o=b.dataset.id?st.list.find(x=>x.id===b.dataset.id):null;
+    if(k==='close'){ close(); return; }
+    if(k==='tg'){ if(o){ o.on=b.checked; save(); changed(); render('list'); } return; }
+    if(k==='new'){ if(st.list.length>=MAX) return; draft=null; open('new'); return; }
+    if(k==='list'){ draft=null; render('list'); return; }
+    if(k==='pid'){ draft.pid=b.dataset.pid; draft.y=0; render('new'); return; }
+    if(k==='y'){ draft.y=+b.dataset.y; render('new'); return; }
+    if(k==='sg'){ draft.name=b.dataset.t; const i=ov.querySelector('.otnm'); if(i) i.value=draft.name; return; }
+    if(k==='pick'){ startPick(); return; }
+    if(k==='add'){ add(); return; }
+    if(k==='go'&&o){ close(); goTo(o); return; }
+    if(k==='ren'&&o){ draft={ren:o.id}; render('list'); const i=ov.querySelector('[data-ote=rnin]'); if(i){ i.focus(); i.select(); } return; }
+    if(k==='rnok'&&o){ const i=ov.querySelector('[data-ote=rnin]'), v=(i&&i.value||'').trim(); if(v){ o.name=v.slice(0,24); save(); changed(); } draft=null; render('list'); return; }
+    if(k==='del'&&o){ if(b.dataset.sure!=='1'){ b.dataset.sure='1'; b.textContent='本当に消す'; b.classList.add('sure'); setTimeout(()=>{ if(b.isConnected){ b.dataset.sure=''; b.textContent='消す'; b.classList.remove('sure'); } },4000); return; }
+      st.list=st.list.filter(x=>x!==o); save(); changed(); render('list',`「${escH(o.name)}」を消しました`); return; } }
+  function add(){ const d=draft; if(!d||!d.pid||!d.y||st.list.length>=MAX) return; const pts=ptsOf(d.pid,d.y); if(pts.length<3) return;
+    const used=st.list.map(o=>o.color), P=parcels[d.pid];
+    const o={id:'o'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:(d.name||'').trim().slice(0,24)||`お手本${st.list.length+1}（${d.y}年）`,pid:d.pid,pn:P?P.name:d.pid.slice(0,8),cell:P&&P.cell||'',y:d.y,
+      color:COLORS.find(c=>!used.includes(c))||COLORS[st.list.length%COLORS.length],on:true,geom:geomOf(d.pid),pts,at:new Date().toISOString().slice(0,10)};
+    st.list.push(o); if(!save()){ st.list.pop(); render('new'); const f=document.querySelector('#oteDlg .otf'); if(f) f.insertAdjacentHTML('afterend','<div class="otw">保存できませんでした（この端末の保存がいっぱいか、使えない設定です）</div>'); return; }
+    draft=null; changed(); render('list',`「${escH(o.name)}」を登録して、グラフに重ねました`); flash(o.id); }
+  // 地図でタップして選ぶ（そのあいだ、地図のタップは区画を選ばない）
+  function startPick(){ picking=true; const dl=document.getElementById('oteDlg'); if(dl) dl.remove();
+    const b=document.createElement('div'); b.id='otePick'; b.innerHTML='<span>★ お手本にする圃場を、地図でタップしてください</span><button type="button" class="btn small">やめる</button>';
+    L.DomEvent.disableClickPropagation(b); b.querySelector('button').onclick=()=>{ endPick(); open('new'); }; document.getElementById('map').appendChild(b); mapIntoView(); }   // 画面を消すだけなので、入れかけの内容（draft）は残る
+  function endPick(){ picking=false; const b=document.getElementById('otePick'); if(b) b.remove(); }
+  function tap(pid){ if(!picking) return false; endPick(); if(!draft) draft={pid:'',y:0,name:''}; draft.pid=pid; draft.y=0; open('new'); return true; }
+  document.getElementById('btnOte').onclick=()=>open();
+  document.getElementById('oteBar').addEventListener('click',e=>{ const b=e.target.closest('[data-ote]'); if(!b) return; const k=b.dataset.ote;
+    if(k==='open'){ open('list'); return; }
+    if(k==='hide'){ const o=st.list.find(x=>x.id===b.dataset.id); if(o){ o.on=false; save(); changed(); } return; }
+    if(k==='sh'||k==='sh0'){ st.shift=k==='sh0'?0:Math.max(-30,Math.min(30,st.shift+ +b.dataset.d)); save(); drawChart(); } });
+  document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(document.getElementById('oteDlg')) close(); else if(picking) endPick(); });
+  frames();
+  return {curves,draw,legend,tip,bar,tap,act,valsAt,open,list:()=>st.list};
+})();
+window.__ote=OTE;
 
 // ---------- Excel に保存（選んだ田の一覧・番号つきの地図・NDVI の推移） ----------
 // 地図: 航空写真（地理院タイル）の上に、いまの色分けと田の形を描き、選んだ田に ①② … の番号をつけた画像。表は同じ番号で並べる
@@ -2988,6 +3212,12 @@ document.getElementById('btnXlsx').onclick=async()=>{
       plan.push({sheet:w.name,title:`NDVIの比較（実線＝${Y}年、点線＝${Y-1}年。5/10〜9/30）`,xmin:Math.round(Date.UTC(2000,4,10)/864e5)+25569,xmax:Math.round(Date.UTC(2000,8,30)/864e5)+25569+1,major:14,xfmt:'m/d',xtitle:'月日',ymin:0,ymax:1,
         ser:[...sSer(Y,R1).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y}年`,color:x.s.color.slice(1).toUpperCase(),w:28575,x:sr(col(HC),R1),y:sr(col(i+1),R1)})),
              ...sSer(Y-1,R0).map(({x,i})=>({text:`${selLabel(x.s.pid)} ${Y-1}年`,color:x.s.color.slice(1).toUpperCase(),w:15875,dash:1,x:sr(col(HC),R0),y:sr(col(i+1),R0)}))]}); }
+    { const OA=window.__ote?window.__ote.act():[];   // グラフに重ねているお手本（月日 × お手本）
+      if(OA.length){ const wo=wb.addWorksheet('お手本'), mds=[...new Set(OA.flatMap(o=>o.pts.map(p=>p[0])))].sort(), Mo=OA.map(o=>new Map(o.pts.map(p=>[p[0],p[1]])));
+        wo.getRow(1).values=['月日',...OA.map(o=>`★ ${o.name}（${o.y}年）`)]; wo.getRow(1).font={bold:true,name:'Calibri',size:11}; wo.getColumn(1).width=10;
+        OA.forEach((o,i)=>{ wo.getColumn(i+2).width=Math.max(16,o.name.length*2+10); wo.getRow(1).getCell(i+2).font={bold:true,name:'Calibri',size:11,color:{argb:'FF'+o.color.slice(1).toUpperCase()}}; });
+        mds.forEach((md,r)=>{ const row=wo.getRow(r+2); row.values=[new Date(Date.UTC(2000,+md.slice(0,2)-1,+md.slice(3,5))),...Mo.map(m=>m.has(md)?m.get(md):null)]; row.getCell(1).numFmt='m/d'; });
+        wo.getRow(mds.length+3).values=['お手本は、登録した圃場のその年の NDVI（5/10〜9/30）。年をのぞいた月日で並べています。']; } }
     wb.worksheets.forEach(w=>w.eachRow({includeEmpty:false},r=>r.eachCell({includeEmpty:false},c=>{ const f=c.font||{}; if(!f.name||!f.size) c.font={...f,name:f.name||'Calibri',size:f.size||11}; })));   // 名前・大きさのないフォントは、Excel で行の高さが狂うことがある
     let buf=await wb.xlsx.writeBuffer(), chartNote='';
     if(plan.length){ try{ buf=await addXlsxCharts(buf,plan); }catch(e){ chartNote='（グラフを付けられませんでした: '+e.message+'）'; } } else chartNote='（稲の期間のデータが少ないため、グラフは付けませんでした）';
