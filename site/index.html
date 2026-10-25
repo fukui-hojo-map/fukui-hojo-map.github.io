@@ -820,8 +820,11 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .splitter{cursor:col-resize;background:var(--line);border-left:3px solid #fbfcfa;border-right:3px solid #fbfcfa;touch-action:none}
   .splitter:hover,.splitter.drag{background:var(--accent)}
   .mapbar{position:absolute;z-index:500;left:6px;bottom:6px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:13px;width:min(346px,calc(100% - 12px));box-shadow:0 1px 5px rgba(0,0,0,.12)}
-  .mapbar select{font:inherit;font-size:13.5px;padding:1px 2px;border:1px solid var(--line);border-radius:4px;max-width:165px}
-  .mapbar .dsel{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13.5px;padding:1px 6px;border:1px solid var(--line);border-radius:4px;background:#fff;color:inherit;cursor:pointer;white-space:nowrap} .mapbar .dsel .car{font-size:11px;color:var(--ink2)} .mapbar .dsel:disabled{opacity:.5;cursor:default}
+  /* 日付と表示モードの箱は、同じ見た目にそろえる（利用者の指示 2026-10-26）: 高さ・文字・枠・角・背景・右の ▾ を同じに（スマホの標準の選択欄は灰色で大きく出るので、appearance:none で自分で描く） */
+  .mapbar .ctl select,.mapbar select,.mapbar .dsel{box-sizing:border-box;height:28px;font:inherit;font-size:14px;line-height:1.2;color:var(--ink);padding:0 24px 0 8px;border:1px solid var(--line);border-radius:6px;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%234c5a52' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center;-webkit-appearance:none;appearance:none;cursor:pointer;margin:0}
+  .mapbar .ctl select,.mapbar select{max-width:165px;text-overflow:ellipsis}
+  .mapbar .dsel{display:inline-flex;align-items:center;white-space:nowrap} .mapbar .dsel .car{display:none} .mapbar .dsel:disabled{opacity:.5;cursor:default}
+  .mapbar .ctl>span:first-child{font-size:13px;color:var(--ink2)}   /* 「日付」「表示モード」の文字も同じ大きさ・色に */
   .mapbar .mbrow{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px} .mapbar #fillMode{field-sizing:content}   /* 選んでいる名前の幅にそろえる（対応していないブラウザは今までの幅で、入らなければ2段に折り返す） */   /* 日付と表示モードを横並びに（狭い画面では折り返して2段） */
   .mapbar .cloudnote{margin-top:4px;font-size:12.5px;line-height:1.5;color:var(--ink2)}
   .dpk{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px}   /* 日付の一覧（雲の割合つき） */
