@@ -834,6 +834,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .mapbar .ctl{gap:4px;flex-wrap:nowrap} .mapbar .ib{border:0;background:none;color:var(--ink2);font-size:15px;cursor:pointer;padding:0 2px;line-height:1} .mapbar .more{display:none} .mapbar.open .more{display:block;max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .mapbar .bar{height:7px;border-radius:3px;background:linear-gradient(90deg,#a0522d,#f5e663,#7fc41c,#0b6b1e);margin:5px 0 2px}
   .mapbar .lbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink2);gap:4px}
+  .mapbar .lbl.plleg{flex-wrap:wrap;justify-content:flex-start;gap:4px 5px;margin-top:2px}   /* 作付計画の色の見本（priv.js の planLegendHtml）。押すと、その作物・品種だけを強く出す */
+  .plk{display:inline-flex;align-items:center;gap:4px;font:600 12px/1.2 inherit;color:#26332c;background:#fff;border:1px solid #c9d3cc;border-radius:999px;padding:3px 8px 3px 5px;cursor:pointer;white-space:nowrap}
+  .plk i{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);flex:none} .plk.on{border-color:#1e3a2f;box-shadow:0 0 0 1.5px #1e3a2f} .plk.off{opacity:.45}
   .mapbar .bar.rel{background:linear-gradient(90deg,#a0522d,#f5e663,#0b6b1e)}
   .mapbar .pxnote{font-size:12px;color:var(--ink2);display:block}
   .mapwrap{position:relative;min-width:0}
@@ -990,6 +993,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .btn.gogo:hover{background:linear-gradient(180deg,#358a58,#22663f)} .btn.gogo:disabled{opacity:.6}
   .plno span{position:absolute;transform:translate(-50%,-50%) rotate(var(--unrot,0deg));font:700 11px/1 sans-serif;color:#222;background:rgba(255,255,255,.88);border:1.5px solid #e0b800;border-radius:9px;padding:2px 5px;white-space:nowrap}
   .plno.man span{background:#ff6d00;border-color:#fff;color:#fff}
+  .plno span small{font-size:10.5px;font-weight:600;margin-left:3px} .plno.dim{opacity:.3}   /* 田が画面で大きいときだけ、番号に短い名前を添える。見本で強く出していない田は薄く */
   .plan h3{font-size:14.5px;margin:8px 0 4px;color:var(--ink)} .plan .ctl{font-size:14.5px} .plan select{font-size:14.5px;padding:3px 4px;min-height:28px} .plan .ctl.pgo{margin-top:8px} .plan .ctl.pgo .btn{min-width:9em} .plan .btn.on{background:var(--ink);color:#fff}
   .topbox{margin:0 0 12px;border:1px solid #cfe3d6;border-radius:10px;overflow:hidden;background:#fbfdfb;user-select:none}
   .topbox .tbhead{padding:12px 14px 10px;color:#fff;background:linear-gradient(135deg,#1e5a38 0%,#2f7d4f 55%,#3f9a8c 100%)}
@@ -2287,18 +2291,21 @@ function planManual(x){ return !!(x&&(x.lock||x.own||x.water||x.memo||x.w||x.s||
 function syncPlanLabels(on){ const want=new Map();
   if(on&&map.getZoom()>=16){ const vis=shownPids?new Set(shownPids):null; for(const x of plan.items) if(parcels[x.pid]&&(!vis||vis.has(x.pid))) want.set(x.pid,x); }
   for(const pid in planLblM) if(!want.has(pid)){ planLbl.removeLayer(planLblM[pid].m); delete planLblM[pid]; }
-  for(const [pid,x] of want){ const man=planManual(x), key=x.no+'|'+man, c=planLblM[pid]; if(c&&c.k===key) continue; if(c) planLbl.removeLayer(c.m);
-    const pt=labelPt(parcels[pid].feature.geometry), m=L.marker([pt[1],pt[0]],{icon:L.divIcon({className:'plno'+(man?' man':''),html:`<span>${x.no}</span>`,iconSize:null}),interactive:false,keyboard:false}).addTo(planLbl); planLblM[pid]={m,k:key}; } }
+  const hl=typeof planHL!=='undefined'?planHL:null;
+  for(const [pid,x] of want){ const man=planManual(x), b=parcels[pid].layer.getBounds(), p1=map.latLngToContainerPoint(b.getNorthWest()), p2=map.latLngToContainerPoint(b.getSouthEast());
+    const big=Math.abs(p2.x-p1.x)>=64&&Math.abs(p2.y-p1.y)>=40, nm=big&&typeof planShort==='function'?planShort(x):'', dim=hl!=null&&typeof planKey==='function'&&planKey(x)!==hl;   // 田が画面で大きいときだけ、短い名前を添える
+    const key=x.no+'|'+man+'|'+nm+'|'+dim, c=planLblM[pid]; if(c&&c.k===key) continue; if(c) planLbl.removeLayer(c.m);
+    const pt=labelPt(parcels[pid].feature.geometry), m=L.marker([pt[1],pt[0]],{icon:L.divIcon({className:'plno'+(man?' man':'')+(dim?' dim':''),html:`<span>${x.no}${nm?`<small>${esc(nm)}</small>`:''}</span>`,iconSize:null}),interactive:false,keyboard:false}).addTo(planLbl); planLblM[pid]={m,k:key}; } }
 function paintMap(){
   const d=document.getElementById('colorDate').value, mode=fillMode(), tr=isTrend(mode), el=mode==='elev', pm=mode==='plan', on=document.getElementById('colorOn').checked&&mode!=='rel'&&mode!=='elevr'&&!pm, vb=tr||el?map.getBounds().pad(0.2):null, PS=SHOW_PLAN?planSet():null, PI=pm?new Map(plan.items.map(x=>[x.pid,x])):null;
   if(geoLayer&&!map.hasLayer(geoLayer)){ syncHalos(false); if(SHOW_PLAN) syncPlanLabels(false); pxGen++; pxLayer.clearLayers(); return; }   // 圃場の中の絵も消す   // 引いているときは区画を出さない
   syncHalos(!pm); if(SHOW_PLAN) syncPlanLabels(pm);
-  const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null;   // 生育予測: 田ごとの予測日で塗る
+  const TP=pm&&plan.showTurn&&ROTM?ROTM:null, gm=mode==='gp', GM=gm?gpPaintPrep():null, HL=pm&&typeof planHL!=='undefined'&&typeof planKey==='function'?planHL:null;   // 生育予測: 田ごとの予測日で塗る
   if(el&&on){ const b=map.getBounds(); elevScale=elevScaleOf((shownPids||Object.keys(parcels)).filter(pid=>parcels[pid]&&b.intersects(parcels[pid].layer.getBounds()))); }   // 高低差マップ（絶対表示）: 見えている圃場で物差しを決める
   const nd=[];   // この日の画像がない田（稲の田で、ほかの日の画像はある）→「この日は写真なし」を小さく出す
   for(const pid of (shownPids||Object.keys(parcels))){ const s=pm?null:selected.find(s=>s.pid===pid); const l=parcels[pid].layer, inP=PS&&PS.has(pid);
     let fc,fo;
-    if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); }
+    if(pm){ const it=PI.get(pid), o=it?(it.lock||plan.res[pid]||''):null; fc=o?planColor(o,it):inP?'#ffffff':'#888'; fo=o?(soilOn?.45:.75):inP?(soilOn?.3:.4):(soilOn?0:.12); if(it&&HL!=null&&planKey(it)!==HL) fo=soilOn?.06:.1; }   // 色の見本で強く出していない田は薄く
     else if(gm){ const t=GM.get(pid); fc=t!=null&&gpRange?gpFill(t):'#888'; fo=t!=null?(soilOn?.45:.8):(soilOn?0:.12); }
     else if(el){ const t=!on?null:vb.intersects(l.getBounds())?elevT(pid):null; fc=t==null?'#888':`rgb(${elevColor(elevBand(t)).join(',')})`; fo=soilOn?(t!=null?.35:0):t==null?.15:.65; }   // 高低差マップ: 標高（見えている圃場で同じ物差し）
     else { const v=!on?null:tr?(vb.intersects(l.getBounds())?trendFill(pid):null):val(pid,d); fc=!on?'#888':tr?(v==null?'#888':`rgb(${vigColor(v).join(',')})`):ndviColor(v);
@@ -2760,6 +2767,7 @@ async function renderPx(){ relRange='';
   const gen=++pxGen, fm=fillMode(), mode=fm==='top'?'abs':fm, on=document.getElementById('colorOn').checked, note=document.getElementById('pxNote');
    // 追肥マップは今は絶対表示で塗る
   const bar=document.getElementById('lgBar'), lbl=document.getElementById('lgLbl');
+  const leg=mode==='plan'&&typeof planLegendHtml==='function'?planLegendHtml():''; lbl.classList.toggle('plleg',!!leg); bar.style.display=leg?'none':'';   // 作付計画が完成したら、色の見本（押すと、その作物・品種だけ強く出す）
   { const dsc=MODE_DESC[fillRaw()]; document.getElementById('modeDesc').textContent=typeof dsc==='function'?dsc():dsc||''; } renderModeHead();
   bar.classList.toggle('rel',mode!=='abs');
   bar.style.background=bandOn()&&(selected.length||map.getZoom()>=BULK_ZOOM)&&document.getElementById('colorOn').checked?bandBar(mode==='abs'?'abs':isTrend(mode)?'vig':'rel'):isTrend(mode)?VIG_GRAD:'';
@@ -2768,7 +2776,7 @@ async function renderPx(){ relRange='';
   if(fm==='gp'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderGp(note,bar,lbl); }
   if(fm==='elev'||fm==='elevr'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderElev(gen,note,bar,lbl,fm==='elevr'); }
   renderElevSel();   // 高低差マップでないときは、右の欄の箱を隠す
-  if(mode==='plan'){ pxLayer.clearLayers(); bar.style.background='#fff'; lbl.innerHTML='<span>黄色の枠＝計画用リスト、オレンジ＝手で入力した圃場（番号は右の表）</span>'; note.textContent=''; const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return; }
+  if(mode==='plan'){ pxLayer.clearLayers(); bar.style.background='#fff'; lbl.innerHTML=leg||'<span>黄色の枠＝計画用リスト、オレンジ＝手で入力した圃場（番号は右の表）</span>'; note.textContent=''; const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return; }
   pxLayer.clearLayers(); if(!isTrend(mode)||!selected.length||!on){ const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; }
   if(!on){ note.textContent=''; return; }
   if(!selected.length){ note.textContent=map.getZoom()<BULK_ZOOM?'拡大すると、圃場の中まで色分けします':''; return renderBulk(gen,mode,note); }
@@ -3187,9 +3195,10 @@ function loadExcelJs(){ return excelJs||(excelJs=new Promise((ok,ng)=>{ const sc
 function numOf(pid){ const s=selected.find(x=>x.pid===pid); const k=s?PALETTE.indexOf(s.color):-1; return CIRC[k]||String(k+1); }
 function labelPt(g){   // 番号を置く点: いちばん大きい部分の重心（田の外に出るときは、中にある点のうち重心に近いもの）
   const polys=g.type==='Polygon'?[g.coordinates]:g.coordinates, ar=r=>{ let a=0; for(let i=0,j=r.length-1;i<r.length;j=i++) a+=r[j][0]*r[i][1]-r[i][0]*r[j][1]; return a/2; };
-  const poly=polys.reduce((a,b)=>Math.abs(ar(b[0]))>Math.abs(ar(a[0]))?b:a), ring=poly[0], A=ar(ring); let cx=0,cy=0;
-  for(let i=0,j=ring.length-1;i<ring.length;j=i++){ const f=ring[j][0]*ring[i][1]-ring[i][0]*ring[j][1]; cx+=(ring[j][0]+ring[i][0])*f; cy+=(ring[j][1]+ring[i][1])*f; }
-  cx/=6*A; cy/=6*A; const ins=(x,y)=>inRing(ring,x,y)&&!poly.slice(1).some(h=>inRing(h,x,y)); if(ins(cx,cy)) return [cx,cy];
+  const poly=polys.reduce((a,b)=>Math.abs(ar(b[0]))>Math.abs(ar(a[0]))?b:a), ring=poly[0], ox=ring[0][0], oy=ring[0][1], rr=ring.map(p=>[p[0]-ox,p[1]-oy]), A=ar(rr); let cx=0,cy=0;
+  // 重心は、1つ目の頂点からの差で計算する（経度136・緯度36のまま掛け合わせると、桁落ちで重心が平均14m・最大100mほどずれ、番号が田の端に寄っていた。2026-10-25）
+  for(let i=0,j=rr.length-1;i<rr.length;j=i++){ const f=rr[j][0]*rr[i][1]-rr[i][0]*rr[j][1]; cx+=(rr[j][0]+rr[i][0])*f; cy+=(rr[j][1]+rr[i][1])*f; }
+  cx=ox+cx/(6*A); cy=oy+cy/(6*A); const ins=(x,y)=>inRing(ring,x,y)&&!poly.slice(1).some(h=>inRing(h,x,y)); if(ins(cx,cy)) return [cx,cy];
   const xs=ring.map(p=>p[0]), ys=ring.map(p=>p[1]), x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys); let best=null, bd=1e18;
   for(let i=1;i<30;i++) for(let j=1;j<30;j++){ const x=x0+(x1-x0)*i/30, y=y0+(y1-y0)*j/30; if(!ins(x,y)) continue; const d=(x-cx)**2+(y-cy)**2; if(d<bd){ bd=d; best=[x,y]; } }
   return best||[cx,cy]; }
