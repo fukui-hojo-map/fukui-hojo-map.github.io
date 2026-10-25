@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rice bowl
+* source:	https://sketchfab.com/3d-models/rice-bowl-24464015c15b4662a32be7625ae3f75b
+* author:	1-3D.com (https://sketchfab.com/1-3D.com)
+
+Model License:
+* license type:	CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+* requirements:	Author must be credited. Derivatives must be shared under the same license (ShareAlike).
+
+This work is based on "Rice bowl" (https://sketchfab.com/3d-models/rice-bowl-24464015c15b4662a32be7625ae3f75b) by 1-3D.com (https://sketchfab.com/1-3D.com) licensed under CC-BY-SA-4.0 (http://creativecommons.org/licenses/by-sa/4.0/)
+Changes: reduced the texture size (for AR display). This modified file is also shared under CC BY-SA 4.0.
