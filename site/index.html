@@ -3182,7 +3182,7 @@ window.__ote=OTE;
 // ExcelJS は押したときだけ読み込む（cdn.jsdelivr.net）
 const CIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
 let excelJs=null;
-function loadExcelJs(){ return excelJs||(excelJs=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+function loadExcelJs(){ return excelJs||(excelJs=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='exceljs.min.js';   // ExcelJS 4.4.0（MIT）。外部の配信元には頼らず、このサイトから配る（2026-10-25 セキュリティ点検）。公式の配布物と同じものを確認ずみ
   sc.onload=()=>ok(window.ExcelJS); sc.onerror=()=>{ excelJs=null; ng(new Error('ExcelJS を読み込めませんでした')); }; document.head.appendChild(sc); })); }
 function numOf(pid){ const s=selected.find(x=>x.pid===pid); const k=s?PALETTE.indexOf(s.color):-1; return CIRC[k]||String(k+1); }
 function labelPt(g){   // 番号を置く点: いちばん大きい部分の重心（田の外に出るときは、中にある点のうち重心に近いもの）
@@ -3340,7 +3340,7 @@ document.getElementById('btnXlsx').onclick=async()=>{
 // ---------- Excel のグラフ（編集できる折れ線）を、書き出した xlsx に足す ----------
 // ExcelJS はグラフを作れないので、できあがった xlsx（zip）に、グラフの部品（chart・drawing）を足す。グラフは表のセルを見ているので、Excel で数値を直すとグラフも変わる
 let jszipP=null;
-function loadJsZip(){ return jszipP||(jszipP=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+function loadJsZip(){ return jszipP||(jszipP=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='jszip.min.js';   // JSZip 3.10.1（MIT）。同上
   sc.onload=()=>ok(window.JSZip); sc.onerror=()=>{ jszipP=null; ng(new Error('JSZip を読み込めませんでした')); }; document.head.appendChild(sc); })); }
 async function addXlsxCharts(buf,charts){   // charts=[{sheet: グラフを置くシート名, title, xmin,xmax,major,xfmt, ymin,ymax, ser:[{ref|text: 系列の名前, color, dash, w, x, y: セルの範囲}]}]。グラフは1枚ずつ別のシートの左上に置く（行の高さ・列の幅に左右されない）
   const JZ=await loadJsZip(), z=await JZ.loadAsync(buf), PR=new DOMParser(), RNS='http://schemas.openxmlformats.org/officeDocument/2006/relationships', RT=RNS+'/drawing';
