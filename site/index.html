@@ -1442,7 +1442,7 @@ const RAINACC=(function(){
     if(!rows.length){ box.hidden=true; return; }
     box.innerHTML=`<div class="rh">この圃場に過去降った雨 <span class="hint">推定・${until(d)}</span></div>`
       +`<table><tr><th></th><th>12時間以内</th><th>24時間以内</th><th>48時間以内</th></tr>${rows.map(({s,v})=>`<tr><td style="color:${s.color}">${esc(selLabel(s.pid))}</td>${d.w.map(w=>`<td><b>${fmtMm(v[w])}</b></td>`).join('')}</tr>`).join('')}</table>`
-      +`<div class="rf">${missNote(d)}出典：気象庁ホームページ（加工して作成）</div>`;
+      +(missNote(d)?`<div class="rf">${missNote(d)}</div>`:'');   // 出典は、画面の一番下の出典の欄にまとめた（利用者の指示 2026-10-25）
     box.hidden=false; }
   return {load, at:atLL, fmt, line, renderSel, until, anyMiss, URL, API, _data:()=>data, _err:()=>err, _val:val};
 })();
@@ -1572,7 +1572,7 @@ const RAIN=(function(){
     return `<div class="rhd"><button type="button" class="rplay" data-r="play" aria-label="再生">▶</button><span class="rt" id="rainT" aria-live="off"></span><span class="sp"></span><button type="button" class="rgeo" data-r="geo">現在地へ</button>${seg}${x}</div>`
       +`<div class="rsl"><div class="rstrip" id="rainStrip" aria-hidden="true"></div><input type="range" id="rainS" min="0" max="${frames.length-1}" step="1" value="${idx}" aria-label="時刻"><div class="rticks">${ticks()}</div></div>`
       +`<div class="rpt" id="rainPt"></div>`
-      +`<div class="rlgbox">${legend()}</div><div class="rfoot"><div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a>（加工して作成）</div></div>`; }
+      +`<div class="rlgbox">${legend()}</div><div class="rfoot"><div class="rsrc"><a href="https://www.jma.go.jp/bosai/nowc/" target="_blank" rel="noopener">出典：気象庁ホームページ</a></div></div>`; }
   // 地図の真ん中（＋）は、帯にかくれない「見えている所」の真ん中（帯の上の部分の真ん中）。帯を作り直したとき・画面の大きさが変わったときに決める
   // ＋が動くときは、地図も同じだけずらして、＋の下の場所を変えない（開く前に見ていた所が、そのまま＋の所に来る）。共有リンクの位置も、＋の所
   let ctrY=null;
@@ -2026,7 +2026,7 @@ function loadPackage(p, label){
   allDates=[...new Set(Object.values(p.series||{}).flat().map(r=>r[0]))].sort();
   detectOutliers();
   document.getElementById('meta').textContent=`${label||p.meta?.name||''}：${feats.length}区画 / ${allDates.length}観測日${allDates.length?'（'+allDates[0]+'〜'+allDates[allDates.length-1]+'）':''}`;
-  setFoot((p.meta?.source?'データ: '+p.meta.source+'。':'')+(p.meta?.attribution||'Contains modified Copernicus Sentinel data')+'。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。');
+  setFoot((p.meta?.source?'データ: '+p.meta.source+'。':'')+(p.meta?.attribution||'Contains modified Copernicus Sentinel data')+'。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲・雨量: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・解析雨量）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。');
   buildColorDates(); refresh();
 }
 
@@ -3150,7 +3150,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   const md=x=>x?`${+x.slice(5,7)}/${+x.slice(8,10)}`:'', LT=index.latest||{}, chk=index.checked||index.updated||'';
   document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+``;
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
-  setFoot('データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報。地点の雨の文は、これを加工して作成）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。');
+  setFoot('データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲・雨量: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・解析雨量）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。');
   const h=parseHash();
   const hm=HOME.get();   // 本拠地を決めてあれば、開くたびにそこから（共有・Excel の「地図」のリンクなど、#c= のある開き方は、その場所）
   if(h.c) map.setView(h.c,h.z||15); else if(hm) map.setView([hm.lat,hm.lng],hm.z); else if(index.bbox) map.fitBounds([[index.bbox[1],index.bbox[0]],[index.bbox[3],index.bbox[2]]],{maxZoom:18});
