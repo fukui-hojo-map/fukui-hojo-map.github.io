@@ -1,0 +1,13 @@
+# 部品の新しい版を、毎月1回、提案（プルリクエスト）として出す。自動では入らない（受け入れる前に、手元と weekly-ndvi の手動実行で試す）
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3

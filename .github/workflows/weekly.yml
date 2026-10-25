@@ -44,14 +44,17 @@ jobs:
             echo "今日（日本時間 ${m}月・曜日${w}）は更新しない日です"
           fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: steps.gate.outputs.run == '1'
+        with:
+          persist-credentials: false
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: steps.gate.outputs.run == '1'
         with:
           ref: gh-pages
           path: published
+          persist-credentials: false
         continue-on-error: true
       - name: 前回データを復元
         if: steps.gate.outputs.run == '1'
@@ -61,14 +64,15 @@ jobs:
             echo "::error::公開中のデータ（gh-pages）を取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
 
       # 機械のハマりやすさ（pipeline/wet.py）の衛星の乾きの合計。公開サイトの容量（1GB）を使わないよう、別のブランチ wet-state に置く
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: steps.gate.outputs.run == '1'
         with:
           ref: wet-state
           path: state
+          persist-credentials: false
         continue-on-error: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         if: steps.gate.outputs.run == '1'
         with:
           python-version: '3.11'
@@ -78,11 +82,12 @@ jobs:
 
       # レーダー（ndvi.json の rp・rdates・rmask と、過去の年の radar.json。約230MB）は、公開サイトの1GB の上限に収めるため、別のブランチ radar-data に置く（pipeline/radar_store.py）。
       # 計算（NDVI の更新・作物の見分け）は、これまでどおりレーダーを含む形で行い、公開のときだけ外す。最初の1回は公開中のデータにレーダーが入っているので、そのまま radar-data に置く
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: steps.gate.outputs.run == '1'
         with:
           ref: radar-data
           path: radar
+          persist-credentials: false
         continue-on-error: true
       - name: レーダーのデータを公開前のデータに戻す
         if: steps.gate.outputs.run == '1'
@@ -102,7 +107,10 @@ jobs:
           EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
           EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
-        run: python pipeline/update_ndvi.py --max-minutes ${{ inputs.max_minutes || '300' }} --workers 4 ${{ inputs.full && '--full' || '' }}
+          MAX_MINUTES: ${{ inputs.max_minutes || '300' }}   # 入力はシェルの文に直接書かず、環境変数で渡す
+        run: |
+          case "$MAX_MINUTES" in ''|*[!0-9]*) echo "::error::max_minutes は数字で入れてください"; exit 1;; esac
+          python pipeline/update_ndvi.py --max-minutes "$MAX_MINUTES" --workers 4 ${{ inputs.full && '--full' || '' }}
 
       # 近くの雲の割合（pipeline/cloudnear.py → data/cloudnear.json）。画面が、6〜9月に「まわり3kmの99%以上が雲」の日の観測を使わないための材料。
       # 計算済みの日は飛ばす（最初の1回だけ全日で5分ほど）。失敗しても前回のファイルが残るだけで、ほかは止めない
@@ -133,7 +141,7 @@ jobs:
           rm -rf site_pub && cp -al site site_pub
           if [ "${{ steps.radar1.outcome }}" = success ]; then python pipeline/radar_store.py strip --data site_pub/data
           else echo "::warning::radar-data に置けなかったので、今回はレーダーを入れたまま公開します"; fi
-      - uses: peaceiris/actions-gh-pages@v4
+      - uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         if: steps.gate.outputs.run == '1'
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -182,11 +190,13 @@ jobs:
       - name: 乾きの合計を wet-state ブランチに保存する
         if: steps.gate.outputs.run == '1' && !cancelled()
         continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           [ -d state/wet ] && [ -n "$(ls -A state/wet 2>/dev/null)" ] || { echo "保存するものがありません"; exit 0; }
           cd state
           [ -d .git ] || { git init -q && git checkout -q -b wet-state; }
-          url="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git remote set-url origin "$url" 2>/dev/null || git remote add origin "$url"
           git config --unset-all http.https://github.com/.extraheader || true
           git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
@@ -209,7 +219,7 @@ jobs:
           rm -rf site_pub && cp -al site site_pub
           if [ "${{ steps.radar2.outcome }}" = success ]; then python pipeline/radar_store.py strip --data site_pub/data
           else echo "::warning::radar-data に置けなかったので、今回はレーダーを入れたまま公開します"; fi
-      - uses: peaceiris/actions-gh-pages@v4
+      - uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || steps.vig.outcome == 'success' || steps.elev.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

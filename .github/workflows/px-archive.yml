@@ -31,10 +31,12 @@ jobs:
       - id: gate
         run: echo "t0=$(date +%s)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       # 公開中のデータのうち、区画の形・目次・画素データだけ（約130MB。全部は取らない）
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: gh-pages
           path: pages
@@ -43,11 +45,13 @@ jobs:
             data/cells/*/parcels.geojson
             data/cells/*/px_*
           sparse-checkout-cone-mode: false
+          persist-credentials: false
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: px-archive
           path: arc
+          persist-credentials: false
         continue-on-error: true
       - name: 置き場の確認（あるのに取り出せなかったときは、空で上書きしないよう中止）
         run: |
@@ -56,7 +60,7 @@ jobs:
           if [ "$rc" = 0 ] && [ ! -d arc/.git ]; then echo "::error::px-archive ブランチはあるのに取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
           mkdir -p arc
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
           cache: pip
@@ -68,7 +72,12 @@ jobs:
           EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
           EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
-        run: python pipeline/px_archive.py --data pages/data --out arc --workers 3 --deadline $(( ${{ steps.gate.outputs.t0 }} + ${{ inputs.max_minutes || '300' }} * 60 )) ${{ inputs.years && format('--years {0}', inputs.years) || '' }}
+          MAX_MINUTES: ${{ inputs.max_minutes || '300' }}   # 入力はシェルの文に直接書かず、環境変数で渡す
+          YEARS: ${{ inputs.years }}
+        run: |
+          case "$MAX_MINUTES" in ''|*[!0-9]*) echo "::error::max_minutes は数字で入れてください"; exit 1;; esac
+          args=(); [ -n "$YEARS" ] && args+=(--years "$YEARS")
+          python pipeline/px_archive.py --data pages/data --out arc --workers 3 --deadline $(( ${{ steps.gate.outputs.t0 }} + MAX_MINUTES * 60 )) "${args[@]}"
 
       - name: px-archive ブランチに置く
         id: push
@@ -81,4 +90,7 @@ jobs:
         if: ${{ !cancelled() && steps.push.outcome == 'success' && steps.px.outputs.made != '0' && steps.px.outputs.left != '0' && steps.px.outputs.left != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run px-archive.yml --repo "$GITHUB_REPOSITORY" -f years="${{ inputs.years }}" -f max_minutes="${{ inputs.max_minutes || '300' }}" && echo "続きを起こした（残り ${{ steps.px.outputs.left }} セル）"
+          YEARS: ${{ inputs.years }}
+          MAX_MINUTES: ${{ inputs.max_minutes || '300' }}
+          LEFT: ${{ steps.px.outputs.left }}
+        run: gh workflow run px-archive.yml --repo "$GITHUB_REPOSITORY" -f years="$YEARS" -f max_minutes="$MAX_MINUTES" && echo "続きを起こした（残り ${LEFT} セル）"
