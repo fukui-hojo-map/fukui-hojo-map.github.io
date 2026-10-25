@@ -2079,7 +2079,9 @@ let geoLayer=null;
 function ndviColor(v){ if(v==null||isNaN(v)) return '#9aa'; const t=Math.max(0,Math.min(1,(v-0.2)/0.7));
   const stops=[[0,[160,82,45]],[.33,[245,230,99]],[.66,[127,196,28]],[1,[11,107,30]]];
   for(let i=1;i<stops.length;i++){ if(t<=stops[i][0]){const a=stops[i-1],b=stops[i],u=(t-a[0])/(b[0]-a[0]); return 'rgb('+a[1].map((c,k)=>Math.round(c+(b[1][k]-c)*u)).join(',')+')';} } return '#0b6b1e'; }
-function centroid(geom){ const ring=(geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0]); let x=0,y=0; for(const p of ring){x+=p[0];y+=p[1];} return [x/ring.length,y/ring.length]; }
+function centroid(geom){   // 田の重心（面積で重みづけ。田の中に入る点）。名札・✓・気温の場所に使う。頂点の平均だと、最初の頂点（閉じる点で2回数える）や、頂点が多い辺のほうへ寄ってしまう（2026-10-26）
+  try{ const q=labelPt(geom); if(q&&isFinite(q[0])&&isFinite(q[1])) return q; }catch(e){}
+  const ring=(geom.type==='Polygon'?geom.coordinates[0]:geom.coordinates[0][0]); let x=0,y=0; for(const p of ring){x+=p[0];y+=p[1];} return [x/ring.length,y/ring.length]; }
 function distM(a,b){ const R=6371000,dl=(b[1]-a[1])*Math.PI/180,dn=(b[0]-a[0])*Math.PI/180*Math.cos((a[1]+b[1])/2*Math.PI/180); return R*Math.hypot(dl,dn); }
 
 function loadPackage(p, label){
