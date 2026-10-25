@@ -3034,6 +3034,8 @@ const OTE=(function(){
   function rows(){ sync(); return {items:act().map(o=>({o,pts:fromFlood(o.pts.map(([md,v])=>({md,ndvi:v,t:tOf(o.y,md)})).sort((a,b)=>a.t-b.t),o.y).map(p=>[p.md,p.ndvi])}))}; }   // Excel に書き出す点（画面と同じ選び方）
   function changed(){ frames(); renderChips(); drawChart(); }
   function hide(id){ const o=st.list.find(x=>x.id===id); if(o&&o.on){ o.on=false; save(); changed(); } }   // グラフから外す（登録は残る）
+  function toggle(id,on){ const o=st.list.find(x=>x.id===id); if(!o||o.on===!!on) return; o.on=!!on; save(); changed(); }   // マイ圃場の生育量のグラフの ✓ から（利用者の指示 2026-10-26）。地図のグラフと同じ「重ねる」の状態
+  function overlay(y0){ sync(); return act().map(o=>({o,pts:placed(o,y0,'date',0)})); }   // 重ねているお手本を、y0 年の軸（日時）にのせた点。マイ圃場のグラフ用
   function clearAll(){ let ch=false; for(const o of st.list) if(o.on){ o.on=false; ch=true; } if(ch){ save(); frames(); } }   // 「すべて解除」から（このあと refresh が描き直す）
   // ---- 一覧・登録の画面 ----
   function spark(pts,c){ const a=Date.UTC(2000,4,10), b=Date.UTC(2000,8,30), P=pts.map(([md,v])=>[(tOf(2000,md)-a)/(b-a)*60+2,24-Math.max(0,Math.min(1,v))*22]);
@@ -3186,7 +3188,7 @@ const OTE=(function(){
   document.getElementById('btnOte').onclick=()=>{ if(!st.list.length&&!helpSkip()) help(()=>open()); else open(); };   // お手本が1つもないときは、まず使い方（アニメ）。「はじめる」で登録の画面へ
   document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(document.getElementById('oteDlg')) close(); else if(picking) endPick(); });
   frames();
-  return {curves,draw,legend,tip,bar,tap,act,valsAt,open,hide,clearAll,nm6,rows,help,list:()=>st.list};
+  return {curves,draw,legend,tip,bar,tap,act,valsAt,open,hide,clearAll,nm6,rows,help,toggle,overlay,band:BAND,list:()=>st.list};
 })();
 window.__ote=OTE;
 
