@@ -941,6 +941,24 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .otediff td b{font-size:15px} .otediff td.eq b{color:#2e7d32} .otediff td.lo b{color:#e65100} .otediff td.lo2 b{color:#c62828} .otediff td.hi b,.otediff td.hi2 b{color:#1565c0} .otediff td.na{color:#9aa39d}
   .odn{font-size:12px;color:#7a837d;margin-top:6px;line-height:1.5}
   .otesx>div{max-width:480px} .otesx p{font-size:13.5px}
+  .otesx .oth h3{flex:1} .otesx .otq{border:1px solid #c9a74a;background:#fffbea;color:#6b4e00;border-radius:16px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+  /* お手本の使い方（アニメ）: AR可変追肥モードの使い方と同じ形 */
+  .ohM{position:fixed;inset:0;z-index:5000;background:rgba(10,24,16,.6);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+  .ohM .ohC{background:#fff;border-radius:14px;width:100%;max-width:440px;max-height:100%;overflow:auto;box-shadow:0 10px 34px rgba(0,0,0,.4);color:var(--ink)}
+  .ohM .ohH{display:flex;align-items:center;gap:8px;padding:10px 8px 6px 14px} .ohM .ohH b{flex:1;font-size:16.5px;color:#6b4e00}
+  .ohM .ohX{border:0;background:none;font-size:26px;line-height:1;width:44px;height:40px;cursor:pointer;color:#555}
+  .ohM .ohS{margin:0 12px;border-radius:10px;overflow:hidden;background:#eef2ec;aspect-ratio:8/5;border:1px solid #e2e7df} .ohM .ohS svg{display:block;width:100%;height:100%}
+  .ohM .ohD{display:flex;justify-content:center;gap:2px;padding:4px 0 0}
+  .ohM .ohD button{width:34px;height:24px;border:0;padding:0;background:none;cursor:pointer;display:flex;align-items:center}
+  .ohM .ohD i{position:relative;display:block;width:100%;height:6px;border-radius:3px;background:#e6dfc8;overflow:hidden}
+  .ohM .ohD button.done i{background:#b8860b} .ohM .ohD button.on i::after{content:'';position:absolute;inset:0;background:#b8860b;transform-origin:left;animation:ohProg var(--d) linear forwards}
+  @keyframes ohProg{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  .ohM .ohCap{display:flex;gap:8px;align-items:flex-start;padding:4px 14px 0;font-size:15.5px;font-weight:700;line-height:1.5;min-height:4.5em}
+  .ohM .ohCap em{flex:none;font-style:normal;background:#b8860b;color:#fff;border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:13.5px;margin-top:1px}
+  .ohM .ohNote{margin:8px 12px 0;padding:8px 10px 8px 12px;background:#fffbea;border-radius:8px;font-size:12.5px;line-height:1.6;color:#5c4a14} .ohM .ohNote ul{margin:0;padding-left:1.1em}
+  .ohM .ohF{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px 12px} .ohM .ohF label{flex:1 1 100%;font-size:13.5px;color:#4c5a52;display:flex;align-items:center;gap:5px;min-height:40px}
+  .ohM .ohF .btn{min-height:42px;flex:1 1 0} .ohM .ohF .btn.primary{background:#b8860b;border-color:#8a6508;color:#fff;font-weight:700}
+  @media (prefers-reduced-motion:reduce){ .ohM .ohD button.on i::after{animation:none;transform:none} }
   .otesx .oth{display:flex;align-items:center;justify-content:space-between;gap:8px} .otesx .oth h3{margin:0;color:#6b4e00;font-size:17px} .otesx .otx{border:0;background:none;font-size:26px;line-height:1;color:var(--ink2);cursor:pointer;padding:0 4px}
   .otesx .otmsg{margin:8px 0;padding:6px 10px;border-radius:8px;background:#e8f3e8;color:#1e5a38;font-size:13.5px}
   .otesx .otl{display:flex;flex-direction:column;gap:6px;margin:10px 0}
@@ -3018,7 +3036,7 @@ const OTE=(function(){
       +`<span class="ota"><button type="button" data-ote="go" data-id="${o.id}">地図で見る</button><button type="button" data-ote="ren" data-id="${o.id}">名前を変える</button><button type="button" class="del" data-ote="del" data-id="${o.id}">消す</button></span></div>`
       +`<svg class="otsp" viewBox="0 0 64 26" aria-hidden="true">${spark(o.pts,o.color)}</svg></div>`; }
   function listHtml(msg){ const n=st.list.length;
-    return `<div class="oth"><h3>★ お手本の生育曲線</h3><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
+    return `<div class="oth"><h3>★ お手本の生育曲線</h3><button type="button" class="otq" data-ote="help">使い方</button><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
       +`<p>よく育った圃場の生育を「お手本」にして、自分の圃場とグラフでくらべられます。品種ごとに作っておくと便利です。<b>${MAX}個まで</b>、この端末に保存します。</p>`
       +(msg?`<div class="otmsg">${msg}</div>`:'')
       +(n?`<div class="otl">${st.list.map(rowHtml).join('')}</div>`:`<div class="ote0">まだ、お手本がありません。<br>下のボタンから、お手本にする圃場を選んで登録します。</div>`)
@@ -3026,7 +3044,7 @@ const OTE=(function(){
       +(n?`<p class="hint">チェックを入れたお手本が、グラフに重なります。地図では、お手本の圃場がお手本の色の点線の枠で囲まれます（グラフに重ねているものは太く）。</p>`:''); }
   function newHtml(){ const d=draft||(draft={pid:'',y:0,name:''}), cand=selected.filter(s=>parcels[s.pid]&&pkg.series[s.pid]), ys=d.pid?yearsOf(d.pid):[];
     if(d.pid&&!ys.some(x=>x.y===d.y)) d.y=ys.length?ys[0].y:0; const ok=!!(d.pid&&d.y);
-    return `<div class="oth"><h3>★ 新しいお手本</h3><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
+    return `<div class="oth"><h3>★ 新しいお手本</h3><button type="button" class="otq" data-ote="help">使い方</button><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
       +`<div class="ots"><div class="otsn">1</div><div><b>お手本にする圃場</b><div class="otpk">${cand.map(s=>`<button type="button" class="otc${d.pid===s.pid?' on':''}" data-ote="pid" data-pid="${escH(s.pid)}" style="--c:${s.color}"><i></i>${escH(selLabel(s.pid))}</button>`).join('')}<button type="button" class="otc map${d.pid&&!cand.some(s=>s.pid===d.pid)?' on':''}" data-ote="pick">${d.pid&&!cand.some(s=>s.pid===d.pid)?'✓ 地図で選んだ圃場（選び直す）':'地図でタップして選ぶ'}</button></div>`
         +(d.pid?`<div class="otsel">選んだ圃場: <b>${escH(nameOf(d.pid))}</b></div>`:`<div class="hint">「選んだ圃場」から選ぶか、地図でタップしてください</div>`)+`</div></div>`
       +`<div class="ots"><div class="otsn">2</div><div><b>年</b>`+(d.pid?(ys.length?`<div class="otys">${ys.map(x=>`<button type="button" class="oty${d.y===x.y?' on':''}" data-ote="y" data-y="${x.y}"><svg viewBox="0 0 64 26" aria-hidden="true">${spark(ptsOf(d.pid,x.y),'#1e3a2f')}</svg><span>${x.y}年<small>観測 ${x.n}回</small></span></button>`).join('')}</div><div class="otcrop" id="oteCrop"></div>`
@@ -3050,6 +3068,7 @@ const OTE=(function(){
   function onDlg(e){ const ov=document.getElementById('oteDlg'); if(e.target===ov){ close(); return; } const b=e.target.closest('[data-ote]'); if(!b) return;
     const k=b.dataset.ote, o=b.dataset.id?st.list.find(x=>x.id===b.dataset.id):null;
     if(k==='close'){ close(); return; }
+    if(k==='help'){ help(null); return; }   // 画面はそのまま、上に使い方を出す
     if(k==='tg'){ if(o){ o.on=b.checked; save(); changed(); render('list'); } return; }
     if(k==='new'){ if(st.list.length>=MAX) return; draft=null; open('new'); return; }
     if(k==='list'){ draft=null; render('list'); return; }
@@ -3075,13 +3094,103 @@ const OTE=(function(){
     L.DomEvent.disableClickPropagation(b); b.querySelector('button').onclick=()=>{ endPick(); open('new'); }; document.getElementById('map').appendChild(b); mapIntoView(); }   // 画面を消すだけなので、入れかけの内容（draft）は残る
   function endPick(){ picking=false; const b=document.getElementById('otePick'); if(b) b.remove(); }
   function tap(pid){ if(!picking) return false; endPick(); if(!draft) draft={pid:'',y:0,name:''}; draft.pid=pid; draft.y=0; open('new'); return true; }
-  document.getElementById('btnOte').onclick=()=>open();
+  // ---- 使い方（小窓のアニメ 5場面・くり返し。AR可変追肥モードの使い方と同じ形）。お手本が1つもないときにボタンを押すと出す（「次から出さない」で出さない）。一覧・登録の画面の「使い方」でいつでも ----
+  const HELP_SKIP='fhmOteHelpSkip';
+  const helpSkip=()=>{ try{ return localStorage.getItem(HELP_SKIP)==='1'; }catch(e){ return false; } };
+  const OH={   // 場面の絵（SVG 320×200）。SMIL の animate で動かす（場面を出すたびに 0 秒から）
+    tap(x,y,b,c='#1e3a2f'){ return `<g opacity="0"><set attributeName="opacity" to="1" begin="${b}s"/><set attributeName="opacity" to="0" begin="${b+0.9}s"/>`
+      +`<circle cx="${x}" cy="${y}" r="10" fill="none" stroke="${c}" stroke-width="2.5"><animate attributeName="r" from="5" to="22" dur="0.8s" begin="${b}s" fill="freeze"/><animate attributeName="opacity" from="1" to="0" dur="0.8s" begin="${b}s" fill="freeze"/></circle>`
+      +`<circle cx="${x}" cy="${y}" r="8" fill="rgba(255,255,255,.85)" stroke="${c}" stroke-width="1.5"/></g>`; },
+    show(b,body,e){ return `<g opacity="0"><set attributeName="opacity" to="1" begin="${b}s"/>${e?`<set attributeName="opacity" to="0" begin="${e}s"/>`:''}${body}</g>`; },
+    toast(y,txt,b,bg='rgba(30,58,47,.92)',w=240){ return OH.show(b,`<rect x="${160-w/2}" y="${y}" width="${w}" height="26" rx="8" fill="${bg}"/><text x="160" y="${y+17.5}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">${txt}</text>`); },
+    // 田の地図（上から）: 3×2 の田。k の田を濃い緑（よく育った田）に
+    map(h){ const F=[[14,10],[114,10],[214,10],[14,h/2+6],[114,h/2+6],[214,h/2+6]], C=['#c6d96b','#3f8f34','#a8cc5c','#d8d67a','#8cc152','#b5d36a'], fh=h/2-12;
+      return {F,fh,svg:`<rect width="320" height="${h}" fill="#e3e8df"/>`+F.map(([x,y],i)=>`<rect x="${x}" y="${y}" width="92" height="${fh}" rx="2" fill="${C[i]}" stroke="#fff" stroke-width="1.5"/>`).join('')}; },
+    X:t=>34+t/143*274, Y:v=>150-v*130,   // グラフ: t＝5/10 からの日数（0〜143）、v＝NDVI
+    ote:t=>0.08+0.82/(1+Math.exp(-(t-50)/9))-Math.max(0,t-108)*0.0062, mine:t=>0.08+0.76/(1+Math.exp(-(t-53)/9.5))-Math.max(0,t-108)*0.0068,
+    path(f,dx=0,t0=0,t1=143,st=2){ let d=''; for(let t=t0;t<=t1;t+=st) d+=(d?'L':'M')+(OH.X(t)+dx).toFixed(1)+','+OH.Y(f(t)).toFixed(1); return d; },
+    band(f,dx=0){ const up=[],dn=[]; for(let t=0;t<=143;t+=3){ up.push((OH.X(t)+dx).toFixed(1)+','+OH.Y(f(t)+0.03).toFixed(1)); dn.unshift((OH.X(t)+dx).toFixed(1)+','+OH.Y(f(t)-0.03).toFixed(1)); } return up.concat(dn).join(' '); },
+    axes(y1=150){ let g=`<rect width="320" height="200" fill="#fff"/>`; for(let v=0;v<=1.0001;v+=0.2){ const y=OH.Y(v); if(y>y1+0.1) continue; g+=`<line x1="34" x2="308" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e6eae3"/><text x="29" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8.5" fill="#4c5a52">${v.toFixed(1)}</text>`; }
+      [[0,'5/10'],[22,'6月'],[52,'7月'],[83,'8月'],[114,'9月'],[143,'9/30']].forEach(([t,l],i,a)=>{ g+=`<text x="${OH.X(t).toFixed(1)}" y="${y1+12}" text-anchor="${i===0?'start':i===a.length-1?'end':'middle'}" font-size="8.5" fill="#4c5a52">${l}</text>`; });
+      return g+`<line x1="34" x2="308" y1="${OH.Y(0)}" y2="${OH.Y(0)}" stroke="#4c5a52"/>`; },
+    mini(x,y,c){ let d=''; for(let t=0;t<=143;t+=10) d+=(d?'L':'M')+(x+t/143*40).toFixed(1)+','+(y+14-OH.ote(t)*14).toFixed(1); return `<rect x="${x-2}" y="${y-2}" width="44" height="18" rx="3" fill="#f3f5f1"/><path d="${d}" fill="none" stroke="${c}" stroke-width="1.6"/>`; },
+  };
+  const OH_SCENES=[
+    {d:4800,cap:'よく育った圃場を地図でタップして選び、期間の横の「お手本 生育曲線」を押します',svg:()=>{ const M=OH.map(132), g=M.F[1];
+      return M.svg+OH.tap(g[0]+46,g[1]+26,0.4)
+        +OH.show(0.8,`<rect x="${g[0]-1.5}" y="${g[1]-1.5}" width="95" height="${M.fh+3}" rx="3" fill="none" stroke="#fff" stroke-width="6"/><rect x="${g[0]}" y="${g[1]}" width="92" height="${M.fh}" rx="2" fill="none" stroke="#1a73e8" stroke-width="3.5"/>`)
+        +OH.show(0.8,`<rect x="${g[0]+18}" y="${g[1]+M.fh+4}" width="56" height="15" rx="7.5" fill="#1a73e8"/><text x="${g[0]+46}" y="${g[1]+M.fh+14.5}" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff">選択中圃場①</text>`)
+        +`<rect y="138" width="320" height="62" fill="#fafbf8"/><rect x="12" y="152" width="170" height="34" rx="6" fill="#f0f1f3" stroke="#cfd6cc"/><text x="22" y="173.5" font-size="11.5" fill="#1e3a2f">今年（5/10〜9/30）</text><path d="M168 166l4 4 4-4" fill="none" stroke="#1e3a2f" stroke-width="1.5"/>`
+        +`<g><rect x="194" y="149" width="114" height="40" rx="8" fill="#fff7dc" stroke="#b8860b" stroke-width="1.8"><set attributeName="fill" to="#b8860b" begin="2.3s"/><animate attributeName="stroke-width" values="1.8;5;1.8" dur="0.9s" begin="1.2s" repeatCount="1"/></rect>`
+        +`<text x="251" y="165" text-anchor="middle" font-size="11.5" font-weight="700" fill="#6b4e00">お手本<set attributeName="fill" to="#fff" begin="2.3s"/></text><text x="251" y="181" text-anchor="middle" font-size="11.5" font-weight="700" fill="#6b4e00">生育曲線<set attributeName="fill" to="#fff" begin="2.3s"/></text></g>`
+        +OH.tap(251,169,1.9)+OH.toast(100,'お手本の登録の画面が開きます',2.7); }},
+    {d:5600,cap:'年（2025年・2026年）を選び、名前（例: コシヒカリ理想生育曲線）を入れて登録します',svg:()=>{
+      const st=(n,y,t)=>`<circle cx="32" cy="${y}" r="8" fill="#b8860b"/><text x="32" y="${y+3.5}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">${n}</text><text x="46" y="${y+4}" font-size="11" font-weight="700" fill="#1e3a2f">${t}</text>`;
+      return `<rect width="320" height="200" fill="#6e7d74"/><rect x="12" y="6" width="296" height="188" rx="10" fill="#fff"/><text x="24" y="26" font-size="13" font-weight="700" fill="#6b4e00">★ 新しいお手本</text>`
+        +st(1,44,'お手本にする圃場')+`<rect x="46" y="54" width="94" height="20" rx="10" fill="#1a73e8"/><text x="93" y="67.5" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff">● 選択中圃場①</text>`
+        +st(2,90,'年')+`<rect x="66" y="80" width="104" height="28" rx="6" fill="#fff" stroke="#cfd6cc"/>${OH.mini(72,86,'#1e3a2f')}<text x="124" y="98.5" font-size="10.5" font-weight="700" fill="#1e3a2f">2026年</text>`
+        +`<rect x="178" y="80" width="104" height="28" rx="6" fill="#fff" stroke="#cfd6cc"><set attributeName="fill" to="#fff7dc" begin="1.0s"/><set attributeName="stroke" to="#b8860b" begin="1.0s"/><set attributeName="stroke-width" to="2.2" begin="1.0s"/></rect>${OH.mini(184,86,'#1e3a2f')}<text x="236" y="98.5" font-size="10.5" font-weight="700" fill="#1e3a2f">2025年</text>`
+        +OH.tap(230,94,0.7)+OH.show(1.1,`<text x="66" y="122" font-size="9" fill="#2e7d32">✓ 2025年は、稲と見分けています</text>`)
+        +st(3,142,'名前')+`<rect x="66" y="150" width="216" height="22" rx="5" fill="#fff" stroke="#cfd6cc"/><clipPath id="ohTy"><rect x="70" y="150" width="0" height="22"><animate attributeName="width" from="0" to="150" begin="1.6s" dur="1.5s" fill="freeze"/></rect></clipPath>`
+        +`<text x="72" y="165" font-size="11" fill="#1e3a2f" clip-path="url(#ohTy)">コシヒカリ理想生育曲線</text>`
+        +`<rect x="150" y="176" width="132" height="14" rx="4" fill="#b8860b" opacity="0"><set attributeName="opacity" to="1" begin="3.2s"/></rect><text x="216" y="186.5" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" opacity="0"><set attributeName="opacity" to="1" begin="3.2s"/>この内容で登録する</text>`
+        +OH.tap(216,183,3.6,'#6b4e00')+OH.toast(170,'✓ 登録して、グラフに重ねました',4.1,'rgba(46,125,50,.95)',236); }},
+    {d:6000,cap:'お手本が金色の線と帯（±0.03）でグラフに重なります。自分の圃場の線が帯より下なら、お手本より生育が弱め',svg:()=>{ const tl=126, xo=OH.X(tl), yo=OH.Y(OH.ote(tl)), ym=OH.Y(OH.mine(tl));
+      let pts=''; for(let t=5,i=0;t<=tl;t+=11,i++) pts+=`<circle cx="${OH.X(t).toFixed(1)}" cy="${OH.Y(OH.mine(t)).toFixed(1)}" r="2.6" fill="#1a73e8" opacity="0"><set attributeName="opacity" to="1" begin="${(2.1+i*0.12).toFixed(2)}s"/></circle>`;
+      return OH.axes()+`<polygon points="${OH.band(OH.ote)}" fill="#b8860b" opacity="0"><animate attributeName="opacity" from="0" to=".16" begin="0.2s" dur="0.6s" fill="freeze"/></polygon>`
+        +`<path d="${OH.path(OH.ote)}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" fill="none" stroke="#b8860b" stroke-width="3.2" stroke-linejoin="round"><animate attributeName="stroke-dashoffset" from="1" to="0" begin="0.3s" dur="1.6s" fill="freeze"/></path>`
+        +`<path d="${OH.path(OH.mine,0,5,tl,3)}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="1" fill="none" stroke="#1a73e8" stroke-width="2" stroke-linejoin="round"><animate attributeName="stroke-dashoffset" from="1" to="0" begin="2.1s" dur="1.5s" fill="freeze"/></path>`+pts
+        +`<rect x="40" y="18" width="16" height="8" fill="#b8860b" opacity=".18"/><line x1="40" x2="56" y1="22" y2="22" stroke="#b8860b" stroke-width="3"/><text x="60" y="25.5" font-size="9.5" font-weight="700" fill="#b8860b">★ コシヒカリ理…（2025年）</text>`
+        +OH.show(2.1,`<line x1="40" x2="56" y1="36" y2="36" stroke="#1a73e8" stroke-width="2"/><text x="60" y="39.5" font-size="9.5" font-weight="700" fill="#1a73e8">選択中圃場①</text>`)
+        +OH.show(3.9,`<line x1="${xo.toFixed(1)}" x2="${xo.toFixed(1)}" y1="${(yo+3).toFixed(1)}" y2="${(ym-3).toFixed(1)}" stroke="#e65100" stroke-width="2"/><path d="M${(xo-4).toFixed(1)} ${(ym-7).toFixed(1)}l4 4 4-4" fill="none" stroke="#e65100" stroke-width="2"/>`
+          +`<rect x="${(xo-104).toFixed(1)}" y="${(ym+2).toFixed(1)}" width="98" height="30" rx="6" fill="#fff8e1" stroke="#e65100"/><text x="${(xo-55).toFixed(1)}" y="${(ym+15).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#e65100">−0.07</text><text x="${(xo-55).toFixed(1)}" y="${(ym+27).toFixed(1)}" text-anchor="middle" font-size="9" fill="#e65100">やや下回る</text>`)
+        +OH.show(4.6,`<rect x="34" y="172" width="274" height="22" rx="6" fill="#fffbea" stroke="#e6d9a8"/><text x="171" y="186.5" text-anchor="middle" font-size="10" fill="#6b4e00"><tspan font-weight="700">お手本とのちがい</tspan>　選択中圃場①　9/13　−0.07 やや下回る</text>`); }},
+    {d:5600,cap:'田植えの日がお手本とちがう圃場は、▶ ◀ でお手本をずらすと、育ちの進み具合をくらべやすくなります',svg:()=>{ const px=274/143, lag=7, mine=t=>OH.ote(t-lag)-0.004;
+      return OH.axes()+`<path d="${OH.path(mine,0,lag+2,143,2)}" fill="none" stroke="#1a73e8" stroke-width="2"/>`
+        +`<g><animateTransform attributeName="transform" type="translate" additive="sum" from="0 0" to="${(px*lag/3).toFixed(2)} 0" begin="1.3s" dur="0.35s" fill="freeze"/><animateTransform attributeName="transform" type="translate" additive="sum" from="0 0" to="${(px*lag/3).toFixed(2)} 0" begin="2.0s" dur="0.35s" fill="freeze"/><animateTransform attributeName="transform" type="translate" additive="sum" from="0 0" to="${(px*lag/3).toFixed(2)} 0" begin="2.7s" dur="0.35s" fill="freeze"/>`
+        +`<polygon points="${OH.band(OH.ote)}" fill="#b8860b" opacity=".16"/><path d="${OH.path(OH.ote)}" fill="none" stroke="#b8860b" stroke-width="3.2" stroke-linejoin="round"/></g>`
+        +`<rect x="40" y="18" width="16" height="8" fill="#b8860b" opacity=".18"/><line x1="40" x2="56" y1="22" y2="22" stroke="#b8860b" stroke-width="3"/><text x="60" y="25.5" font-size="9.5" font-weight="700" fill="#b8860b">★ お手本</text><line x1="40" x2="56" y1="36" y2="36" stroke="#1a73e8" stroke-width="2"/><text x="60" y="39.5" font-size="9.5" font-weight="700" fill="#1a73e8">田植えが7日おそい圃場</text>`
+        +`<rect y="166" width="320" height="34" fill="#fafbf8"/><text x="40" y="186" font-size="11" fill="#4c5a52">お手本を</text><rect x="92" y="172" width="28" height="22" rx="5" fill="#fff" stroke="#cfd6cc"/><text x="106" y="187" text-anchor="middle" font-size="10" fill="#1e3a2f">◀</text>`
+        +[['0日',0,1.3],['+2日',1.3,2.0],['+4日',2.0,2.7],['+7日',2.7,0]].map(([t,b,e])=>`<text x="143" y="187" text-anchor="middle" font-size="12" font-weight="700" fill="#1e3a2f" opacity="${b?0:1}">${b?`<set attributeName="opacity" to="1" begin="${b}s"/>`:''}${e?`<set attributeName="opacity" to="0" begin="${e}s"/>`:''}${t}</text>`).join('')
+        +`<rect x="166" y="172" width="28" height="22" rx="5" fill="#fff" stroke="#cfd6cc"/><text x="180" y="187" text-anchor="middle" font-size="10" fill="#1e3a2f">▶</text><text x="202" y="186" font-size="11" fill="#4c5a52">ずらす</text>`
+        +OH.tap(180,183,1.1)+OH.tap(180,183,1.8)+OH.tap(180,183,2.5)
+        +OH.show(3.4,`<rect x="196" y="58" width="104" height="26" rx="7" fill="#e8f5e9" stroke="#2e7d32"/><text x="248" y="75" text-anchor="middle" font-size="11" font-weight="700" fill="#2e7d32">✓ お手本並み</text>`); }},
+    {d:5800,cap:'地図では、お手本の圃場が点線の枠に。お手本は10個まで登録でき、「選んだ圃場」の並びの × で外せます（登録は残ります）',svg:()=>{ const M=OH.map(120), g=M.F[1], h=M.fh;
+      return M.svg+`<rect x="${g[0]}" y="${g[1]}" width="92" height="${h}" rx="2" fill="none" stroke="#fff" stroke-width="7" stroke-dasharray="10 6"><set attributeName="stroke-width" to="5" begin="2.7s"/></rect>`
+        +`<rect x="${g[0]}" y="${g[1]}" width="92" height="${h}" rx="2" fill="none" stroke="#b8860b" stroke-width="4" stroke-dasharray="10 6"><animate attributeName="stroke-dashoffset" from="0" to="-32" dur="1.2s" repeatCount="indefinite"/><set attributeName="stroke-width" to="2.2" begin="2.7s"/></rect>`
+        +`<g><set attributeName="opacity" to=".75" begin="2.7s"/><rect x="${g[0]+8}" y="${g[1]+h-2}" width="76" height="17" rx="8.5" fill="#b8860b" stroke="#fff" stroke-width="1.5"/><text x="${g[0]+46}" y="${g[1]+h+9.5}" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">★ コシヒカリ理…</text></g>`
+        +`<rect y="124" width="320" height="76" fill="#fafbf8"/><text x="12" y="141" font-size="11" font-weight="700" fill="#1e3a2f">選んだ圃場・お手本</text>`
+        +`<rect x="12" y="148" width="104" height="22" rx="11" fill="#fff" stroke="#1a73e8" stroke-width="1.5"/><circle cx="24" cy="159" r="4" fill="#1a73e8"/><text x="32" y="163" font-size="9.5" font-weight="700" fill="#1a73e8">選択中圃場①</text><text x="106" y="163" text-anchor="middle" font-size="10" fill="#4c5a52">×</text>`
+        +`<g><animate attributeName="opacity" from="1" to="0" begin="2.6s" dur="0.4s" fill="freeze"/><rect x="122" y="148" width="186" height="22" rx="11" fill="#fffaf0" stroke="#b8860b" stroke-width="1.5"/><rect x="132" y="156" width="14" height="6" rx="2" fill="#b8860b"/><text x="152" y="163" font-size="9.5" font-weight="700" fill="#b8860b">★ コシヒカリ理…</text><text x="236" y="163" font-size="9" fill="#4c5a52">2025年</text><text x="296" y="163" text-anchor="middle" font-size="10" fill="#4c5a52">×</text></g>`
+        +OH.tap(296,159,2.2)+OH.toast(174,'外しても、登録は残ります（ボタンからいつでも）',3.2,'rgba(30,58,47,.92)',280); }},
+  ];
+  function help(after){ const old=document.getElementById('oteHelp'); if(old) old.remove();
+    const w=document.createElement('div'); w.id='oteHelp'; w.className='ohM'; w.setAttribute('role','dialog'); w.setAttribute('aria-modal','true'); w.setAttribute('aria-labelledby','oteHelpT');
+    w.innerHTML=`<div class="ohC"><div class="ohH"><b id="oteHelpT">★ お手本生育曲線の使い方</b><button type="button" class="ohX" aria-label="閉じる">×</button></div>`
+      +`<div class="ohS"></div><div class="ohD">${OH_SCENES.map((s,i)=>`<button type="button" aria-label="${i+1}番目の場面"><i></i></button>`).join('')}</div>`
+      +`<div class="ohCap"><em></em><span></span></div>`
+      +`<div class="ohNote"><ul><li>お手本は、<b>この端末に10個まで</b>保存します（スマホとパソコンは別々）</li><li>品種ごと（コシヒカリ・いちほまれ・ハナエチゼン など）に作っておくと便利です</li>`
+      +`<li>差は、田植えの日・品種・水の管理・天気などでも出ます。現地の様子とあわせて見てください</li></ul></div>`
+      +`<div class="ohF"><label><input type="checkbox" id="ohSkip"${helpSkip()?' checked':''}> 次から出さない</label><button type="button" class="btn" id="ohAgain">もう一度見る</button><button type="button" class="btn primary" id="ohGo">${after?'はじめる':'閉じる'}</button></div></div>`;
+    document.body.appendChild(w); let t=null;
+    const show=i=>{ clearTimeout(t); const S=OH_SCENES[i], box=w.querySelector('.ohS');
+      box.innerHTML=`<svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg" font-family="'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP',sans-serif" aria-hidden="true">${S.svg()}</svg>`; try{ box.querySelector('svg').setCurrentTime(0); }catch(e){}
+      w.querySelector('.ohCap em').textContent=i+1; w.querySelector('.ohCap span').textContent=S.cap;
+      w.querySelectorAll('.ohD button').forEach((b,j)=>{ b.className=j<i?'done':''; if(j===i){ b.style.setProperty('--d',S.d+'ms'); void b.offsetWidth; b.className='on'; } });
+      t=setTimeout(()=>{ if(document.body.contains(w)) show((i+1)%OH_SCENES.length); },S.d); };
+    const done=go=>{ clearTimeout(t); try{ localStorage.setItem(HELP_SKIP,w.querySelector('#ohSkip').checked?'1':'0'); }catch(e){} w.remove(); document.removeEventListener('keydown',onKey,true); if(go&&after) after(); };
+    const onKey=e=>{ if(e.key==='Escape'){ e.stopPropagation(); done(false); } };
+    w.querySelectorAll('.ohD button').forEach((b,i)=>b.onclick=()=>show(i));
+    w.querySelector('.ohX').onclick=()=>done(false); w.querySelector('#ohGo').onclick=()=>done(true); w.querySelector('#ohAgain').onclick=()=>show(0);
+    w.addEventListener('click',e=>{ if(e.target===w) done(false); });
+    document.addEventListener('keydown',onKey,true); show(0); w.querySelector('#ohGo').focus({preventScroll:true}); }
+  document.getElementById('btnOte').onclick=()=>{ if(!st.list.length&&!helpSkip()) help(()=>open()); else open(); };   // お手本が1つもないときは、まず使い方（アニメ）。「はじめる」で登録の画面へ
   document.getElementById('oteBar').addEventListener('click',e=>{ const b=e.target.closest('[data-ote]'); if(!b) return; const k=b.dataset.ote;
     if(k==='open'){ open('list'); return; }
     if(k==='sh'||k==='sh0'){ st.shift=k==='sh0'?0:Math.max(-30,Math.min(30,st.shift+ +b.dataset.d)); save(); drawChart(); } });
   document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(document.getElementById('oteDlg')) close(); else if(picking) endPick(); });
   frames();
-  return {curves,draw,legend,tip,bar,tap,act,valsAt,open,hide,clearAll,nm6,rows,list:()=>st.list};
+  return {curves,draw,legend,tip,bar,tap,act,valsAt,open,hide,clearAll,nm6,rows,help,list:()=>st.list};
 })();
 window.__ote=OTE;
 
