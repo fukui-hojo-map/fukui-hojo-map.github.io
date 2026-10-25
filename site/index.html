@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js"}}</script>
+<script type="importmap">{"imports":{"three":"./three/three.module.min.js"}}</script>   <!-- three.js 0.169.0（MIT）。外部の配信元には頼らず、このサイトから配る（2026-10-25 セキュリティ点検）。公式の配布物と同じものを確認ずみ -->
 <title>ふくい圃場マップ</title>
 <link rel="manifest" href="manifest.webmanifest">
 <script>if('serviceWorker' in navigator&&location.protocol==='https:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });</script>
@@ -3179,7 +3179,7 @@ window.__ote=OTE;
 
 // ---------- Excel に保存（選んだ田の一覧・番号つきの地図・NDVI の推移） ----------
 // 地図: 航空写真（地理院タイル）の上に、いまの色分けと田の形を描き、選んだ田に ①② … の番号をつけた画像。表は同じ番号で並べる
-// ExcelJS は押したときだけ読み込む（cdn.jsdelivr.net）
+// ExcelJS は押したときだけ読み込む（このサイトの exceljs.min.js）
 const CIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
 let excelJs=null;
 function loadExcelJs(){ return excelJs||(excelJs=new Promise((ok,ng)=>{ const sc=document.createElement('script'); sc.src='exceljs.min.js';   // ExcelJS 4.4.0（MIT）。外部の配信元には頼らず、このサイトから配る（2026-10-25 セキュリティ点検）。公式の配布物と同じものを確認ずみ
@@ -3594,14 +3594,14 @@ const HOME=(function(){
   return {get,set,clear,open,close,pin,_mk:()=>mk};
 })();
 // ---------- ARで見る（Android の Chrome。WebXR の immersive-ar と hit-test） ----------
-// 田んぼに立ってスマホをかざすと、選んだ筆の中の色（NDVI など）が地面に塗られて見える。three.js は押したときだけ読み込む（cdn.jsdelivr.net）
+// 田んぼに立ってスマホをかざすと、選んだ筆の中の色（NDVI など）が地面に塗られて見える。three.js は押したときだけ読み込む（このサイトの three/）
 // 1. 地図で筆を選び「ARで見る」→ 地図の上で、筆の頂点から 角1・角2 を選ぶ（長い辺の両はしがおすすめ）
 // 2. AR の画面で地面を映すと照準（リング）が出る。リングを角1に合わせてタップ → 角2に合わせてタップ
 // 3. 2点から回転と位置を決める（縮尺は 1:1）。回転 = 地図の角1→角2 の方位と、AR でタップした角1→角2 の向きの差。
 //    位置は2点の真ん中どうしを合わせる（タップのずれを2つの角に半分ずつ分ける）。2点の距離が地図と AR で 1m 以上違えば「タップ位置を確認してください」
 // 4. 塗る高さ: はじめはタップした所（あぜ）の高さ。田の中を映すと、田の中で見つかった面（稲の上・水面）の高さに合わせる。▲▼で手で直せる
 // 座標: 緯度経度は角1を原点にした 東・北 の m（筆1枚ほどなので平面で近似）。three.js では 東 = +X、上 = +Y、北 = −Z
-const AR_THREE='https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js';
+const AR_THREE='./three/three.module.min.js';   // このサイトの three.js（上の importmap と同じ場所＝同じ部品として読まれる）
 // 色の出どころ。get(pid) → {cells:[{sq:[[緯度,経度]×4（マスの角）], rgb:[r,g,b], txt}], legend:{grad, lo, hi, unit}, note} か {err}
 const AR_SRC=[{k:'ndvi',name:'NDVI（地図の日付）',get:pid=>arNdvi(pid)},{k:'line',name:'輪郭だけ（確認用）',get:async()=>({cells:[],legend:null,note:'筆の輪郭と頂点の番号だけ'})}];
 const AR_OP=0.6;   // 色の濃さ（半透明）
@@ -4028,7 +4028,7 @@ function arSnd(kind){ try{ if(!arSndOn()) return; const AC=window.AudioContext||
   else if(kind==='clear'){ [988,784,659,523,392,294].forEach((f,k)=>note(f,k*0.045,0.06,0.4)); }   // ぴぽぽぽぽ…（消した）
   else if(kind==='err'){ note(150,0,0.13,0.5); note(110,0.16,0.2,0.5); }   // ぶっ ぶー（置けなかった）
   else note(660,0,0.045,0.35); }catch(e){ console.warn('効果音',e); } }   // ぽ（タップ。しゃべるときの音のように短く）
-const AR_THREE_BASE='https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/', arObjBuf=new Map();
+const AR_THREE_BASE='./three/examples/jsm/', arObjBuf=new Map();
 function arObjCredit(){ const c=document.getElementById('arCredit'); if(!c) return; const t=[...new Set((ar.objs||[]).map(o=>o.userData.credit).filter(Boolean))].join('\n'); c.textContent=t; c.style.whiteSpace='pre-line'; c.hidden=!t; }
 function arObjClear(n){ const L=ar.objs||[]; let d=0; for(let k=0;k<(n||L.length);k++){ const o=L.pop(); if(!o) break; if(ar.scene) ar.scene.remove(o); arDispose(o); d++; } arObjCredit(); if(d) arSnd('clear'); }
 function arObjMenuToggle(){ const m=document.getElementById('arObjMenu'); if(!m||!ar.on||!DEV) return; if(!m.hidden){ m.hidden=true; return; }
