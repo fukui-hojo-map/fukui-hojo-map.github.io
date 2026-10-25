@@ -23,14 +23,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { path: main, sparse-checkout: pipeline }
       - name: 前回のデータ（rain-data）
         env: { TOKEN: '${{ github.token }}' }
         run: |
           U="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           if git clone -q --depth 1 --branch rain-data "$U" data 2>/dev/null; then echo "前回あり: $(cat data/t.txt 2>/dev/null)"; else mkdir data && cd data && git init -q && git remote add origin "$U" && echo "はじめて"; fi
-      - run: pip install -q numpy pillow
+      - run: pip install -q numpy==2.4.6 pillow==13.0.0
       - name: 雨量を作りつづける（1分ごと・約5時間半）
         run: |
           START=$(date +%s); N=0; FAILS=0
