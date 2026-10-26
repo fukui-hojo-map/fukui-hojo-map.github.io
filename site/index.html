@@ -944,7 +944,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .otediff th{font-size:12.5px;padding:3px 8px;text-align:center;white-space:nowrap} .otediff td{padding:5px 8px;text-align:center;border-top:1px solid #efe4bd;white-space:nowrap} .otediff td.f{text-align:left} .otediff td small{display:block;font-size:11.5px;font-weight:400;color:var(--ink2)}
   .otediff td b{font-size:15px} .otediff td.eq b{color:#2e7d32} .otediff td.lo b{color:#e65100} .otediff td.lo2 b{color:#c62828} .otediff td.hi b,.otediff td.hi2 b{color:#1565c0} .otediff td.na{color:#9aa39d}
   .odn{font-size:12px;color:#7a837d;margin-top:6px;line-height:1.5}
-  .otesx>div{max-width:480px} .otesx p{font-size:13.5px}
+  .otesx>div{max-width:520px} .otesx p{font-size:15px;line-height:1.6} .otesx .hint{font-size:14px}
   .otesx .oth h3{flex:1} .otesx .otq{border:1px solid #c9a74a;background:#fffbea;color:#6b4e00;border-radius:16px;padding:4px 11px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
   /* お手本の使い方（アニメ）: AR可変追肥モードの使い方と同じ形 */
   .ohM{position:fixed;inset:0;z-index:5000;background:rgba(10,24,16,.6);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
@@ -963,29 +963,30 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .ohM .ohF{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px 12px} .ohM .ohF label{flex:1 1 100%;font-size:13.5px;color:#4c5a52;display:flex;align-items:center;gap:5px;min-height:40px}
   .ohM .ohF .btn{min-height:42px;flex:1 1 0} .ohM .ohF .btn.primary{background:#b8860b;border-color:#8a6508;color:#fff;font-weight:700}
   @media (prefers-reduced-motion:reduce){ .ohM .ohD button.on i::after{animation:none;transform:none} }
-  .otesx .oth{display:flex;align-items:center;justify-content:space-between;gap:8px} .otesx .oth h3{margin:0;color:#6b4e00;font-size:17px} .otesx .otx{border:0;background:none;font-size:26px;line-height:1;color:var(--ink2);cursor:pointer;padding:0 4px}
-  .otesx .otmsg{margin:8px 0;padding:6px 10px;border-radius:8px;background:#e8f3e8;color:#1e5a38;font-size:13.5px}
+  .otesx .oth{display:flex;align-items:center;justify-content:space-between;gap:8px} .otesx .oth h3{margin:0;color:#6b4e00;font-size:19px} .otesx .otx{border:0;background:none;font-size:26px;line-height:1;color:var(--ink2);cursor:pointer;padding:0 4px}
+  .otesx .otmsg{margin:8px 0;padding:6px 10px;border-radius:8px;background:#e8f3e8;color:#1e5a38;font-size:15px}
   .otesx .otl{display:flex;flex-direction:column;gap:6px;margin:10px 0}
   .otesx .otr{display:flex;align-items:flex-start;gap:8px;border:1.5px solid var(--line);border-left:6px solid var(--c);border-radius:10px;padding:8px 8px 8px 6px;background:#fff} .otesx .otr.on{background:#fffaf0;border-color:var(--c)}
   .otesx .otck{display:flex;align-items:center;padding:2px 2px 0;cursor:pointer} .otesx .otck input{width:22px;height:22px;accent-color:var(--c);margin:0;cursor:pointer}
-  .otesx .otm{flex:1;min-width:0} .otesx .otm b{display:block;color:var(--c);font-size:15px;overflow-wrap:anywhere} .otesx .otm small{display:block;color:var(--ink2);font-size:12.5px;margin-top:1px}
-  .otesx .ota{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px} .otesx .ota button{border:0;background:none;padding:3px 0;font:inherit;font-size:13px;color:var(--accent);text-decoration:underline;cursor:pointer}
+  .otesx .otm{flex:1;min-width:0} .otesx .otm b{display:block;color:var(--c);font-size:17px;overflow-wrap:anywhere} .otesx .otm small{display:block;color:var(--ink2);font-size:14px;margin-top:1px}
+  .otesx .ota{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px} .otesx .ota button{border:0;background:none;padding:4px 0;font:inherit;font-size:15px;color:var(--accent);text-decoration:underline;cursor:pointer}
   .otesx .ota .del{color:#b8442c} .otesx .ota .del.sure{font-weight:700;background:#fdecea;border-radius:4px;padding:3px 6px;text-decoration:none}
   .otesx .otsp{width:72px;height:30px;flex:none;background:#f7f8f5;border-radius:6px}
-  .otesx .ote0{margin:12px 0;padding:14px;border:1.5px dashed #e0c870;border-radius:10px;background:#fffbea;text-align:center;color:#6b4e00;font-size:14px;line-height:1.6}
-  .otesx .otf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 4px} .otesx .otego{background:#b8860b;border-color:#8a6508;color:#fff;font-weight:700;min-height:42px} .otesx .otego:hover{background:#a57808} .otesx .otego:disabled{background:#d8cfb4;border-color:#d8cfb4;cursor:default}
-  .otesx .ots{display:flex;gap:10px;margin:14px 0} .otesx .otsn{flex:none;width:26px;height:26px;border-radius:50%;background:#b8860b;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
-  .otesx .ots>div:last-child{flex:1;min-width:0} .otesx .ots>div>b{font-size:15px;color:var(--ink)}
+  .otesx .ote0{margin:12px 0;padding:14px;border:1.5px dashed #e0c870;border-radius:10px;background:#fffbea;text-align:center;color:#6b4e00;font-size:16px;line-height:1.6}
+  .otesx .otf{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 4px} .otesx .otego{background:#b8860b;border-color:#8a6508;color:#fff;font-weight:700;min-height:46px;font-size:16px} .otesx .otf .btn{min-height:46px;font-size:16px} .otesx .otego:hover{background:#a57808} .otesx .otego:disabled{background:#d8cfb4;border-color:#d8cfb4;cursor:default}
+  .otesx .ots{display:flex;gap:10px;margin:14px 0} .otesx .otsn{flex:none;width:30px;height:30px;border-radius:50%;background:#b8860b;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .otesx .ots>div:last-child{flex:1;min-width:0} .otesx .ots>div>b{font-size:17.5px;color:var(--ink)}
   .otesx .otpk,.otesx .otys,.otesx .otsg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-  .otesx .otc{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--c,#9aa39d);border-radius:20px;background:#fff;padding:6px 12px;font:inherit;font-size:14px;font-weight:700;color:var(--c,var(--ink));cursor:pointer}
+  .otesx .otc{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--c,#9aa39d);border-radius:20px;background:#fff;padding:8px 14px;font:inherit;font-size:16px;font-weight:700;color:var(--c,var(--ink));cursor:pointer}
   .otesx .otc i{width:10px;height:10px;border-radius:50%;background:var(--c)} .otesx .otc.on{background:var(--c);color:#fff} .otesx .otc.on i{background:#fff} .otesx .otc.map{--c:#8a6508;border-style:dashed;font-weight:400}
-  .otesx .otsel{margin-top:6px;font-size:13.5px;color:var(--ink2)}
+  .otesx .otsel{margin-top:6px;font-size:15px;color:var(--ink2)}
   .otesx .oty{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);border-radius:10px;background:#fff;padding:6px 10px;font:inherit;cursor:pointer;text-align:left}
-  .otesx .oty svg{width:64px;height:26px;background:#f7f8f5;border-radius:4px} .otesx .oty span{font-weight:700;font-size:15px;color:var(--ink)} .otesx .oty small{display:block;font-weight:400;font-size:12px;color:var(--ink2)}
+  .otesx .oty svg{width:64px;height:26px;background:#f7f8f5;border-radius:4px} .otesx .oty span{font-weight:700;font-size:17px;color:var(--ink)} .otesx .oty small{display:block;font-weight:400;font-size:14px;color:var(--ink2)}
   .otesx .oty.on{border-color:#b8860b;background:#fff7dc;box-shadow:inset 0 0 0 1.5px #b8860b}
-  .otesx .otnm{width:100%;box-sizing:border-box;margin-top:6px;font:inherit;font-size:16px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px}
-  .otesx .otsg button{border:1px dashed #c9a74a;background:#fffbea;color:#6b4e00;border-radius:16px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}
-  .otesx .otw{margin-top:6px;color:#b8442c;font-size:13.5px} .otesx .otcrop{margin-top:6px;font-size:13px} .otesx .otcrop.ok{color:#2e7d32} .otesx .otcrop.ng{color:#b8442c}
+  .otesx .otnm{width:100%;box-sizing:border-box;margin-top:6px;font:inherit;font-size:17px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px}
+  .otesx .otsg button{border:1px dashed #c9a74a;background:#fffbea;color:#6b4e00;border-radius:16px;padding:7px 12px;font:inherit;font-size:15px;cursor:pointer}
+  .otesx .otw{margin-top:6px;color:#b8442c;font-size:15px} .otesx .otcrop{margin-top:6px;font-size:15px}
+  .otesx .otpv{margin-top:8px;border:1px solid var(--line);border-radius:10px;background:#fbfcfa;padding:6px 6px 2px} .otesx .otpv svg{display:block;width:100%;height:auto} .otesx .otpv .cap{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:14px;color:var(--ink2);padding:2px 4px 4px} .otesx .otpv .cap b{color:#8a6508} .otesx .otcrop.ok{color:#2e7d32} .otesx .otcrop.ng{color:#b8442c}
   .otesx .otrn{display:flex;gap:6px} .otesx .otrn input{flex:1;min-width:0;font:inherit;font-size:16px;padding:5px 8px;border:1.5px solid var(--c);border-radius:6px}
   #otePick{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:1100;display:flex;align-items:center;gap:10px;background:#fff7dc;border:2px solid #b8860b;border-radius:12px;padding:8px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);font-size:14.5px;font-weight:700;color:#6b4e00;width:max-content;max-width:calc(100% - 24px)}
   .otelbl{pointer-events:none} .otelbl span{position:absolute;transform:translate(-50%,calc(-100% - 5px)) rotate(var(--unrot,0deg));transform-origin:50% calc(100% + 5px);font:700 11.5px/1 sans-serif;color:#fff;background:var(--c);border:1.5px solid #fff;border-radius:9px;padding:3px 6px;white-space:nowrap;opacity:.8;box-shadow:0 1px 3px rgba(0,0,0,.35)} .otelbl.on span{opacity:1;font-size:12.5px}
@@ -3053,12 +3054,22 @@ const OTE=(function(){
       +(n?`<div class="otl">${st.list.map(rowHtml).join('')}</div>`:`<div class="ote0">まだ、お手本がありません。<br>下のボタンから、お手本にする圃場を選んで登録します。</div>`)
       +`<div class="otf"><button type="button" class="btn primary otego" data-ote="new"${n>=MAX?' disabled':''}>＋ 新しいお手本を登録する</button><span class="hint">${n}/${MAX}${n>=MAX?'（いっぱいです。使わないお手本を消してください）':''}</span></div>`
       +(n?`<p class="hint">チェックを入れたお手本が、グラフに重なります。地図では、お手本の圃場がお手本の色の点線の枠で囲まれます（グラフに重ねているものは太く）。</p>`:''); }
+  // 年を選ぶところの、大きめのグラフ（利用者の指示 2026-10-26「2025年と2026年のグラフ、どんなんだったっけな？って、ここで見れない」）。選んだ年を太く、ほかの年を細く。年のボタンを押すと切りかわる
+  function pvHtml(pid,ys,sel){ if(!pid||!ys.length) return ''; const W=320,H=150,L=30,R=8,T=8,B=22, a=Date.UTC(2000,4,10), b=Date.UTC(2000,8,30), X=md=>L+(tOf(2000,md)-a)/(b-a)*(W-L-R), Y=v=>T+(1-Math.max(0,Math.min(1,v)))*(H-T-B);
+    const cols=['#8d9aa0','#6d8fb3','#9b7fb0','#7aa37a'], ln=(pts,c,w,dot)=>{ const P=pts.map(([md,v])=>[X(md),Y(v)]); return (P.length>1?`<path d="${P.map((q,i)=>`${i?'L':'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('')}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linejoin="round"/>`:'')+(dot?P.map(q=>`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="${c}"/>`).join(''):''); };
+    let g=''; for(const v of [0.2,0.4,0.6,0.8,1]) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#e3e8e0"/><text x="${L-4}" y="${Y(v)+3.5}" font-size="10" text-anchor="end" fill="#7a857f">${v.toFixed(1)}</text>`;
+    for(const m of ['06-01','07-01','08-01','09-01']) g+=`<line x1="${X(m)}" x2="${X(m)}" y1="${T}" y2="${H-B}" stroke="#eef1ec"/><text x="${X(m)}" y="${H-B+14}" font-size="10.5" text-anchor="middle" fill="#5b6b63">${+m.slice(0,2)}月</text>`;
+    const oth=ys.filter(x=>x.y!==sel), on=ys.find(x=>x.y===sel), sp=on?ptsOf(pid,sel):[], pk=sp.reduce((m,p)=>!m||p[1]>m[1]?p:m,null);
+    oth.forEach((x,i)=>{ g+=ln(ptsOf(pid,x.y),cols[i%cols.length],1.6,false); });
+    if(on) g+=ln(sp,'#b8860b',3,true);
+    const cap=(on?`<span><b>━ ${sel}年</b>${pk?`（いちばん高い ${pk[1].toFixed(2)}・${+pk[0].slice(0,2)}/${+pk[0].slice(3,5)}）`:''}</span>`:'')+oth.map((x,i)=>`<span style="color:${cols[i%cols.length]}">─ ${x.y}年</span>`).join('');
+    return `<div class="otpv"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="この圃場の年ごとの生育（NDVI、5/10〜9/30）">${g}</svg><div class="cap">${cap}</div></div>`; }
   function newHtml(){ const d=draft||(draft={pid:'',y:0,name:''}), cand=selected.filter(s=>parcels[s.pid]&&pkg.series[s.pid]), ys=d.pid?yearsOf(d.pid):[];
     if(d.pid&&!ys.some(x=>x.y===d.y)) d.y=ys.length?ys[0].y:0; const ok=!!(d.pid&&d.y);
     return `<div class="oth"><h3>★ 新しいお手本</h3><button type="button" class="otq" data-ote="help">使い方</button><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
       +`<div class="ots"><div class="otsn">1</div><div><b>お手本にする圃場</b><div class="otpk">${cand.map(s=>`<button type="button" class="otc${d.pid===s.pid?' on':''}" data-ote="pid" data-pid="${escH(s.pid)}" style="--c:${s.color}"><i></i>${escH(selLabel(s.pid))}</button>`).join('')}<button type="button" class="otc map${d.pid&&!cand.some(s=>s.pid===d.pid)?' on':''}" data-ote="pick">${d.pid&&!cand.some(s=>s.pid===d.pid)?'✓ 地図で選んだ圃場（選び直す）':'地図でタップして選ぶ'}</button></div>`
         +(d.pid?`<div class="otsel">選んだ圃場: <b>${escH(nameOf(d.pid))}</b></div>`:`<div class="hint">「選んだ圃場」から選ぶか、地図でタップしてください</div>`)+`</div></div>`
-      +`<div class="ots"><div class="otsn">2</div><div><b>年</b>`+(d.pid?(ys.length?`<div class="otys">${ys.map(x=>`<button type="button" class="oty${d.y===x.y?' on':''}" data-ote="y" data-y="${x.y}"><svg viewBox="0 0 64 26" aria-hidden="true">${spark(ptsOf(d.pid,x.y),'#1e3a2f')}</svg><span>${x.y}年<small>観測 ${x.n}回</small></span></button>`).join('')}</div><div class="otcrop" id="oteCrop"></div>`
+      +`<div class="ots"><div class="otsn">2</div><div><b>年</b>`+(d.pid?(ys.length?`<div class="otys">${ys.map(x=>`<button type="button" class="oty${d.y===x.y?' on':''}" data-ote="y" data-y="${x.y}"><svg viewBox="0 0 64 26" aria-hidden="true">${spark(ptsOf(d.pid,x.y),'#1e3a2f')}</svg><span>${x.y}年<small>観測 ${x.n}回</small></span></button>`).join('')}</div>${pvHtml(d.pid,ys,d.y)}<div class="otcrop" id="oteCrop"></div>`
           :`<div class="otw">この圃場は、5/10〜9/30 の観測が少なく、お手本にできません。ほかの圃場を選んでください。</div>`):`<div class="hint">圃場を選ぶと、選べる年が出ます</div>`)+`</div></div>`
       +`<div class="ots"><div class="otsn">3</div><div><b>名前</b><input type="text" class="otnm" maxlength="24" placeholder="例: コシヒカリ理想生育曲線" value="${escH(d.name)}" data-ote="nm" aria-label="お手本の名前">`
         +`<div class="otsg">${SUG.map(t=>`<button type="button" data-ote="sg" data-t="${t}">${t}</button>`).join('')}</div></div></div>`
