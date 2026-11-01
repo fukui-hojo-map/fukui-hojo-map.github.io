@@ -3579,8 +3579,9 @@ function writeHash(){ const c=RAIN.isOn()?RAIN.viewCenter():map.getCenter(); con
 // 押すと小窓: 本拠地へ・いま見ている所を本拠地にする・現在地を本拠地にする・現在地へ（前の「現在地へ」ボタンの働き）・本拠地をやめる
 const HOME=(function(){
   const K='fhm_home', btn=document.getElementById('btnGeo'), box=document.getElementById('homeMenu');
-  function get(){ try{ const o=JSON.parse(localStorage.getItem(K)||'null'); return o&&isFinite(o.lat)&&isFinite(o.lng)?{lat:+o.lat,lng:+o.lng,z:Math.max(12,Math.min(18,Math.round(+o.z||16)))}:null; }catch(e){ return null; } }
-  function set(lat,lng,z){ try{ localStorage.setItem(K,JSON.stringify({lat:+lat.toFixed(6),lng:+lng.toFixed(6),z:Math.max(12,Math.min(18,Math.round(z))),t:Date.now()})); return true; }catch(e){ return false; } }
+  const HZMAX=17;   // 開いたとき・「本拠地へ」の拡大の上限（18 だと家のまわりだけで近すぎる。前に 18 で覚えた本拠地も 17 で開く。2026-11-01 利用者の指示）
+  function get(){ try{ const o=JSON.parse(localStorage.getItem(K)||'null'); return o&&isFinite(o.lat)&&isFinite(o.lng)?{lat:+o.lat,lng:+o.lng,z:Math.max(12,Math.min(HZMAX,Math.round(+o.z||16)))}:null; }catch(e){ return null; } }
+  function set(lat,lng,z){ try{ localStorage.setItem(K,JSON.stringify({lat:+lat.toFixed(6),lng:+lng.toFixed(6),z:Math.max(12,Math.min(HZMAX,Math.round(z))),t:Date.now()})); return true; }catch(e){ return false; } }
   function clear(){ try{ localStorage.removeItem(K); }catch(e){} }
   // 地図に本拠地のピン（緑のピンに黄色の家）。押せない印（下の圃場は、そのまま押せる）。決めた・やめたときに置き直す
   let mk=null;
