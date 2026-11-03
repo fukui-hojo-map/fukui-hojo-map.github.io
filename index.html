@@ -3049,7 +3049,6 @@ const OTE=(function(){
   map.on('zoomend',()=>{ if((map.getZoom()>=16)!==lblOn) frames(); });
   function flash(id){ blink=id; frames(); setTimeout(()=>{ if(blink===id){ blink=''; frames(); } },2800); }
   const mapIntoView=()=>{ const m=document.getElementById('map'), r=m.getBoundingClientRect(); if(r.top<0||r.top>innerHeight*0.4) m.scrollIntoView({behavior:'smooth',block:'start'}); };   // スマホで、グラフの方へ下がっているときは、地図が見える所まで上げる
-  function goTo(o){ if(!o.geom||!o.geom.length) return; mapIntoView(); map.fitBounds(L.latLngBounds(o.geom.flat().map(([x,y])=>[y,x])).pad(1.5),{maxZoom:17}); flash(o.id); }
   function rows(){ sync(); return {items:act().map(o=>({o,pts:fromFlood(o.pts.map(([md,v])=>({md,ndvi:v,t:tOf(o.y,md)})).sort((a,b)=>a.t-b.t),o.y).map(p=>[p.md,p.ndvi])}))}; }   // Excel に書き出す点（画面と同じ選び方）
   function changed(){ frames(); renderChips(); drawChart(); }
   function hide(id){ const o=st.list.find(x=>x.id===id); if(o&&o.on){ o.on=false; save(); changed(); } }   // グラフから外す（登録は残る）
@@ -3059,11 +3058,12 @@ const OTE=(function(){
   // ---- 一覧・登録の画面 ----
   function spark(pts,c){ const a=Date.UTC(2000,4,10), b=Date.UTC(2000,8,30), P=pts.map(([md,v])=>[(tOf(2000,md)-a)/(b-a)*60+2,24-Math.max(0,Math.min(1,v))*22]);
     return P.length>1?`<path d="${P.map((p,i)=>`${i?'L':'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('')}" fill="none" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/>`:''; }
-  function rowHtml(o){ const ren=draft&&draft.ren===o.id;
+  // お手本の札: 名前・年・区画と「消す」だけ（2026-11-03 利用者の指示で「地図で見る」「名前を変える」「観測 ○回」を外した）
+  function rowHtml(o){
     return `<div class="otr${o.on?' on':''}" style="--c:${o.color}"><label class="otck" title="グラフに重ねる"><input type="checkbox" data-ote="tg" data-id="${o.id}"${o.on?' checked':''} aria-label="${escH(o.name)}をグラフに重ねる"></label>`
-      +`<div class="otm">${ren?`<div class="otrn"><input type="text" maxlength="24" value="${escH(o.name)}" data-ote="rnin" aria-label="お手本の名前"><button type="button" class="btn small primary" data-ote="rnok" data-id="${o.id}">決める</button></div>`:`<b>★ ${escH(o.name)}</b>`}`
-      +`<small>${o.y}年・区画 ${escH(o.pn||o.pid.slice(0,8))}・観測 ${o.pts.length}回</small>`
-      +`<span class="ota"><button type="button" data-ote="go" data-id="${o.id}">地図で見る</button><button type="button" data-ote="ren" data-id="${o.id}">名前を変える</button><button type="button" class="del" data-ote="del" data-id="${o.id}">消す</button></span></div>`
+      +`<div class="otm"><b>★ ${escH(o.name)}</b>`
+      +`<small>${o.y}年・区画 ${escH(o.pn||o.pid.slice(0,8))}</small>`
+      +`<span class="ota"><button type="button" class="del" data-ote="del" data-id="${o.id}">消す</button></span></div>`
       +`<svg class="otsp" viewBox="0 0 64 26" aria-hidden="true">${spark(o.pts,o.color)}</svg></div>`; }
   function listHtml(msg){ const n=st.list.length;
     return `<div class="oth"><h3>★ お手本の生育曲線</h3><button type="button" class="otq" data-ote="help">使い方</button><button type="button" class="otx" data-ote="close" aria-label="閉じる">×</button></div>`
@@ -3101,7 +3101,6 @@ const OTE=(function(){
   function open(view){ const old=document.getElementById('oteDlg'); if(old) old.remove(); if(picking) endPick();
     const ov=document.createElement('div'); ov.className='sx otesx'; ov.id='oteDlg'; ov.innerHTML='<div role="dialog" aria-modal="true" aria-label="お手本の生育曲線"></div>'; document.body.appendChild(ov);
     ov.addEventListener('click',onDlg); ov.addEventListener('input',e=>{ if(e.target.dataset.ote==='nm'&&draft) draft.name=e.target.value; });
-    ov.addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.target.dataset.ote==='rnin'){ e.preventDefault(); const b=ov.querySelector('[data-ote=rnok]'); if(b) b.click(); } });
     view=view||(st.list.length?'list':'new'); if(view==='new'&&!draft) draft={pid:selected.length===1&&pkg&&pkg.series[selected[0].pid]?selected[0].pid:'',y:0,name:''};   // 選んだ圃場が1枚なら、それを最初から選んでおく
     render(view); }
   function close(){ const o=document.getElementById('oteDlg'); if(o) o.remove(); draft=null; }
@@ -3117,9 +3116,6 @@ const OTE=(function(){
     if(k==='sg'){ draft.name=b.dataset.t; const i=ov.querySelector('.otnm'); if(i) i.value=draft.name; return; }
     if(k==='pick'){ startPick(); return; }
     if(k==='add'){ add(); return; }
-    if(k==='go'&&o){ close(); goTo(o); return; }
-    if(k==='ren'&&o){ draft={ren:o.id}; render('list'); const i=ov.querySelector('[data-ote=rnin]'); if(i){ i.focus(); i.select(); } return; }
-    if(k==='rnok'&&o){ const i=ov.querySelector('[data-ote=rnin]'), v=(i&&i.value||'').trim(); if(v){ o.name=v.slice(0,24); save(); changed(); } draft=null; render('list'); return; }
     if(k==='del'&&o){ if(b.dataset.sure!=='1'){ b.dataset.sure='1'; b.textContent='本当に消す'; b.classList.add('sure'); setTimeout(()=>{ if(b.isConnected){ b.dataset.sure=''; b.textContent='消す'; b.classList.remove('sure'); } },4000); return; }
       st.list=st.list.filter(x=>x!==o); save(); changed(); render('list',`「${escH(o.name)}」を消しました`); return; } }
   function add(){ const d=draft; if(!d||!d.pid||!d.y||st.list.length>=MAX) return; const pts=ptsOf(d.pid,d.y); if(pts.length<3) return;
