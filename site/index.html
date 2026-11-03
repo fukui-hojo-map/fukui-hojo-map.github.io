@@ -919,7 +919,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .ctl label{display:inline-flex;align-items:center;gap:6px}
   .btnrow3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 4px} .btnrow3 .btn{min-height:42px;padding:4px 6px;font-size:13.5px;line-height:1.25;text-align:center;white-space:normal} .btnrow3 .btn span{display:inline-block}   /* グラフの下に、ボタンを1行に3つ（文字が長いものは2行にして、高さをそろえる） */
   .ctl select,.ctl input[type=date],.ctl input[type=number]{font:inherit;font-size:15px;padding:5px 6px;border:1px solid var(--line);border-radius:5px}
-  .svgwrap{position:relative} svg.chart{width:100%;height:auto;display:block;font-family:var(--sans)}
+  .svgwrap{position:relative} svg.chart{width:100%;height:auto;display:block;font-family:var(--sans)} #chart{touch-action:pan-y pinch-zoom;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   .tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.14);padding:6px 9px;font-size:13.5px;display:none;min-width:150px;z-index:5}
   .tip b{display:block;margin-bottom:3px} .tip .r{display:flex;justify-content:space-between;gap:12px} .tip i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:6px}
   table{border-collapse:collapse;width:100%;font-size:14.5px} th,td{padding:4px 6px;border-bottom:1px solid var(--grid);text-align:left;white-space:nowrap} th{color:var(--ink2);border-bottom:1.5px solid var(--line)} td.num,th.num{text-align:right}
@@ -2925,22 +2925,40 @@ function drawVigChart(svg){   // 生育傾向マップのときのグラフ: 稲
   svg.setAttribute('viewBox',`0 0 ${W} ${ly+8}`); svg.innerHTML=g;
 }
 let lastPick=null;
+// グラフの吹き出し（日付と値）。パソコン: マウスを乗せている間。スマホ: 長押し・横に指を動かしている間だけ出し、指を離すと消す（2026-11-03 利用者の指示）。
+// 上下に指を動かしたときは、そのまま画面を上下にスクロール（touch-action: pan-y。グラフでは止めない）。軽く押した（タップ）ときは、吹き出しを出さずに、その点の日で地図を塗る
 (function(){ const svg=document.getElementById('chart'),tip=document.getElementById('tip');
-  const onMove=ev=>{ if(!hoverPts.length) return; const pt=ev.touches?ev.touches[0]:ev; if(ev.touches) ev.preventDefault();
-    const r=svg.getBoundingClientRect(); const mx=(pt.clientX-r.left)*W/r.width; let best=null; for(const h of hoverPts){const d=Math.abs(h.px-mx); if(!best||d<best.d) best={d,h};}
-    if(!best||best.d>25){lastPick=null;tip.style.display='none';svg.querySelector('#hl')?.setAttribute('visibility','hidden');return;}
+  const hideTip=()=>{ lastPick=null; tip.style.display='none'; svg.querySelector('#hl')?.setAttribute('visibility','hidden'); };
+  const near=pt=>{ if(!hoverPts.length) return null; const r=svg.getBoundingClientRect(); const mx=(pt.clientX-r.left)*W/r.width; let best=null; for(const h of hoverPts){const d=Math.abs(h.px-mx); if(!best||d<best.d) best={d,h};}
+    return best&&best.d<=25?best:null; };
+  const show=(pt,touch)=>{ const best=near(pt); if(!best){ hideTip(); return; } const r=svg.getBoundingClientRect();
     lastPick=best.h.s.ote?null:best.h.p.date;   // お手本の点は、ほかの年の日なので、押しても地図の日付を変えない
     const rows=hoverPts.filter(h=>Math.abs(h.x-best.h.x)<1e-6).sort((a,b)=>b.p.ndvi-a.p.ndvi); const mode=document.getElementById('mode').value;
     const fmtRow=(h,ex)=>`<div class="r"><span><i style="background:${h.s.color}"></i>${h.s.label}${h.p.ls?'（Landsat）':h.p.rad?'（レーダー推定）':''}${h.p.haze?'（速報・もやの疑い）':h.p.prov?'（速報）':''}</span><span>${h.p.ndvi.toFixed(2)}${ex||''}</span></div>`, O=window.__ote;
     tip.innerHTML=O&&O.act().length?O.tip(best,rows,fmtRow):`<b>${best.h.p.date}</b>`+rows.map(h=>fmtRow(h)).join('');   // お手本を重ねているときは、お手本の値と差も
     tip.style.display='block'; const hl=svg.querySelector('#hl'); hl.setAttribute('x1',best.h.px); hl.setAttribute('x2',best.h.px); hl.setAttribute('visibility','visible');
-    const px=best.h.px*r.width/W; tip.style.left=(px+14+tip.offsetWidth>r.width?px-tip.offsetWidth-14:px+14)+'px'; tip.style.top=Math.max(0,(pt.clientY-r.top)-20)+'px'; };
-  svg.addEventListener('mousemove',onMove); svg.addEventListener('touchstart',onMove,{passive:false}); svg.addEventListener('touchmove',onMove,{passive:false});
-  const pick=()=>{ const d=lastPick; if(!d) return; const sel=document.getElementById('colorDate'); if([...sel.options].some(o=>o.value===d)&&sel.value!==d){ sel.value=d; paintMap(); } };   // グラフの点をタップ → その日で地図を塗る
-  svg.addEventListener('click',pick); svg.addEventListener('touchend',pick);
-  const hideTip=()=>{ lastPick=null; tip.style.display='none'; svg.querySelector('#hl')?.setAttribute('visibility','hidden'); };
-  svg.addEventListener('mouseleave',hideTip);
-  document.addEventListener('pointerdown',e=>{ if(tip.style.display==='none'||(e.target.closest&&e.target.closest('#chart,#tip'))) return; hideTip(); },true); })();   // グラフの外の何もない所を押したら、吹き出しを消す（スマホは、指を離しても出たままだったため。グラフの上の、点から遠い所を押したときは、もとから消える）
+    const px=best.h.px*r.width/W, y=pt.clientY-r.top; tip.style.left=(px+14+tip.offsetWidth>r.width?px-tip.offsetWidth-14:px+14)+'px';
+    tip.style.top=(touch?(y-tip.offsetHeight-28>=0?y-tip.offsetHeight-28:y+36):Math.max(0,y-20))+'px'; };   // スマホは指の上に出す（指で隠れないように）
+  const pick=()=>{ const d=lastPick; if(!d) return; const sel=document.getElementById('colorDate'); if([...sel.options].some(o=>o.value===d)&&sel.value!==d){ sel.value=d; paintMap(); } };   // グラフの点を押す → その日で地図を塗る
+  // パソコン（マウス）。スマホの指から作られるマウスの動きは使わない（タップのあとに吹き出しが残らないように）
+  svg.addEventListener('pointermove',e=>{ if(e.pointerType==='mouse') show(e,false); });
+  svg.addEventListener('pointerleave',e=>{ if(e.pointerType==='mouse') hideTip(); });
+  svg.addEventListener('click',()=>{ if(!T) pick(); });
+  // スマホ（指）。T: {x,y（押した所）, m: 'wait'（押しただけ）|'hold'（吹き出しを出している）|'scroll'（上下に動かした）, last, timer}
+  const HOLD=350, SLOP=8; let T=null;
+  svg.addEventListener('touchstart',ev=>{ if(T){ clearTimeout(T.timer); T=null; } if(ev.touches.length!==1){ hideTip(); return; } const t=ev.touches[0];
+    T={x:t.clientX,y:t.clientY,m:'wait',last:{clientX:t.clientX,clientY:t.clientY}}; T.timer=setTimeout(()=>{ if(T&&T.m==='wait'){ T.m='hold'; show(T.last,true); } },HOLD); },{passive:true});
+  svg.addEventListener('touchmove',ev=>{ if(!T||ev.touches.length!==1) return; const t=ev.touches[0], dx=t.clientX-T.x, dy=t.clientY-T.y; T.last={clientX:t.clientX,clientY:t.clientY};
+    if(T.m==='wait'){ if(Math.abs(dy)>SLOP&&Math.abs(dy)>Math.abs(dx)){ T.m='scroll'; clearTimeout(T.timer); return; }   // 上下 → 画面のスクロールにまかせる
+      if(Math.abs(dx)<=SLOP) return; T.m='hold'; clearTimeout(T.timer); }   // 横 → グラフを触る
+    if(T.m==='hold') show(T.last,true); },{passive:true});
+  svg.addEventListener('touchend',()=>{ if(!T) return; clearTimeout(T.timer); const m=T.m, last=T.last; T=null;
+    if(m==='wait'){ const b=near(last); lastPick=b&&!b.h.s.ote?b.h.p.date:null; pick(); }   // タップ: 吹き出しは出さず、その日で地図を塗る
+    else if(m==='hold'){ const r=svg.getBoundingClientRect(); if(last.clientY>=r.top&&last.clientY<=r.bottom) pick(); }   // 長押し・横のあと、グラフの上で離したら、その日で地図を塗る
+    hideTip(); });
+  svg.addEventListener('touchcancel',()=>{ if(T) clearTimeout(T.timer); T=null; hideTip(); });
+  svg.addEventListener('contextmenu',e=>{ if(e.pointerType==='touch'||T) e.preventDefault(); });   // 長押しで出るメニューを出さない
+  document.addEventListener('pointerdown',e=>{ if(tip.style.display==='none'||(e.target.closest&&e.target.closest('#chart,#tip'))) return; hideTip(); },true); })();   // グラフの外を押したら、吹き出しを消す
 
 // ---------- お手本の生育曲線（2026-10-25 利用者の指示: 期間の横の「お手本 生育曲線」のボタン） ----------
 // よく育った圃場の、ある年の NDVI の推移を「お手本」として、この端末（localStorage）に10個まで覚える。農家が品種ごとの理想と、自分の圃場の今を見くらべるため。
