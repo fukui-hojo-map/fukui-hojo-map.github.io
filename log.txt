@@ -1,0 +1,2 @@
+latest 20261107130000 immed 20261107132000 need 1 partial 0 fetch now 1
+done 2026-11-07T13:20:00Z immed {12: 0, 24: 0, 48: 0} max mm {12: 15.5, 24: 27.3, 48: 60.8} unknown [] failed 0 14 s
