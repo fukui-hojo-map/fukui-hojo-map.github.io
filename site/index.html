@@ -786,7 +786,9 @@ svg.leaflet-image-layer.leaflet-interactive path {
   header h1{margin:0;display:flex;align-items:center}
   .fukui-logo{--s:20px;gap:calc(var(--s)*.426);color:#0F3D2E;font-family:'Zen Kaku Gothic New','Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif;font-weight:700;font-size:var(--s);line-height:1.15;letter-spacing:.02em;white-space:nowrap}
   .fukui-logo svg{width:calc(var(--s)*1.3);height:calc(var(--s)*1.3);flex:none;display:block}
-  header .meta{color:var(--ink2);font-size:14px}
+  .side .meta{color:var(--ink2);font-size:13.5px;line-height:1.45;margin-top:14px} .side .meta:empty{display:none} .side .meta+.foot{margin-top:4px}
+  /* 上の段は、題字と「本拠地」「マイ圃場」だけ（2026-11-07 利用者の指示「160,087区画…の文言を下に。余白ができた分、題字とボタンを大きく」） */
+  header h1.fukui-logo{--s:24px} header #btnGeo,header #myOpen{font-size:16.5px;min-height:42px}
   header .spacer{flex:1}
   .btn{font:inherit;font-size:15px;padding:7px 12px;border:1px solid var(--ink);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer;min-height:36px}
   .sx{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:12px}
@@ -798,7 +800,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
   .btn:hover{background:var(--panel)} .btn.primary{background:var(--ink);color:#fff} .btn.small{padding:3px 9px;min-height:28px;font-size:14px}
   .btn:disabled{opacity:.45;cursor:default}
   /* 上の段の「本拠地」「マイ圃場」: 白地（マイ圃場は淡い緑）に、濃い緑→黄緑→黄色のグラデーションの枠のピル（見本41） */
-  header #btnGeo,header #myOpen{border:2px solid transparent;border-radius:999px;font-weight:700;color:var(--ink);padding-left:13px;padding-right:13px;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
+  header #btnGeo,header #myOpen{border:2px solid transparent;border-radius:999px;font-weight:700;color:var(--ink);padding-left:17px;padding-right:17px;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
   header #myOpen{background:linear-gradient(#e4efe6,#e4efe6) padding-box,linear-gradient(135deg,#0f3d2e,#7fc41c 60%,#f5c542) border-box}
   header #btnGeo:hover,header #myOpen:hover{filter:brightness(.96)} header #btnGeo:active,header #myOpen:active{filter:brightness(.92)}
   /* 「本拠地」の小窓（上の段のボタンの下）: 本拠地へ・いま見ている所／現在地を本拠地にする・現在地へ */
@@ -1178,17 +1180,16 @@ svg.leaflet-image-layer.leaflet-interactive path {
   @media (max-width:860px){
     .layout{grid-template-columns:1fr;height:auto;grid-template-rows:auto auto}   /* 地図の行の高さは、地図（#map の 64vh）にまかせる。行と地図を別々に vh で決めると、スマホの Chrome で片方だけ古い高さのまま残ることがあり、左下の欄が地図の下にはみ出した（2026-10-16 実機） */
     #map{height:64vh} .side{border-top:1px solid var(--line)} .splitter{display:none}
-    header{padding:8px 12px;gap:4px 6px} .side{padding:10px 12px 30px} header h1.fukui-logo{--s:17px}
+    header{padding:9px 12px;gap:4px 6px} .side{padding:10px 12px 30px} header h1.fukui-logo{--s:clamp(16px,5vw,24px)}   /* 412px幅で約20.6px（前は17px）。題字とボタン2つが1行に収まる大きさ */
     /* スマホ幅: 「ふくい圃場マップ」の右に、「本拠地」「マイ圃場」を並べる（少し小さく）。更新の日付などの行は、その下 */
-    header h1{order:0} header .spacer{order:1} header #btnGeo,header #myOpen{order:2} header .meta{order:3;flex:0 0 100%;font-size:13px;line-height:1.35}
+    header h1{order:0} header .spacer{order:1} header #btnGeo,header #myOpen{order:2}
     header .btn{min-height:30px;padding:3px 8px;font-size:13.5px;border-radius:6px}
-    header #btnGeo,header #myOpen{padding:3px 8px;border-width:1.5px}   /* 360px幅でも、題字と同じ行に収まる幅 */
+    header #btnGeo,header #myOpen{min-height:clamp(34px,10vw,44px);padding:3px clamp(8px,2.6vw,13px);font-size:clamp(13px,3.75vw,17px);border-width:1.5px}   /* 412px幅で 高さ41px・文字15.5px（前は 30px・13.5px）。360px幅でも、題字と同じ行に収まる */
   }
 </style>
 
 <header>
   <h1 class="fukui-logo"><svg class="logo" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="8 8 84 84"><rect x="12" y="12" width="23" height="23" rx="6" fill="#f5c542"/><rect x="39" y="12" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="66" y="12" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="12" y="39" width="23" height="23" rx="6" fill="#d7d65a"/><rect x="39" y="39" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="66" y="39" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="12" y="66" width="23" height="23" rx="6" fill="#6cc24a"/><rect x="39" y="66" width="23" height="23" rx="6" fill="#3fa45a"/><rect x="66" y="66" width="23" height="23" rx="6" fill="#1f8a53"/></svg><span>ふくい圃場マップ</span></h1>
-  <span class="meta" id="meta"></span>
   <span class="spacer"></span>
   <button class="btn" id="btnGeo" type="button" aria-haspopup="true" aria-expanded="false" title="本拠地（開くたびに、ここから始まります）">本拠地</button>
 </header>
@@ -1247,6 +1248,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="excl" id="excl"></div>
       <div class="ctl"><select id="addExcl"></select><button class="btn small" id="btnAddExcl">この日を除外</button></div>
     </div>
+    <div class="meta" id="meta"></div>   <!-- 区画の数・最新の撮影日は、出典のすぐ上に（2026-11-07 利用者の指示。上の段は、題字とボタンだけにして大きく） -->
     <div class="foot" id="foot"></div>
   </aside>
 </div>
