@@ -6,7 +6,7 @@
 <script type="importmap">{"imports":{"three":"./three/three.module.min.js"}}</script>   <!-- three.js 0.169.0（MIT）。外部の配信元には頼らず、このサイトから配る（2026-10-25 セキュリティ点検）。公式の配布物と同じものを確認ずみ -->
 <title>ふくい圃場マップ</title>
 <link rel="manifest" href="manifest.webmanifest">
-<script>if('serviceWorker' in navigator&&location.protocol==='https:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });</script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:') window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').then(function(r){ var t=Date.now(); r.update().catch(function(){}); document.addEventListener('visibilitychange',function(){ if(!document.hidden&&Date.now()-t>3e5){ t=Date.now(); r.update().catch(function(){}); } }); }).catch(function(){}); });</script><!-- sw.js は、開いたとき・アプリにもどったとき（5分ごとまで）に新しいかを確かめる（ホーム画面のアプリは開きっぱなしのことが多く、ページを読み直さないと古いままになるため。2026-11-07） -->
 <meta name="theme-color" content="#1e3a2f">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
