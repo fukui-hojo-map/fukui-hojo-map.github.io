@@ -1518,11 +1518,15 @@ const RAINACC=(function(){
   return {load, at:atLL, fmt, line, renderSel, until, anyMiss, URL, API, _data:()=>data, _err:()=>err, _val:val};
 })();
 const RAIN=(function(){
-  const JT='https://www.jma.go.jp/bosai/jmatile/data/', BLANK='data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+  const JT='https://www.jma.go.jp/bosai/jmatile/data/';
   const MAXZ={hrpns:10,rasrf:10}, MINZ=4;
-  // 気象庁の色（タイルはこの色の点と透明だけでできている。2026-10 にタイルのパレットで確認）。降水短時間予報は1時間の雨量（mm）で、色の区切りは同じ
-  const LV=[{c:[242,242,255],lo:0,hi:1},{c:[160,210,255],lo:1,hi:5},{c:[33,140,255],lo:5,hi:10},{c:[0,65,255],lo:10,hi:20,w:'やや強い雨'},{c:[250,245,0],lo:20,hi:30,w:'強い雨'},
-            {c:[255,153,0],lo:30,hi:50,w:'激しい雨'},{c:[255,40,0],lo:50,hi:80,w:'非常に激しい雨'},{c:[180,0,104],lo:80,hi:null,w:'猛烈な雨'}];
+  // c: 気象庁の色（タイルはこの色の点と透明だけでできている。2026-10 にタイルのパレットで確認）。地点の雨は、この色で段階を読む。降水短時間予報は1時間の雨量（mm）で、色の区切りは同じ
+  // d: 画面に出す色。2026-11-07 利用者の指示「青色の濃淡が分かりづらい」: 20mm より弱い4段階（気象庁は白・水色・青・紺）を、水色・青・うすい緑・緑にする。20mm 以上（黄・橙・赤・紫）は気象庁と同じ。
+  //    気象庁の色は、ごく弱い雨（白に近い）が地図に白いもやのようにかかり、帯の白地ではほとんど見えなかった。色の差（CIEDE2000、地図の上・白地、P型・D型の色覚も）で、
+  //    となり合う段階の差の最小は 15→20、ごく弱い雨と白地の差は 7→16。P型・D型で見たときの、いちばん近い2色の差は気象庁の色より小さくならない（黄と橙の組で決まる）ように選んだ
+  //    al: 地図での透けぐあい（0〜255）。ごく弱い雨は少し透かして、下の圃場が見えるように（地図の上の濃さは 0.78→0.55。それでも地図との色の差は 15 以上）
+  const LV=[{c:[242,242,255],d:[150,220,255],al:180,lo:0,hi:1},{c:[160,210,255],d:[35,115,255],lo:1,hi:5},{c:[33,140,255],d:[165,232,145],lo:5,hi:10},{c:[0,65,255],d:[28,148,80],lo:10,hi:20,w:'やや強い雨'},
+            {c:[250,245,0],d:[250,245,0],lo:20,hi:30,w:'強い雨'},{c:[255,153,0],d:[255,153,0],lo:30,hi:50,w:'激しい雨'},{c:[255,40,0],d:[255,40,0],lo:50,hi:80,w:'非常に激しい雨'},{c:[180,0,104],d:[180,0,104],lo:80,hi:null,w:'猛烈な雨'}];
   const OP=.78, R=1;   // 雨雲の濃さ・地点の雨を見るときの、まわりの点（R=1 で 3×3 点＝ズーム10 で約370m四方。いちばん強い色をとる）
   const pad=n=>String(n).padStart(2,'0'), ms=s=>Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12));
   const jst=t=>{ const d=new Date(t+9*36e5); return {mo:d.getUTCMonth()+1,d:d.getUTCDate(),h:d.getUTCHours(),mi:d.getUTCMinutes(),w:'日月火水木金土'[d.getUTCDay()]}; };
@@ -1542,9 +1546,23 @@ const RAIN=(function(){
   const has=(e,el)=>(e.elements||[]).includes(el), asc=(a,b)=>a.validtime<b.validtime?-1:a.validtime>b.validtime?1:0;
   const fr=(p,el,e,kind)=>{ const m=e.member||'none'; return {p,el,b:e.basetime,m,v:e.validtime,t:ms(e.validtime),kind,k:`${p}/${e.basetime}/${m}/${e.validtime}/${el}`}; };
   const urlT=(f,z,x,y)=>`${JT}${f.p}/${f.b}/${f.m}/${f.v}/surf/${f.el}/${z}/${x}/${y}.png`;
-  const Tile=L.TileLayer.extend({ _clampZoom(z){ z=Math.max(MINZ,Math.min(this.options.maxNativeZoom,Math.round(z))); return z-z%2; } });   // 奇数のズーム → 1つ下の偶数
+  // タイルは、気象庁の画像を読んで、色を画面の色（LV の d）に塗り替えてから描く（canvas）。雨のない所（404）・読めないタイルは、何も描かない
+  const RECOL=new Map(LV.map(v=>[(v.c[0]<<16)|(v.c[1]<<8)|v.c[2],v]));
+  function recolor(d){ const a=d.data, miss=new Map(); let lk=-1, ln=null;   // lk・ln: ひとつ前の点の色（となりの点は同じ色が多いので、表を引かずにすむ）
+    for(let o=0;o<a.length;o+=4){ if(!a[o+3]) continue; const key=(a[o]<<16)|(a[o+1]<<8)|a[o+2]; let n=key===lk?ln:RECOL.get(key);
+      if(!n&&key!==lk){ n=miss.get(key); if(n===undefined){ const k=cls(a[o],a[o+1],a[o+2],LV); n=k<0?null:LV[k]; miss.set(key,n); } }   // 気象庁の色からわずかにずれた点（端末の色の扱い）は、いちばん近い段階の色に
+      lk=key; ln=n; if(n){ a[o]=n.d[0]; a[o+1]=n.d[1]; a[o+2]=n.d[2]; if(n.al) a[o+3]=n.al; } }
+    return d; }
+  function paintTile(url,cv){ const ac=typeof AbortController==='function'?new AbortController():null, t=ac?setTimeout(()=>ac.abort(),15000):0; cv._ac=ac;
+    return fetch(url,ac?{credentials:'omit',signal:ac.signal}:{credentials:'omit'}).then(r=>r.ok?r.blob():null).then(b=>b&&decode(b)).then(bm=>{ clearTimeout(t); if(!bm) return;
+      const w=bm.naturalWidth||bm.width, h=bm.naturalHeight||bm.height; cv.width=w; cv.height=h; const g=cv.getContext('2d',{willReadFrequently:true}); g.drawImage(bm,0,0); if(bm.close) bm.close();
+      g.putImageData(recolor(g.getImageData(0,0,w,h)),0,0); }).catch(()=>{ clearTimeout(t); }); }
+  const Tile=L.GridLayer.extend({ _clampZoom(z){ z=Math.max(MINZ,Math.min(this.options.maxNativeZoom,Math.round(z))); return z-z%2; },   // 奇数のズーム → 1つ下の偶数
+    createTile(c,done){ const cv=document.createElement('canvas'); cv.width=cv.height=1;   // 雨のないタイルは 1×1 のまま（大きさは Leaflet が CSS で決める）
+      paintTile(urlT(this.options.f,c.z,c.x,c.y),cv).then(()=>done(null,cv)); return cv; } });
   const BOUNDS=L.latLngBounds([[17,115],[50,155]]);   // 気象庁のタイルがある範囲（日本のまわり）。この外と、ズーム4より引いたときは読まない（読むタイルが何千枚にもならないように）
-  const mkTile=f=>new Tile(urlT(f,'{z}','{x}','{y}'),{pane:'rainPane',opacity:0,maxNativeZoom:MAXZ[f.el],minNativeZoom:MINZ,minZoom:MINZ,maxZoom:22,bounds:BOUNDS,keepBuffer:1,updateWhenIdle:true,errorTileUrl:BLANK,className:'rainT'});
+  const mkTile=f=>new Tile({f,pane:'rainPane',opacity:0,maxNativeZoom:MAXZ[f.el],minNativeZoom:MINZ,minZoom:MINZ,maxZoom:22,bounds:BOUNDS,keepBuffer:1,updateWhenIdle:true,className:'rainT'})
+    .on('tileunload',e=>{ const a=e.tile&&e.tile._ac; if(a) a.abort(); });   // 見えなくなったタイルは、読みかけをやめる
   // ---- 時刻の一覧を読んで、こま（frame）を作る ----
   async function loadNow(){
     const [n1,n2]=await Promise.all([gj('nowc/targetTimes_N1.json'),gj('nowc/targetTimes_N2.json')]);
@@ -1628,7 +1646,7 @@ const RAIN=(function(){
     if(mode==='15h'){ a=[[0,'いま']]; for(let i=4;i<n-2;i+=4) a.push([i,hmS(frames[i].t)]); if(n>1) a.push([n-1,hmS(frames[n-1].t)]); }
     else a=[[0,`${Math.round((frames[nowIdx].t-frames[0].t)/6e4)}分前`],[nowIdx,'いま'],[n-1,`${Math.round((frames[n-1].t-frames[nowIdx].t)/6e4)}分後`]];
     return a.filter(([i],k,arr)=>arr.findIndex(x=>x[0]===i)===k).map(([i,t])=>`<span class="rtick" data-i="${i}" style="${at(i)}">${t}</span>`).join(''); }
-  function legend(){ return `<span class="rlg" title="雨の強さ（${mode==='15h'?'1時間の雨量 mm':'mm/h'}）"><span class="u">${mode==='15h'?'mm':'mm/h'}</span>${LV.map(v=>`<i style="background:rgb(${v.c})"><b>${v.lo||''}</b></i>`).join('')}</span>`; }
+  function legend(){ return `<span class="rlg" title="雨の強さ（${mode==='15h'?'1時間の雨量 mm':'mm/h'}）"><span class="u">${mode==='15h'?'mm':'mm/h'}</span>${LV.map(v=>`<i style="background:rgb(${v.d})"><b>${v.lo||''}</b></i>`).join('')}</span>`; }
   function buildBar(){ let b=$('rainBar');
     if(!b){ b=document.createElement('div'); b.id='rainBar'; b.setAttribute('role','region'); b.setAttribute('aria-label','雨雲レーダー'); document.querySelector('.mapwrap').appendChild(b); L.DomEvent.disableClickPropagation(b); L.DomEvent.disableScrollPropagation(b); }
     const ae=document.activeElement, fk=ae&&b.contains(ae)?(ae.id?'#'+ae.id:ae.getAttribute('data-r')?`[data-r="${ae.getAttribute('data-r')}"]`:''):'';
@@ -1713,7 +1731,7 @@ const RAIN=(function(){
     }
     const acc=await Promise.race([accP,new Promise(r=>setTimeout(()=>r(undefined),400))]); if(!live()) return;   // 降った雨は待たない（読めたら、あとで足す）
     const nF=fr0.length, atF=j=>nF>1?j/(nF-1)*100:0;
-    const cells=ks.map((k,i)=>`<i data-i="${ni+i}" style="left:${atF(ni+i)}%;width:calc(${100/Math.max(1,nF-1)}% - 2px);background:${ok(k)?`rgb(${pal[k].c})`:k==null?'repeating-linear-gradient(45deg,#c9ced6 0 2px,#fff 2px 4px)':'#fff'}" title="${md==='15h'?(i?rng(i):'直前1時間'):(i?mins(i)+'分後':'いま')}：${k==null?'読めません':nm(k)}"></i>`).join('');
+    const cells=ks.map((k,i)=>`<i data-i="${ni+i}" style="left:${atF(ni+i)}%;width:calc(${100/Math.max(1,nF-1)}% - 2px);background:${ok(k)?`rgb(${pal[k].d})`:k==null?'repeating-linear-gradient(45deg,#c9ced6 0 2px,#fff 2px 4px)':'#fff'}" title="${md==='15h'?(i?rng(i):'直前1時間'):(i?mins(i)+'分後':'いま')}：${k==null?'読めません':nm(k)}"></i>`).join('');
     setStrip((md==='1h'&&ni>=6?'<span class="cap">この場所の雨</span>':'')+cells);
     box.innerHTML=`<div class="rtx"><span class="rwh">${where}</span><span class="rsay">${s}${part==='some'?reB:''}</span></div>${old}${acc?RAINACC.line(acc):''}`;
     if(acc) accT=acc.t;
