@@ -1386,7 +1386,7 @@ const HZ=(function(){
 })();
 // ---------- 航空写真の上の地名・施設名（国土地理院の実験版ベクトルタイル experimental_bvmap の label 層）。2026-10-23 の利用者の指示 ----------
 // 地理院の注記は、町名（字・大字）・役場・消防署・郵便局・学校・福祉施設・寺・公園など。民間の店・旅館などは、地理院にも OpenStreetMap にも入っていないので出ない。
-// 名札は HTML の部品（地図を回しても --unrot で立ったまま）。重なるものは、施設を優先して間引く。航空写真のときだけ出す（淡色地図は、もともと名前入り）
+// 名札は HTML の部品（地図を回しても --unrot で立ったまま）。重なるものは、施設を優先して間引く。航空写真のときだけ出す（淡色地図・土壌図は、下の地図に、もともと名前が入っている）。入り切りの欄はなし（いつも出す）
 const LBL=(function(){
   const URL_=(z,x,y)=>`https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/${z}/${x}/${y}.pbf`, ATTR='地名：国土地理院';
   map.createPane('lblPane').style.zIndex=470; map.getPane('lblPane').style.pointerEvents='none';
@@ -1440,13 +1440,13 @@ const LBL=(function(){
   const soon=()=>{ clearTimeout(tmr); tmr=setTimeout(update,120); };
   const ctl=L.layerGroup();   // 入り切りの欄に出すための、中身のない層（名札そのものは grp）
   ctl.on('add',()=>{ wOn=true; grp.addTo(map); try{ localStorage.removeItem('fhmLblOff'); }catch(e){} map.attributionControl.addAttribution(ATTR); soon(); });
-  ctl.on('remove',()=>{ wOn=false; gen++; grp.clearLayers(); map.removeLayer(grp); try{ localStorage.setItem('fhmLblOff','1'); }catch(e){} map.attributionControl.removeAttribution(ATTR); });
+  ctl.on('remove',()=>{ wOn=false; gen++; grp.clearLayers(); map.removeLayer(grp); map.attributionControl.removeAttribution(ATTR); });
   map.on('moveend',soon); map.on('baselayerchange',soon);
   new MutationObserver(soon).observe(document.body,{attributes:true,attributeFilter:['class']});   // マイ圃場の地図に入ったとき・出たときも、出し入れする
   return {layer:ctl, update, _decode:decode, _state:()=>({wOn,active:active(),n:grp.getLayers().length,cache:cache.size})};
 })();
-photo.addTo(map); { let off=false; try{ off=localStorage.getItem('fhmLblOff')==='1'; }catch(e){} if(!off) LBL.layer.addTo(map); }
-const lcLayers=L.control.layers({'航空写真':photo,'淡色地図':std,'土壌図':soilBase},Object.assign({'地名・施設名':LBL.layer},HZ.ov),{position:'topright'}).addTo(map); HZ.setBox(lcLayers);
+photo.addTo(map); LBL.layer.addTo(map); try{ localStorage.removeItem('fhmLblOff'); }catch(e){}   // 地名・施設名は、いつも出す（2026-11-10 利用者の指示「地名・施設名は、いかなるときでも表示されるようにして。デフォルトとして。設定のチェックも不要」）。前に欄で切った人（localStorage の fhmLblOff）も、出す形にもどす（記録を消す）
+const lcLayers=L.control.layers({'航空写真':photo,'淡色地図':std,'土壌図':soilBase},HZ.ov,{position:'topright'}).addTo(map); HZ.setBox(lcLayers);   // 背景の切り替えの欄には「地名・施設名」のチェックを出さない
 // ---------- 雨雲レーダー（気象庁の 高解像度降水ナウキャスト・降水短時間予報） ----------
 // 気象庁ホームページのタイルと時刻の一覧（どちらも CORS 可）を、そのまま地図に重ねる。中継のサーバーは使わない（端末から気象庁へ直接）
 // 予報は気象庁の予報だけを見せる。このアプリでは予報を作らない・警報もしない（気象業務法 第17条・第23条）
