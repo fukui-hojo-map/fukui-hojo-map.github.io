@@ -2260,7 +2260,8 @@ function detectOutliers(){
     const s=pkg.series[pid].filter(r=>r[2]>=t-1e-9&&r[3]!=='L');   // Sentinel-2 だけ（Landsat の ±0.07 のばらつきを数えない）
     for(let i=1;i<s.length-1;i++){ const pv=s[i-1],nx=s[i+1],tD=tOf(s[i][0]), md=s[i][0].slice(5); if(md<'06-01'||md>'08-31') continue;   // 6〜8月だけ（9月の収穫→ひこばえを「日ごとの雲」と見ないため）
       if(tD-tOf(pv[0])>25*864e5||tOf(nx[0])-tD>25*864e5||nx[1]<pv[1]-0.10) continue;   // 次の点が前の水準近くまで戻るものだけ
-      (byDate[s[i][0]]=byDate[s[i][0]]||[]).push((pv[1]+nx[1])/2-s[i][1]); }
+      const tP=tOf(pv[0]), tN=tOf(nx[0]);   /* 前後の点を「日数で按分」した値（その日にあるはずの値）と比べる。前は単純な平均だったので、前の観測が近く・次が遠い日（2026-06-13 など）は、育ち盛りの稲が必ず「低い」と数えられ、晴れた日がまるごと外れていた（2026-11-12 全体点検。実データ637区画のまとまりで、晴れの日の誤った除外 40→11） */
+      (byDate[s[i][0]]=byDate[s[i][0]]||[]).push(pv[1]+(tD-tP)/(tN-tP)*(nx[1]-pv[1])-s[i][1]); }
   }
   for(const d of allDates){
     const drops=byDate[d]||[];
