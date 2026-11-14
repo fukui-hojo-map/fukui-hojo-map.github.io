@@ -8,12 +8,13 @@
 セルごと・年ごとに、次の順で決める（確定した年だけ。期間が終わって20日たった年）。
   1) 置き場（--out）に、同じ方式・同じ格子の確定ずみのものがあれば、何もしない
   2) 公開中のデータ（--data）に確定ずみの px_<年> があれば、そのまま写す（Earth Engine を使わない。公開サイトから外れる前に取っておく）
-  3) どちらにもなければ、Earth Engine で作る（Sentinel-2 の晴れた日。pixels.py と同じ作り方）
+  3) どちらにもなければ、作る（Sentinel-2 の晴れた日。pixels.py と同じ作り方。既定は Earth Engine を使わない s2open.py）
+Earth Engine のころに作って確定した年（config の legacy_masks の名前）は、1)・2) で「同じ方式」とみなす（作り直さない）。
 1セル・1年ずつ保存するので、時間切れで止まっても次回に続きから作る。置き場からファイルを消すことはない。
 --backend fake は、Earth Engine を使わない作り物のデータ（動作確認用）。
 """
 import os, shutil, time, threading, datetime as dt
-from common import write_json, read_json
+from common import write_json, read_json, legacy_masks, pick_backend
 from pixels import grid_for, read_layers, write_png, cached_paddy, MIN_CLEAR
 
 
@@ -39,7 +40,9 @@ def parse_years(text, cfg, today):
 
 
 def is_done(meta, mask, g, win):
-    return bool(meta) and bool(meta.get("done")) and meta.get("mask") == mask and meta.get("window") == win \
+    """mask は、認める方式の名前（1つ、または並び。Earth Engine のころに作った年も認めるときは並びで渡す）"""
+    ok = mask if isinstance(mask, (tuple, list)) else (mask,)
+    return bool(meta) and bool(meta.get("done")) and meta.get("mask") in ok and meta.get("window") == win \
         and all(meta.get(k) == g[k] for k in g)
 
 
@@ -58,6 +61,22 @@ class GEEArc:
 
     def clear_dates(self, bbox, start, end, min_frac):
         return self.tr.clear_dates(bbox, start, end, min_frac)
+
+    def ndvi(self, bbox, dates, g):
+        return self.px.ndvi(bbox, dates, g)
+
+    def paddy(self, fc, g):
+        return self.px.paddy(fc, g)
+
+
+class OpenArc:
+    """Earth Engine を使わない（s2open.py）。晴れた日はセルの範囲の晴れの割合（判定器・SCL）"""
+    def __init__(self, cfg, data_dir):
+        from s2open import OpenBackend, OpenPixels
+        self.b = OpenBackend(cfg, data_dir); self.px = OpenPixels(self.b)
+
+    def clear_dates(self, bbox, start, end, min_frac):
+        return self.b.eng.clear_dates(bbox, start, end, min_frac)
 
     def ndvi(self, bbox, dates, g):
         return self.px.ndvi(bbox, dates, g)
@@ -105,14 +124,15 @@ def update_cell(get_src, cfg, data_dir, out_dir, cell, years, mask, today, log, 
         return 0
     fc = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {}, "geometry": f["geometry"]} for f in parcels["features"]]}
     g = grid_for(cell["bbox"]); made = 0
+    okm = (mask,) + legacy_masks(cfg)                # Earth Engine のころに作って確定した年は、そのまま使う
     for y in years:
         ws, we = year_window(cfg, y); win = [ws.isoformat(), we.isoformat()]
-        if arc_done(arc_cdir, y, mask, g, win):
+        if arc_done(arc_cdir, y, okm, g, win):
             continue
         if deadline and time.time() > deadline:
             break
         site = read_json(os.path.join(cdir, f"px_{y}.json"))
-        if is_done(site, mask, g, win):                          # 公開中のものを写す
+        if is_done(site, okm, g, win):                           # 公開中のものを写す
             os.makedirs(arc_cdir, exist_ok=True)
             for ext in ("png", "json"):
                 p = os.path.join(cdir, f"px_{y}.{ext}")
@@ -145,10 +165,10 @@ def need_cell(data_dir, out_dir, cell, years, mask, cfg):
     parcels = read_json(os.path.join(data_dir, "cells", cid, "parcels.geojson"))
     if not parcels or not parcels.get("features"):
         return False
-    g = grid_for(cell["bbox"])
+    g = grid_for(cell["bbox"]); okm = (mask,) + legacy_masks(cfg)
     for y in years:
         ws, we = year_window(cfg, y)
-        if not arc_done(os.path.join(out_dir, "cells", cid), y, mask, g, [ws.isoformat(), we.isoformat()]):
+        if not arc_done(os.path.join(out_dir, "cells", cid), y, okm, g, [ws.isoformat(), we.isoformat()]):
             return True
     return False
 
@@ -165,12 +185,13 @@ def main():
     ap.add_argument("--minutes", type=float, default=300, help="使う時間の上限（分）")
     ap.add_argument("--deadline", type=float, help="この時刻（UNIX 秒）までに終える")
     ap.add_argument("--workers", type=int, default=3)
-    ap.add_argument("--backend", choices=["gee", "fake"], default="gee")
+    ap.add_argument("--backend", choices=["gee", "fake", "open"], default=None, help="既定は config の s2_backend（なければ open ＝ Earth Engine を使わない）")
     ap.add_argument("--cells", help="カンマ区切りでセルIDを限定（テスト用）")
     ap.add_argument("--today", help="今日の日付（YYYY-MM-DD。テスト用）")
     args = ap.parse_args()
     def log(m): print(time.strftime("%H:%M:%S"), m, flush=True)
     cfg = load_config()
+    args.backend = pick_backend(cfg, args.backend)   # 雲判定の方式の名前（mask_id）が変わる
     index = read_json(os.path.join(args.data, "index.json"))
     if not index:
         sys.exit("index.json がありません")
@@ -188,6 +209,8 @@ def main():
                 if args.backend == "gee":
                     from update_ndvi import GEEBackend
                     box["src"] = GEEArc(GEEBackend(cfg))
+                elif args.backend == "open":
+                    box["src"] = OpenArc(cfg, args.data)
                 else:
                     box["src"] = FakeArc()
             return box["src"]

@@ -1,6 +1,6 @@
-"""各セルの区画について、まだ計算していない観測日の NDVI（区画平均）を
-Google Earth Engine で計算し、cells/<id>/ndvi.json に追記する。
-Sentinel-2（10m）に加えて、Landsat 8/9（HLS L30, 30m）も使う（config の landsat）。
+"""各セルの区画について、まだ計算していない観測日の NDVI（区画平均）を計算し、cells/<id>/ndvi.json に追記する。
+2026-11 から、Google Earth Engine は使わない（既定は --backend open: Sentinel-2 は AWS の公開データ＋学習した雲の判定器 s2open.py、
+レーダーは Copernicus Data Space s1cdse.py。Landsat〔HLS L30, 30m〕は新しい日を計算せず、すでにある分を残す）。
 
   python pipeline/update_ndvi.py --max-minutes 300 --workers 4
 
@@ -19,10 +19,14 @@ ndvi.json の形式（v2）:
 
 --backend fake --fake-csv <file> を付けると GEE を使わずに CSV（pid,date,mean,count[,src]）から
 同じ形式を作る（動作確認用）。
+--backend は、付けなければ config の s2_backend（なければ open）。
+  open: Earth Engine を使わない。レーダーは、鍵（CDSE_CLIENT_ID・CDSE_CLIENT_SECRET）があるときだけ計算する。計算しない観測元は、ndvi.json にある分をそのまま残す。
+        方式を変えた計算し直しのセルが多いときは、先に日ごと・ブロックごとにまとめて計算し（s2open.prefill）、時間切れなら、済んだ日までを ndvi_next.json に保存して次回に続ける。
+  gee:  Google Earth Engine（前の方式。earthengine-api と EE_* の鍵が要る。本番では使っていない）
 """
 import argparse, os, sys, json, time, math, datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from common import load_config, write_json, read_json, round_coords, with_retry
+from common import load_config, write_json, read_json, round_coords, with_retry, pick_backend
 
 MAX_FEATURES_PER_CALL = 4500      # getInfo の要素数上限(5000)に余裕を持たせる
 MIN_PCT = 50                      # これ未満の有効画素率の観測は保存しない
@@ -31,6 +35,8 @@ LANDSAT_MASK = "hlsl30-fmask"     # Landsat の雲判定の方式（変えると
 RADAR_MASK = "s1-vhdb-med"        # レーダーの指標（変えるとレーダー分だけ計算し直す）。区画の中央値（縁の畦・道路・建物に引っぱられない）
 RECENT_DAYS = 20                  # 毎日の更新で、新しい画像を探す日数
 PROVISIONAL_DAYS = 7              # この日数以内の日は「仮」。同じ日の画像があとから届いたら計算し直す
+PREFILL_MIN_CELLS = 20            # open で、計算し直しのセルがこの数以上あるときは、先に日ごとにまとめて計算する（s2open.prefill）
+PREFILL_SHARE = 0.75              # そのまとめての計算に使ってよい時間（--max-minutes に対する割合）
 SEEN_KEEP_DAYS = 40               # state.json に覚えておく画像の日数
 
 # 観測元ごとの設定: ndvi.json のキー、計算の画素サイズ、full（10m画素数）との比、直近の再確認日数
@@ -43,6 +49,9 @@ SOURCES = {
 
 
 def mask_id(cfg):
+    if cfg.get("s2_backend") == "open":          # Earth Engine を使わない計算（s2open.py）。判定器の名前
+        from s2open import mask_id as open_mask
+        return open_mask(cfg)
     sc = cfg.get("max_scene_cloud")
     return f"csplus{cfg.get('cloud_score_min', 0.6):.2f}" + (f"-scene{sc}" if sc else "")
 
@@ -63,7 +72,7 @@ NEAR_RULE = "a"                    # 雲の近くの規則の版（起点: cs_cd
 def s2_mask_id(cfg):
     """田の NDVI（ndvi.json の Sentinel-2）の雲判定の方式。雲の近く・cs を使うときは、ほかのデータ（生育傾向・圃場内マップ）とは別の名前にする
     （mask_id を変えると、それを使う過去の年のデータまで全部作り直しになるため）"""
-    return mask_id(cfg) + (f"-near{near_m(cfg)}{NEAR_RULE}" if near_m(cfg) else "") + (f"-cs{cs_min(cfg):.2f}" if cs_min(cfg) else "")
+    return mask_id(cfg) + (f"-near{near_m(cfg)}{NEAR_RULE}" if near_m(cfg) else "") + (f"-cs{cs_min(cfg):.2f}" if cs_min(cfg) and cfg.get("s2_backend") != "open" else "")
 
 
 def utm_epsg(bbox):
@@ -252,7 +261,24 @@ def compact_parcels(cdir):
 
 
 def sources(cfg):
-    return ["s2"] + (["ls"] if cfg.get("landsat") else []) + (["s1"] if cfg.get("radar") else [])
+    out = ["s2"] + (["ls"] if cfg.get("landsat") else []) + (["s1"] if cfg.get("radar") else [])
+    if cfg.get("s2_backend") == "open":          # 計算できない観測元（Landsat。鍵がないときのレーダー）は、ndvi.json にある分をそのまま残す
+        from s2open import supported
+        out = [s for s in out if s in supported()]
+    return out
+
+
+def window_overlaps(cfg, start, end):
+    """start〜end（end は含まない）に、レーダーを計算する時期（radar_window）の日が1日でもあるか"""
+    a, b = dt.date.fromisoformat(start), dt.date.fromisoformat(end)
+    if (b - a).days >= 366:
+        return True
+    d = a
+    while d < b:
+        if in_window(cfg, d.isoformat()):
+            return True
+        d += dt.timedelta(days=1)
+    return False
 
 
 def in_window(cfg, d):
@@ -344,6 +370,8 @@ def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_d
         nxt = (dt.date.fromisoformat(nd[kd][-1]) + dt.timedelta(days=1)).isoformat()
         back = (dt.date.fromisoformat(end) - dt.timedelta(days=S["lookback"])).isoformat()
         start = max(start_default, min(nxt, back))
+    if src == "s1" and only_dates is None and not window_overlaps(cfg, start, end):
+        return 0, False                          # レーダーを計算しない時期（冬など）は、画像の一覧も調べない
     cand = sorted(d for d in only_dates if start_default <= d < end) if only_dates is not None else backend.list_dates(cell["bbox"], start, end, src)
     dates = [d for d in cand if d not in have and (src != "s1" or in_window(cfg, d))]
     added = 0; timed_out = False
@@ -382,9 +410,14 @@ def update_source(backend, cfg, cdir, fname, nd, cell, inner, full, src, start_d
     return added, timed_out
 
 
-def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=None, targeted=False, deadline=None):
+class NotYet(RuntimeError):
+    """方式を変えた計算し直しが、まだ最新まで追いついていない（ここまでの分は ndvi_next.json に保存済み。入れ替えずに、次回に続ける）"""
+
+
+def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=None, targeted=False, deadline=None, hold_end=None):
     """plan = {src: {"dates": 新しい画像がある日, "redo": 計算し直す日}}。
-    targeted（毎日の更新）なら plan の日だけ計算する。そうでなければ観測日を調べて足りない日をすべて計算する。"""
+    targeted（毎日の更新）なら plan の日だけ計算する。そうでなければ観測日を調べて足りない日をすべて計算する。
+    hold_end: 計算し直し中のセルで、この日（含まない）までだけ計算して保存し、入れ替えずに終える（先のまとめての計算 prefill が、時間切れでこの日までしか済んでいないとき）"""
     cid = cell["id"]; cdir = os.path.join(data_dir, "cells", cid)
     inner = read_json(os.path.join(cdir, "inner.geojson"))
     if not inner:
@@ -396,6 +429,10 @@ def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=Non
         cur = read_json(os.path.join(cdir, "ndvi.json"))
         if cur and cur.get("dates"):
             start_default = min(start_default, cur["dates"][0])
+        if hold_end:
+            end = min(end, hold_end)
+    else:
+        hold_end = None
     plan = plan or {}
     redone = 0
     full = load_full(cdir)
@@ -413,8 +450,8 @@ def process_cell(backend, cfg, data_dir, cell, start_default, end, log, plan=Non
         timed_out = timed_out or to
     added = sum(got.values())
     npar = len(inner["features"])
-    if fname == "ndvi_next.json" and timed_out:   # 計算し直しの途中で時間切れ: 入れ替えず、次回に続ける（ここまでの分は ndvi_next.json に保存済み。main が「エラー」として次回に持ち越す）
-        raise RuntimeError(f"計算し直しの途中で時間切れ（{len(nd['dates'])}日まで）。次回に続けます")
+    if fname == "ndvi_next.json" and (timed_out or hold_end):   # 計算し直しの途中（時間切れ、またはまとめての計算がまだ途中）: 入れ替えず、次回に続ける（ここまでの分は ndvi_next.json に保存済み。main が次回に持ち越す）
+        raise NotYet(f"計算し直しの途中（{len(nd['dates'])}日まで）。次回に続けます")
     if fname == "ndvi_next.json":              # 最新まで追いついたので入れ替える
         write_json(os.path.join(cdir, "ndvi.json"), nd)
         if os.path.exists(os.path.join(cdir, "ndvi_next.json")):
@@ -430,7 +467,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-minutes", type=float, default=300)
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--backend", choices=["gee", "fake"], default="gee")
+    ap.add_argument("--backend", choices=["gee", "fake", "open"], default=None, help="既定は config の s2_backend（なければ open ＝ Earth Engine を使わない）")
     ap.add_argument("--fake-csv")
     ap.add_argument("--cells", help="カンマ区切りでセルIDを限定（テスト用）")
     ap.add_argument("--pixel-minutes", type=float, default=240, help="圃場内マップの画素データ作成に使う時間の上限（分）")
@@ -438,11 +475,18 @@ def main():
     args = ap.parse_args()
 
     cfg = load_config()
+    args.backend = pick_backend(cfg, args.backend)   # 雲判定の方式の名前（mask_id）と、計算できる観測元（sources）が変わる
     data_dir = os.path.join(cfg["site_dir"], "data")
     index = read_json(os.path.join(data_dir, "index.json"))
     if not index:
         sys.exit("index.json がありません。先に build_cells.py を実行してください。")
-    backend = FakeBackend(cfg, args.fake_csv) if args.backend == "fake" else GEEBackend(cfg)
+    if args.backend == "fake":
+        backend = FakeBackend(cfg, args.fake_csv)
+    elif args.backend == "open":
+        from s2open import OpenBackend
+        backend = OpenBackend(cfg, data_dir)
+    else:
+        backend = GEEBackend(cfg)
 
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
@@ -456,7 +500,7 @@ def main():
     # ---- 新しい画像を県全体で探す（毎日の更新）----
     state_p = os.path.join(data_dir, "state.json")
     state = read_json(state_p, {}) or {}
-    seen = state.setdefault("seen", {})          # {src: {画像ID: {date, t, first_seen}}}
+    seen = state.setdefault("seen" if args.backend != "open" else "seen_open", {})   # {src: {画像ID: {date, t, first_seen}}}（画像の ID の付け方が違うので、open は別に覚える）
     plans, found_all = find_new_images(backend, cfg, index, seen, today, end, now, log)
     # 前回やり残したセル（時間切れ・エラー）の予定を足す。成功するまで毎回やり直す
     for cid, pl in state.get("pending", {}).items():
@@ -478,7 +522,29 @@ def main():
     # 新しい画像があるセルを先に、次に更新が古いセル（計算し直し中のセルが時間を使い切って、新しい画像が後回しにならないように）
     cells = sorted(cells, key=lambda c: (c["id"] not in plans and c["id"] not in redo_full, cell_state(cfg, os.path.join(data_dir, "cells", c["id"]))[2]))
 
-    total = 0; done = 0; changed = False; ok_cells = set(); latest_new = {}
+    # 方式を変えた計算し直し（Earth Engine → open など）が多くのセルにあるときは、先に、日ごと・ブロックごとにまとめて計算して置き場に入れる
+    # （同じ日の隣のブロックは、読んだ画像のまとまりを使い回せるので、セルごとに計算するより速い。あとのセルごとの計算は、置き場から読むだけになる）
+    hold_end = None; fresh = {}
+    if args.backend == "open" and cells:
+        for c in cells:
+            cdir = os.path.join(data_dir, "cells", c["id"])
+            fname, nd, key = cell_state(cfg, cdir)
+            if fname == "ndvi_next.json":
+                cur = read_json(os.path.join(cdir, "ndvi.json")) or {}
+                first = min(start_default, cur["dates"][0]) if cur.get("dates") else start_default
+                fresh[c["id"]] = (dt.date.fromisoformat(nd["dates"][-1]) + dt.timedelta(days=1)).isoformat() if nd["dates"] else first
+        if len(fresh) >= int(cfg.get("prefill_min_cells") or PREFILL_MIN_CELLS):
+            from s2open import prefill
+            p0 = min(fresh.values()); info = {}
+            # 近くの雲の割合（cloudnear.py）が読む、セルのまわり 3km のブロックも一緒に（区画のないブロック。あとで cloudnear が置き場から読める）
+            extra = {c["id"]: backend.eng.near_blocks((c["bbox"][0] + c["bbox"][2]) / 2, (c["bbox"][1] + c["bbox"][3]) / 2) for c in cells if c["id"] in fresh}
+            log(f"計算し直しのセル {len(fresh)}: {p0} からの画像を、先にまとめて計算します")
+            prefill(backend.eng, p0, end, cells=fresh, workers=args.workers, deadline=t0 + args.max_minutes * 60 * PREFILL_SHARE, log=log, info=info, extra=extra)
+            if not info.get("finished"):          # 時間切れ: 済んだ日までを各セルに保存して（入れ替えない）、次回はその続きから
+                hold_end = (dt.date.fromisoformat(info["last"]) + dt.timedelta(days=1)).isoformat() if info.get("last") else p0
+                log(f"まとめての計算は {info.get('last') or '（まだ）'} まで。計算し直しのセルは、その日までを保存して、次回に続けます")
+
+    total = 0; done = 0; changed = False; ok_cells = set(); latest_new = {}; held = 0
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
         futs = {}
         # 時間予算を見ながら順次投入
@@ -487,7 +553,8 @@ def main():
             while pending and len(futs) < args.workers and (time.time() - t0) < args.max_minutes * 60:
                 c = pending.pop(0)
                 futs[ex.submit(process_cell, backend, cfg, data_dir, c, start_default, end, log,
-                               plans.get(c["id"]), not full and c["id"] not in redo_full, t0 + args.max_minutes * 60)] = c["id"]
+                               plans.get(c["id"]), not full and c["id"] not in redo_full, t0 + args.max_minutes * 60,
+                               hold_end if c["id"] in fresh else None)] = c["id"]
             if not futs:
                 break
             for f in as_completed(list(futs)):
@@ -497,6 +564,10 @@ def main():
                     changed = changed or n > 0 or any(v.get("redo") for v in plans.get(cid, {}).values())
                     for s_, d_ in last.items():
                         latest_new[s_] = max(latest_new.get(s_, ""), d_)
+                except NotYet as e:         # 計算し直しの途中（次回に続ける）。セルごとには書かず、あとでまとめて数を出す
+                    held += 1
+                    if held <= 3:
+                        log(f"{cid}: {e}")
                 except Exception as e:      # 1セルの失敗で全体を止めない（予定は次回に持ち越す）
                     log(f"{cid}: エラー {e}")
                 break
@@ -507,13 +578,20 @@ def main():
     state["pending_full"] = sorted({c["id"] for c in cells if c["id"] not in ok_cells and (full or c["id"] in redo_full)})
     if state["pending"] or state["pending_full"]:
         log(f"やり残し {len(set(state['pending']) | set(state['pending_full']))} セルは次回に続けます")
+    if held:
+        log(f"計算し直しの途中のセル {held}（ここまでの分は保存済み。公開中のデータは前のまま。次回に続けます）")
     log(f"NDVI 完了: {done}セル処理, 観測日を合計 {total} 追加")
 
     # 圃場内マップ（10m画素）。NDVI のあとに残り時間で作る。途中で切れても次回に続きから。
     pdays = 0
-    if cfg.get("pixel_maps") and args.backend == "gee":
+    if cfg.get("pixel_maps") and args.backend in ("gee", "open"):
         from pixels import GEEPixels, update_cell, windows, drop_dates as px_drop
-        psrc = GEEPixels(backend); mid = mask_id(cfg)
+        if args.backend == "open":
+            from s2open import OpenPixels
+            psrc = OpenPixels(backend)
+        else:
+            psrc = GEEPixels(backend)
+        mid = mask_id(cfg)
         t1 = time.time(); limit = min(args.pixel_minutes * 60, 330 * 60 - (t1 - t0))
         cur = windows(cfg, today)[-1][0]
         # 圃場内マップを作るセル: NDVI が成功したセル（毎日の更新では S2 の新しい画像があったセル）と、前回のやり残し
@@ -559,7 +637,12 @@ def main():
     latest = index.setdefault("latest", {})        # 観測元ごとの最新の撮影日（実際に計算したデータの中で）
     for src, d in latest_new.items():
         latest[src] = max(latest.get(src, ""), d)
-    index["source"] = "Sentinel-2 L2A (Copernicus)" + (" + Landsat 8/9 (NASA HLS)" if cfg.get("landsat") else "") + (" + Sentinel-1" if cfg.get("radar") else "") + " / Google Earth Engine"
+    for src in [k for k in latest if k not in sources(cfg)]:
+        del latest[src]                            # いま計算していない観測元（Earth Engine をやめたあとの Landsat など）の「最新の撮影日」は出さない（古い日付が残り続けるため）
+    if args.backend == "open":
+        index["source"] = "Sentinel-2 L2A (Copernicus) / AWS Open Data (Element 84 sentinel-cogs)" + (" + Sentinel-1 (Copernicus Data Space)" if "s1" in sources(cfg) else "")
+    else:
+        index["source"] = "Sentinel-2 L2A (Copernicus)" + (" + Landsat 8/9 (NASA HLS)" if cfg.get("landsat") else "") + (" + Sentinel-1" if cfg.get("radar") else "") + " / Google Earth Engine"
     write_json(os.path.join(data_dir, "index.json"), index)
     write_json(state_p, state)
     log(f"完了: {done}セル処理, 観測日を合計 {total} 追加（{(time.time() - t0) / 60:.1f}分）")

@@ -11,6 +11,26 @@ def load_config(path="config.yaml"):
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
+def pick_backend(cfg, arg=None):
+    """衛星データの取り方: "open"（Earth Engine を使わない。AWS の公開データ＋Copernicus Data Space）・"gee"（Earth Engine）・"fake"（動作確認用）。
+    引数（--backend）がなければ config の s2_backend、それもなければ open。cfg["s2_backend"] も合わせる（雲判定の方式の名前 mask_id と、計算できる観測元が変わるため）"""
+    b = arg or cfg.get("s2_backend") or "open"
+    cfg["s2_backend"] = "open" if b == "open" else "gee"
+    return b
+
+
+def legacy_masks(cfg):
+    """Earth Engine のころに作ったデータの、雲判定の方式の名前（config の legacy_masks）。
+    Earth Engine をやめたあと（s2_backend: open）も、すでに作ってある過去の年のデータ（生育傾向・過去の推移・確定した年の圃場内マップ）は、この名前のまま使う（作り直さない）。
+    新しく足す年は今の方式で作り、ファイルに "legacy": {"mask": 前の方式, "years": その方式で作った年} を残す"""
+    return tuple(cfg.get("legacy_masks") or ()) if cfg.get("s2_backend") == "open" else ()
+
+
+def mask_ok(m, mask, cfg):
+    """ファイルの方式 m が、今の方式 mask か、引きつぐ前の方式（legacy_masks）か"""
+    return m == mask or (m is not None and m in legacy_masks(cfg))
+
+
 def cell_id(lon, lat, cfg):
     cx = math.floor(lon / cfg["cell_deg_lon"]); cy = math.floor(lat / cfg["cell_deg_lat"])
     return f"{cx}_{cy}"

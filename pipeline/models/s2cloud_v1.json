@@ -1,0 +1,66 @@
+{
+ "name": "s2cloud_v1",
+ "feats": [
+  "B02",
+  "B03",
+  "B04",
+  "B08",
+  "B11",
+  "B12",
+  "NDVI",
+  "SCL",
+  "b02m5",
+  "b02s5",
+  "doy"
+ ],
+ "threshold": 0.5,
+ "sklearn": "1.9.1",
+ "numpy": "2.4.6",
+ "label": "公開済みの px_<年>.png（Earth Engine の Cloud Score+ cs_cdf≥0.6 で晴れの田の画素）",
+ "rows": 1755324,
+ "cloud_share": 0.386,
+ "cells": 45,
+ "dates": [
+  "20250511",
+  "20260924"
+ ],
+ "cv": {
+  "auc": 0.9781,
+  "agree": 0.9196,
+  "recall": 0.8945,
+  "false_cloud": 0.0646,
+  "scl_agree": 0.7695
+ },
+ "note": "田の画素（公開済みの圃場内マップ px_<年>.png）で学習。45セル、2025〜26年の 5/10〜9/30",
+ "made": "2026-10-28",
+ "near_threshold": 0.8,
+ "near_note": "雲の近く（300m）の起点にする、判定器の雲のしきい値。使える観測の数と値の合い方が、前の方式（Earth Engine の Cloud Score+）とそろう値",
+ "season": [
+  {
+   "months": [
+    10
+   ],
+   "threshold": 0.8,
+   "near_threshold": 0.9
+  },
+  {
+   "months": [
+    11,
+    12
+   ],
+   "threshold": 0.8,
+   "near_threshold": 0.99
+  },
+  {
+   "months": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "threshold": 0.9,
+   "near_threshold": 0.99
+  }
+ ],
+ "season_note": "判定器は 5〜9月だけで学習したので、10〜4月は雲を多く見すぎる。月ごとに、前の方式（Earth Engine）の判断と食い違いがつり合う値にした"
+}

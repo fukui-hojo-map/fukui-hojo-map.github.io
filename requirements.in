@@ -1,10 +1,13 @@
-earthengine-api>=1.5
 geopandas>=1.0
 pyogrio>=0.10
 shapely>=2.0
+pyproj>=3.6
 pyyaml>=6
 requests>=2.31
 pillow>=10
 numpy>=1.24
 pyshp>=2.3
 scipy>=1.11
+# Google Earth Engine を使わない計算（2026-11 から。pipeline/s2open.py・s2cloud.py）
+rasterio==1.4.4        # AWS の公開データ（COG）を部分読みする。GDAL 同梱の wheel
+scikit-learn==1.9.1    # 雲の判定器（pipeline/models/s2cloud_v1.pkl）を作ったときの版に固定（版が違うと、読めても結果が変わりうる）

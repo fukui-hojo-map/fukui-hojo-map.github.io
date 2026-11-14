@@ -21,6 +21,8 @@
   python pipeline/trend.py --minutes 300 --workers 4
 1セル・1年ずつ保存するので、時間切れで止まっても次回に続きから作る。できあがった年は作り直さない。
 --backend fake を付けると GEE を使わずに作り物のデータで作る（動作確認用）。
+--backend は、付けなければ config の s2_backend（なければ open）。open は Earth Engine を使わない（s2open.py）。レーダーの R は Copernicus Data Space の鍵があるときだけ作れる（ないときは、新しい年を作らない）。
+Earth Engine のころに作った年（config の legacy_masks の名前のファイル）は、作り直さずに使う。
 
 cells/<id>/trend.png: 年・時期ごとの「田の中の差」を縦に積んだグレースケール
                       （0=なし, 1〜255=差 -0.3〜+0.3）。格子は px_<年>.png と同じ（EPSG:3857）
@@ -34,7 +36,7 @@ cells/<id>/trend.json:
 """
 import os, math, time, hashlib, datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from common import write_json, read_json, with_retry
+from common import write_json, read_json, with_retry, legacy_masks, mask_ok, pick_backend
 from pixels import grid_for, read_layers, write_png
 
 VERSION = 1
@@ -101,6 +103,144 @@ class GEETrend:
             d = dt.datetime.fromtimestamp(p["t"] / 1000, dt.timezone.utc).strftime("%Y-%m-%d")
             frac[d] = min(1.0, frac.get(d, 0) + (p.get("c") or 0))    # 同じ日の隣のタイルは足す
         return sorted(d for d, c in frac.items() if c >= min_frac)
+
+    def ndvi(self, bbox, dates, g):
+        return self.px.ndvi(bbox, dates, g)
+
+
+def wmedian(G, V, W):
+    """区画（添字 G）ごとの、重み W つきの V の中央値 → {添字: 値}（重みの累積が半分に届いた所の値）"""
+    import numpy as np
+    G = np.asarray(G, np.int64); V = np.asarray(V, np.float64); W = np.asarray(W, np.float64)
+    if not len(G):
+        return {}
+    o = np.lexsort((V, G)); G, V, W = G[o], V[o], W[o]
+    u, start, cnt = np.unique(G, return_index=True, return_counts=True)
+    out = {}
+    for gi, s, n in zip(u.tolist(), start.tolist(), cnt.tolist()):
+        c = np.cumsum(W[s:s + n])
+        if c[-1] <= 0:
+            continue
+        out[gi] = float(V[s + int(np.searchsorted(c, c[-1] / 2))])
+    return out
+
+
+class OpenTrend:
+    """Earth Engine を使わない（s2open.py）。GEETrend と同じ口。
+    A・J: 期間の画像の「使える画素」（学習した雲の判定器。雲の近くは除かない＝Earth Engine の _col と同じ）の NDVI を、画素ごとに中央値
+          → 区画の内側の、画素にかかる割合の重みつき中央値（Earth Engine の reduceRegions の median と同じ考え）
+          画素の値は圃場内マップと同じ符号（NDVI を 1.2/254 きざみ）を戻したもの。きざみによる差は ±0.0024 以内
+    晴れた日: セルの範囲の晴れの割合（s2open.clear_frac。60m の晴れ・雲の数）。田の中の差: 圃場内マップと同じ画素（OpenPixels）
+    R（レーダー）: Copernicus Data Space の鍵があるとき（s2open.supported に "s1"）、5/1〜6/10 の VH（dB）の画素ごとの中央値 → 区画の重みつき中央値（Earth Engine と同じ考え）。
+          鍵がないときは None で、radar = 0（trend.py の main は、レーダーを使う設定なら新しい年を作らない）"""
+    radar = 0
+
+    def __init__(self, cfg, data_dir, engine=None):
+        import threading
+        from collections import OrderedDict
+        from s2open import OpenBackend, OpenPixels, supported
+        self.b = OpenBackend(cfg, data_dir, engine); self.px = OpenPixels(self.b); self.eng = self.b.eng
+        self.radar = 1 if "s1" in supported() else 0
+        self._med = OrderedDict(); self._lock = threading.Lock(); self._klocks = {}
+        self.keep = int(cfg.get("trend_open_keep") or 12)     # 覚えておくブロックの中央値の数（1つ 960×960 の float32 ＝ 3.7MB）
+
+    def _days(self, bkey, start, end):
+        from s2open import block_window
+        x0, y1, W, H = block_window(bkey)
+        days = sorted({it["date"] for it in self.eng.cat.scenes(self.eng.tiles, start, end)})
+        return [d for d in days if any(self.eng._hits(it, x0, y1, W, H) for it in self.eng.scenes_on(d))]
+
+    def block_median(self, bkey, start, end):
+        """ブロックの芯（960×960、10m）の、期間の画素ごとの NDVI の中央値（float32、使える画素が1つもなければ NaN）。画像がなければ None"""
+        import numpy as np, warnings, threading
+        key = (start, end, bkey)
+        with self._lock:
+            if key in self._med:
+                self._med.move_to_end(key); return self._med[key]
+            kl = self._klocks.setdefault(key, threading.Lock())
+        with kl:
+            with self._lock:
+                if key in self._med:
+                    return self._med[key]
+            stack = [self.eng.px_core(d, bkey) for d in self._days(bkey, start, end)]
+            med = None
+            if stack:
+                a = np.stack(stack).astype(np.float32); a[a == 0] = np.nan
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", RuntimeWarning)      # どの日も雲の画素（全部 NaN）
+                    med = (np.nanmedian(a, axis=0) - 1) / 254 * 1.2 - 0.2
+                med = med.astype(np.float32)
+            with self._lock:
+                self._med[key] = med
+                while len(self._med) > self.keep:
+                    self._med.popitem(last=False)
+                self._klocks.pop(key, None)
+            return med
+
+    def _block_ll(self, bkey):
+        """ブロックの四角（経緯度）"""
+        from s2open import BLOCK_PX, RES
+        from pyproj import Transformer
+        L = BLOCK_PX * RES; x0, y0 = bkey[0] * L, bkey[1] * L
+        xs, ys = Transformer.from_crs(self.eng.epsg, 4326, always_xy=True).transform([x0, x0 + L, x0, x0 + L], [y0, y0, y0 + L, y0 + L])
+        return [min(xs), min(ys), max(xs), max(ys)]
+
+    def block_radar(self, bkey, start, end):
+        """ブロックの芯の、期間のレーダー VH（dB）の画素ごとの中央値（float32、NaN = なし）。画像がなければ None。block_median と同じ置き場に覚える"""
+        import threading
+        key = ("R", start, end, bkey)
+        with self._lock:
+            if key in self._med:
+                self._med.move_to_end(key); return self._med[key]
+            kl = self._klocks.setdefault(key, threading.Lock())
+        with kl:
+            with self._lock:
+                if key in self._med:
+                    return self._med[key]
+            s1 = self.b.s1
+            med = s1.period_median_db(bkey, s1.list_dates(self._block_ll(bkey), start, end))
+            with self._lock:
+                self._med[key] = med
+                while len(self._med) > self.keep:
+                    self._med.popitem(last=False)
+                self._klocks.pop(key, None)
+            return med
+
+    def features(self, bbox, inner, year):
+        """{pid: [A, J, R]}（値がなければ None。R はレーダーの鍵がないとき None）"""
+        import numpy as np
+        from s2open import WIN_PX, HALO_PX
+        P = self.eng.parcels
+        pids = [f["properties"]["pid"] for f in inner["features"] if f["properties"]["pid"] in P.index]
+        out = {p: [None, None, None] for p in pids}
+        if not pids:
+            return out
+        gis = np.array([P.index[p] for p in pids], np.int64); want = set(gis.tolist())
+        y = year
+        spans = [(f"{y}-04-01", f"{y}-05-01"), (f"{y}-07-10", f"{y}-08-01")] + ([(f"{y}-05-01", f"{y}-06-11")] if self.radar else [])
+        for k, (s, e) in enumerate(spans):
+            G, V, W = [], [], []
+            for bk in P.blocks_of(gis):
+                med = self.block_median(bk, s, e) if k < 2 else self.block_radar(bk, s, e)
+                if med is None:
+                    continue
+                g, pix, w, _ = self.eng.weights(bk)   # 重みは Earth Engine と同じ集め方（s2open.EE_DEG）
+                m = np.fromiter((x in want for x in g.tolist()), bool, len(g))
+                if not m.any():
+                    continue
+                r = pix[m] // WIN_PX - HALO_PX; c = pix[m] % WIN_PX - HALO_PX
+                v = med[r, c]; ok = ~np.isnan(v)
+                G.append(g[m][ok]); V.append(v[ok]); W.append(w[m][ok])
+            if not G:
+                continue
+            res = wmedian(np.concatenate(G), np.concatenate(V), np.concatenate(W))
+            for p, gi in zip(pids, gis.tolist()):
+                if gi in res:
+                    out[p][k] = round(res[gi], 4)
+        return out
+
+    def clear_dates(self, bbox, start, end, min_frac):
+        return self.eng.clear_dates(bbox, start, end, min_frac)
 
     def ndvi(self, bbox, dates, g):
         return self.px.ndvi(bbox, dates, g)
@@ -219,7 +359,17 @@ def encode(dev):
 
 
 def meta_ok(meta, cfg, mask):
-    return meta.get("v") == VERSION and meta.get("mask") == mask and meta.get("win") == windows(cfg)
+    """方式・時期が今と同じか。Earth Engine のころに作った年（legacy_masks）も、そのまま使う"""
+    return meta.get("v") == VERSION and mask_ok(meta.get("mask"), mask, cfg) and meta.get("win") == windows(cfg)
+
+
+def legacy_of(meta, mask):
+    """前の方式で作った年の記録 {"mask", "years"}（なければ None）。前の方式のファイルに今の方式の年を足すときに残す"""
+    if meta.get("legacy"):
+        return meta["legacy"]
+    if meta.get("mask") and meta.get("mask") != mask:
+        return {"mask": meta["mask"], "years": sorted(meta.get("years", []))}
+    return None
 
 
 def update_cell(src, cfg, data_dir, cell, today, mask, log, deadline=None):
@@ -243,6 +393,8 @@ def update_cell(src, cfg, data_dir, cell, today, mask, log, deadline=None):
     pids = [f["properties"]["pid"] for f in parcels["features"]]
     npx = np.bincount(lab.ravel(), minlength=len(pids) + 1)
     p = meta.get("p", {}); years = set(meta.get("years", [])); made = []
+    leg = legacy_of(meta, mask)
+    r_flag = getattr(src, "radar", 1) if not meta else min(int(meta.get("r", 1)), getattr(src, "radar", 1))   # r: 0 = R（レーダー）を入れていない年がある
     for y in todo:
         if deadline and time.time() > deadline:
             break
@@ -271,7 +423,7 @@ def update_cell(src, cfg, data_dir, cell, today, mask, log, deadline=None):
             write_png(png_p, [layers[k] for k in keys])
         elif os.path.exists(png_p):
             os.remove(png_p)
-        write_json(meta_p, {"v": VERSION, "mask": mask, **g, "win": win, "years": sorted(years), "layers": keys, "p": p})
+        write_json(meta_p, {"v": VERSION, "mask": mask, **g, "win": win, "years": sorted(years), "layers": keys, "p": p, "r": r_flag, **({"legacy": leg} if leg else {})})
     if made:
         log(f"{cell['id']}: 生育傾向 {made[0]}" + (f"〜{made[-1]}" if len(made) > 1 else "") + f"年（{len(made)}年分, 区画{len(pids)}）")
     return len(made)
@@ -297,9 +449,11 @@ def update_hist(backend, cfg, data_dir, cell, today, mask, log, deadline=None, f
     h = read_json(os.path.join(cdir, fname)) or {}
     from update_ndvi import SOURCES
     kd, kp = SOURCES[src]["dates"], SOURCES[src]["p"]
-    if h.get("v") != 2 or h.get("mask") != mask or kd not in h:
+    if h.get("v") != 2 or not mask_ok(h.get("mask"), mask, cfg) or kd not in h:
         h = {"v": 2, "mask": mask, kd: [], kp: {}, "years": []}
     todo = [y for y in want if y not in h["years"]]
+    if todo and h.get("mask") != mask:           # Earth Engine のころに作ったファイルに、今の方式の年を足す: 前の方式で作った年を書き残す
+        h["legacy"] = legacy_of(h, mask); h["mask"] = mask
     full = load_full(cdir); made = []
     for y in todo:
         if deadline and time.time() > deadline:
@@ -369,11 +523,13 @@ def main():
     ap.add_argument("--minutes", type=float, default=300, help="使う時間の上限（分）")
     ap.add_argument("--deadline", type=float, help="この時刻（UNIX 秒）までに終える（ワークフローの時間切れ対策）")
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--backend", choices=["gee", "fake"], default="gee")
+    ap.add_argument("--backend", choices=["gee", "fake", "open"], default=None,
+                    help="既定は config の s2_backend（なければ open）。open は Earth Engine を使わない: 生育傾向・過去の推移（Sentinel-2。レーダーは Copernicus Data Space の鍵があるとき）・獣害・住宅地・土・地形・田の形。Landsat・乾きは作らない")
     ap.add_argument("--cells", help="カンマ区切りでセルIDを限定（テスト用）")
     args = ap.parse_args()
     def log(m): print(time.strftime("%H:%M:%S"), m, flush=True)
     cfg = load_config()
+    args.backend = pick_backend(cfg, args.backend)   # 雲判定の方式の名前（mask_id）が変わる
     data_dir = os.path.join(cfg["site_dir"], "data")
     index = read_json(os.path.join(data_dir, "index.json"))
     if not index:
@@ -386,6 +542,8 @@ def main():
             from update_ndvi import GEEBackend
             from pixels import GEEPixels
             b = GEEBackend(cfg); src = GEETrend(b, GEEPixels(b))
+        elif args.backend == "open":
+            src = OpenTrend(cfg, data_dir); b = src.b
         else:
             src = FakeTrend()
         limit = args.minutes * 60
@@ -395,10 +553,20 @@ def main():
         cells = [c for c in index["cells"] if want is None or c["id"] in want]
         if limit > 60:
             today = dt.datetime.now(dt.timezone.utc).date(); t2 = time.time()
-            try:
-                made = run_all(src, cfg, data_dir, cells, today, mask_id(cfg), log, limit, args.workers)
-            except Exception as e:               # 途中まで作った分は公開する（-1 = 途中で止まった）
-                log(f"生育傾向 エラー {e}"); made = -1
+            no_radar = args.backend == "open" and cfg.get("radar") and not src.radar
+            if no_radar:                         # 作物の手がかりの R（レーダー）が作れない: 新しい年は作らず、鍵が入るのを待つ（今あるファイルはそのまま）
+                def lacks(c):
+                    m = read_json(os.path.join(data_dir, "cells", c["id"], "trend.json")) or {}
+                    return not (meta_ok(m, cfg, mask_id(cfg)) and set(trend_years(cfg, today)) <= set(m.get("years", [])))
+                n_lack = sum(1 for c in cells if lacks(c))
+                log(f"生育傾向: レーダーの鍵（CDSE_CLIENT_ID・CDSE_CLIENT_SECRET）がないので、新しい年は作りません（まだ作っていない年があるセル {n_lack}）")
+                if n_lack:
+                    print("::warning::生育傾向の新しい年を作れません。Copernicus Data Space の鍵（CDSE_CLIENT_ID・CDSE_CLIENT_SECRET）をシークレットに入れてください", flush=True)
+            else:
+                try:
+                    made = run_all(src, cfg, data_dir, cells, today, mask_id(cfg), log, limit, args.workers)
+                except Exception as e:               # 途中まで作った分は公開する（-1 = 途中で止まった）
+                    log(f"生育傾向 エラー {e}"); made = -1
             # 過去の年（ndvi.json より前）の区画ごとの NDVI。GEE のときだけ
             #   spring.json: 4/15〜6/10（春の田起こし・代掻きが見えるか。休耕の年を稲と見分ける）
             #   hist.json:   5/10〜9/30（生育傾向のグラフ用）
@@ -411,14 +579,18 @@ def main():
                                                      ("post.json", POST_WINDOW, "過去の秋", "s2", mid),
                                                      ("pre.json", PRE_WINDOW, "過去の春先", "s2", mid),
                                                      ("hist_ls.json", LS_HIST_WINDOW, "過去の Landsat", "ls", LANDSAT_MASK)):
-                if args.backend != "gee" or limit - (time.time() - t2) <= 60:
+                if args.backend == "fake" or limit - (time.time() - t2) <= 60:
                     break
                 if srcx == "s1" and not cfg.get("radar") or srcx == "ls" and not cfg.get("landsat"):
                     continue
+                if args.backend == "open":       # Landsat は open では作れない。レーダーは Copernicus Data Space の鍵があるときだけ（今あるファイルはそのまま）
+                    from s2open import supported
+                    if srcx not in supported():
+                        continue
                 def hneed(c, fname=fname, window=window, fmask=fmask):
                     cdir = os.path.join(data_dir, "cells", c["id"])
                     h = read_json(os.path.join(cdir, fname)) or {}
-                    return not (h.get("v") == 2 and h.get("mask") == fmask and
+                    return not (h.get("v") == 2 and mask_ok(h.get("mask"), fmask, cfg) and
                                 set(hist_years(cfg, today, read_json(os.path.join(cdir, "ndvi.json")), window)) <= set(h.get("years", [])))
                 try:
                     hm = run_all(src, cfg, data_dir, cells, today, mid, log, limit - (time.time() - t2), args.workers,
@@ -431,7 +603,11 @@ def main():
             # 獣害の起きやすさの手がかり（森との接し方・周りの田の割合）。区画の形が変わらなければ1回だけ
             if limit - (time.time() - t2) > 60:
                 import wild
-                wsrc = wild.GEEWild(b, src.px) if args.backend == "gee" else wild.FakeWild()
+                if args.backend == "open":
+                    import open_layers
+                    wsrc = open_layers.OpenWild()
+                else:
+                    wsrc = wild.GEEWild(b, src.px) if args.backend == "gee" else wild.FakeWild()
                 try:
                     wm = run_all(src, cfg, data_dir, cells, today, mask_id(cfg), log, limit - (time.time() - t2), args.workers,
                                  task=lambda c, dl: wild.update_cell(wsrc, cfg, data_dir, index, c, log, dl),
@@ -442,8 +618,12 @@ def main():
             # 住宅地の近さ（WorldCover の市街地）と田の中の鉄塔（OpenStreetMap）。区画の形が変わらなければ1回だけ（鉄塔が取れなかったセルは次の回にもう一度）
             if limit - (time.time() - t2) > 60:
                 import near
-                nsrc = near.GEENear(b, src.px) if args.backend == "gee" else near.FakeNear()
-                tw = near.towers(data_dir, log) if args.backend == "gee" else []
+                if args.backend == "open":
+                    import open_layers
+                    nsrc = open_layers.OpenNear()
+                else:
+                    nsrc = near.GEENear(b, src.px) if args.backend == "gee" else near.FakeNear()
+                tw = near.towers(data_dir, log) if args.backend in ("gee", "open") else []     # 鉄塔は OpenStreetMap（GEE は使わない）
                 try:
                     nm = run_all(src, cfg, data_dir, cells, today, mask_id(cfg), log, limit - (time.time() - t2), args.workers,
                                  task=lambda c, dl: near.update_cell(nsrc, cfg, data_dir, index, c, log, dl, tw),

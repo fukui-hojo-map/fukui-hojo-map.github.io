@@ -10,7 +10,7 @@
 対象は今年と昨年（今年の期間がまだ始まっていなければ昨年と一昨年）。それより古い年のファイルは消す。
 """
 import os, io, math, datetime as dt
-from common import write_json, read_json, with_retry
+from common import write_json, read_json, with_retry, legacy_masks
 
 R = 6378137.0
 MIN_CLEAR = 0.2          # セル内の田の画素のうち晴れている割合がこれ未満の日は保存しない
@@ -143,9 +143,11 @@ def update_cell(src, cfg, data_dir, cell, today, mask, log):
         meta_p = os.path.join(cdir, f"px_{year}.json"); png_p = os.path.join(cdir, f"px_{year}.png")
         dates = [d for d in nd.get("dates", []) if ws.isoformat() <= d <= we.isoformat()]
         meta = read_json(meta_p) or {}
-        if meta.get("mask") != mask or any(meta.get(k) != g[k] for k in g):
-            meta = {}                                  # 方式か格子が変わったら作り直し
         win = [ws.isoformat(), we.isoformat()]
+        # 方式か格子が変わったら作り直し。ただし、Earth Engine のころに作って確定した年（legacy_masks）は、そのまま使う
+        legacy = meta.get("mask") in legacy_masks(cfg) and meta.get("done") and meta.get("window") == win
+        if (meta.get("mask") != mask and not legacy) or any(meta.get(k) != g[k] for k in g):
+            meta = {}
         if meta.get("done") and meta.get("window") == win:
             continue                                   # 期間を広げたときは、確定済みでも足りない日だけ取る
         new = [d for d in dates if d not in set(meta.get("src_dates", []))]

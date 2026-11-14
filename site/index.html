@@ -1242,7 +1242,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
       <div class="ctl"><label><input type="checkbox" id="dipOn" checked>雲・かすみの疑いの点を、グラフと計算から外す（1区画だけ前後より低いV字の点〔前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上〕、同じ日の周りの圃場よりいつもの差で 0.12 以上低い点、地域全体がそろって下がった日〔かすみの日。6〜8月、9月は近くの雲30%以上の日〕に前後を結んだ線より 0.04 以上低い点、近くの雲20%以上の日に前後より 0.2 以上低い点。どれも、あとの点でもどるものだけ。水張りの水面〔0 以下〕は外さない）</label></div>
-      <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）の99%以上が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
+      <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）のほぼ全部が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl" id="radarCtl" style="display:none"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
       <div class="excl" id="excl"></div>
@@ -2147,7 +2147,7 @@ const CN_TH=99, CN_FROM='06-01', CN_TO='09-30';   // 評価した 6〜9月（202
 let cnData=null, cnVer=0;
 function cnOn(){ return !!cnData&&document.getElementById('cnOn').checked; }
 function cnVal(cell,d){ if(!cnData) return null; const a=cnData.d[d], j=cnData.ci[cell]; if(!a||j===undefined) return null; const v=a[j]; return v===null||v===undefined?null:v; }   // 近くの雲の割合（%）。データがなければ null
-function cnBad(cell,d){ const md=d.slice(5); if(md<CN_FROM||md>CN_TO) return false; const a=cnData.d[d], j=cnData.ci[cell]; if(!a||j===undefined) return false; const v=a[j]; return v!==null&&v!==undefined&&v>=CN_TH; }
+function cnBad(cell,d){ const md=d.slice(5); if(md<CN_FROM||md>CN_TO) return false; const a=cnData.d[d], j=cnData.ci[cell]; if(!a||j===undefined) return false; const v=a[j]; return v!==null&&v!==undefined&&v>=(cnData.th||CN_TH); }   /* しきい値は、雲の見分け方（Earth Engine をやめたあとは学習した判定器）に合わせた値が cloudnear.json の th にあればそれ（pipeline/cloudnear.py の calibrate） */
 let cloudP=null;
 async function loadCloudNear(){
   try{ const r=await (window.__cn||fetch(DATA+'cloudnear.json',{cache:'no-cache'})); if(!r||!r.ok) return; const j=await r.json();

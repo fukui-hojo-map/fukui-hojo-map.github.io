@@ -515,7 +515,7 @@ def dem_part(tiles, sat, parcels, around, cell, log):
     if tot[0] == 0 or tot[2] > tot[0]:                  # タイルがほとんど取れない（海の欠測は NaN のままでよい）
         if sat is None:
             log(f"{cell['id']}: 標高タイルが取れません（取れた{tot[0]}・なし{tot[1]}・失敗{tot[2]}）"); return None, None
-        log(f"{cell['id']}: 標高タイルが取れないので GEE の Copernicus DEM（30m）を使います（失敗{tot[2]}）")
+        log(f"{cell['id']}: 標高タイルが取れないので Copernicus DEM（30m）を使います（失敗{tot[2]}）")
         H10 = sat.dem(g10).astype(np.float32); H4 = None; srcname = "copernicus-glo30"
     else:
         H10 = block_mean(H4, gz, g10); srcname = "gsi-dem5a/5b/5c/dem10b"
@@ -1003,14 +1003,18 @@ class FakeSat:
 
 
 class Sources:
-    def __init__(self, tiles, sat, soil2=None):
+    def __init__(self, tiles, sat, soil2=None, dem=None):
         self.tiles = tiles; self.sat = sat; self.soil2 = soil2
+        self.dem = dem                    # 標高タイルが取れないときの予備（.dem(g)）。なければ sat（GEE）の Copernicus DEM
 
 
 def sources(cfg, backend, gee_backend=None, px=None, log=print):
     if backend == "fake":
         return Sources(FakeTiles(), FakeSat() if cfg.get("wet_sat", True) else None)
     cache = os.path.join(os.environ.get("RUNNER_TEMP") or ".cache", "tiles")
+    if backend == "open":                 # Earth Engine を使わない: 乾き（衛星）は作らない（Earth Engine のころの分を残す）。標高の予備は AWS の Copernicus DEM
+        from open_layers import OpenDEM
+        return Sources(HttpTiles(cache, log), None, MlitSoil(int(cfg.get("soil_pref", 18)), cache, log), dem=OpenDEM())
     sat = GEEWet(gee_backend, px) if gee_backend is not None and cfg.get("wet_sat", True) else None
     return Sources(HttpTiles(cache, log), sat, MlitSoil(int(cfg.get("soil_pref", 18)), cache, log))
 
@@ -1090,7 +1094,7 @@ def update_cell(src, cfg, data_dir, index, cell, today, ready, log, deadline=Non
     if "terr" in todo_ and not (deadline and time.time() > deadline):
         around = neighbor_parcels(data_dir, index, cell["id"])
         try:
-            t, dz = dem_part(src.tiles, src.sat, parcels, around, cell, log)
+            t, dz = dem_part(src.tiles, getattr(src, "dem", None) or src.sat, parcels, around, cell, log)
         except Exception as e:
             log(f"{cell['id']}: 地形 エラー {e}"); t, dz = None, None
         m["terr"] = {**(t or {"src": None, "p": None}), "tried": today.isoformat()}
