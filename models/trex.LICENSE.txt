@@ -1,0 +1,11 @@
+Model Information:
+* title:	Tyrant King - Tyrannosaurus
+* source:	https://sketchfab.com/3d-models/tyrant-king-tyrannosaurus-6465a297fa784598adc49f6e0042d449
+* author:	Marcel Schanz (https://sketchfab.com/mschanz)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+This work is based on "Tyrant King - Tyrannosaurus" (https://sketchfab.com/3d-models/tyrant-king-tyrannosaurus-6465a297fa784598adc49f6e0042d449) by Marcel Schanz (https://sketchfab.com/mschanz) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+Changes: converted the materials, reduced the polygon count and the texture size (for AR display).
