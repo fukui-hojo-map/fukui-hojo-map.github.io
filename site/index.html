@@ -2151,7 +2151,7 @@ function cnBad(cell,d){ const md=d.slice(5); if(md<CN_FROM||md>CN_TO) return fal
 let cloudP=null;
 async function loadCloudNear(){
   try{ const r=await (window.__cn||fetch(DATA+'cloudnear.json',{cache:'no-cache'})); if(!r||!r.ok) return; const j=await r.json();
-    if(j.v!==1||!j.cells||!j.d) return; const ci=Object.create(null); j.cells.forEach((c,i)=>ci[c]=i); cnData={ci,d:j.d}; cnVer++; }
+    if(j.v!==1||!j.cells||!j.d) return; const ci=Object.create(null); j.cells.forEach((c,i)=>ci[c]=i); cnData={ci,d:j.d,th:(j.th>=50&&j.th<=100)?j.th:null}; cnVer++; }   /* th: 「ほぼ雲」のしきい値（%）。雲の見分け方に合わせて pipeline/cloudnear.py が入れる。なければ 99 */
   catch(e){ cnData=null; } }
 // Landsat（HLS L30, 30m画素）は畦・道が画素に混ざり、同じ田の同じ日の Sentinel-2 より、茂った時期は低く（平均 −0.03）、水・土のころは高く（+0.10）出る。
 // 県内の同じ日の組（約36万組）から作った換算表で Sentinel-2 相当に直す。直しても1回ごとのばらつき（±0.07ほど）は残るので、
