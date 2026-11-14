@@ -97,32 +97,61 @@ jobs:
           if [ "$rc" = 0 ] && [ ! -d radar/cells ]; then echo "::error::radar-data ブランチはあるのに取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
           python pipeline/radar_store.py restore --data site/data --store radar
 
+      # 雲の見分け方を変えたときの計算し直し（例: 2026-11 の Earth Engine → open）は、何回かの実行に分かれることがある。
+      # 途中のファイル（ndvi_next.json・cloudnear_next.json）は、公開サイトの容量（1GB）を使わないよう、別のブランチ rebuild-state に置く（終わったらブランチごと消す）
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: steps.gate.outputs.run == '1'
+        with:
+          ref: rebuild-state
+          path: next
+          persist-credentials: false
+        continue-on-error: true
+      - name: 計算し直しの途中のファイルを戻す
+        if: steps.gate.outputs.run == '1'
+        run: |
+          rc=0; git ls-remote --exit-code --heads origin rebuild-state >/dev/null 2>&1 || rc=$?      # 0=ある, 2=ない
+          if [ "$rc" = 0 ] && [ ! -d next/data ]; then echo "::error::rebuild-state ブランチはあるのに取り出せませんでした。途中の計算を捨てないよう中止します"; exit 1; fi
+          if [ -d next/data ]; then cp -r next/data/. site/data/; echo "戻した: $(find next/data -type f | wc -l) ファイル"; else echo "途中の計算はありません"; fi
+
       - name: 区画グリッドを作成（初回 or 指定時）
         if: ${{ steps.gate.outputs.run == '1' && (inputs.rebuild_cells == true || hashFiles('site/data/index.json') == '') }}
         run: python pipeline/build_cells.py
 
+      # 衛星データは Google Earth Engine を使わずに取る（2026-11 から。config.yaml の s2_backend: open）。
+      #   Sentinel-2: AWS の公開データ（鍵はいらない）。レーダー: Copernicus Data Space（下の2つのシークレットがあるときだけ。なければ、今ある分を残して先へ進む）
       - name: NDVI を更新
         if: steps.gate.outputs.run == '1'
         env:
-          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
-          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
-          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+          CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+          CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
           MAX_MINUTES: ${{ inputs.max_minutes || '300' }}   # 入力はシェルの文に直接書かず、環境変数で渡す
         run: |
           case "$MAX_MINUTES" in ''|*[!0-9]*) echo "::error::max_minutes は数字で入れてください"; exit 1;; esac
           python pipeline/update_ndvi.py --max-minutes "$MAX_MINUTES" --workers 4 ${{ inputs.full && '--full' || '' }}
 
       # 近くの雲の割合（pipeline/cloudnear.py → data/cloudnear.json）。画面が、6〜9月に「まわり3kmの99%以上が雲」の日の観測を使わないための材料。
-      # 計算済みの日は飛ばす（最初の1回だけ全日で5分ほど）。失敗しても前回のファイルが残るだけで、ほかは止めない
+      # 計算済みの日は飛ばす。方式を変えたとき（Earth Engine → open）は、cloudnear_next.json に全部の日を作ってから入れ替える（それまでは前のファイルを使う）。
+      # 失敗しても前回のファイルが残るだけで、ほかは止めない
       - name: 近くの雲の割合を計算する
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
         timeout-minutes: 40
-        env:
-          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
-          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
-          EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: python pipeline/cloudnear.py --max-minutes 30 --workers 4
+
+      - name: 計算し直しの途中のファイルを rebuild-state ブランチに置く（公開サイトには出さない）
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf next_out && mkdir -p next_out/data
+          (cd site/data && find . -name ndvi_next.json -o -name cloudnear_next.json) | while read -r f; do mkdir -p "next_out/data/$(dirname "$f")"; mv "site/data/$f" "next_out/data/$f"; done
+          n=$(find next_out/data -type f | wc -l); echo "途中のファイル: $n"
+          if [ "$n" -gt 0 ]; then
+            bash pipeline/branch_push.sh next_out rebuild-state "rebuild state"
+          elif git ls-remote --exit-code --heads origin rebuild-state >/dev/null 2>&1; then
+            git push -q "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" --delete rebuild-state && echo "計算し直しが終わったので、rebuild-state ブランチを消しました"
+          fi
 
       - name: 最新の画面を取り込む（この更新の途中で site.yml が画面だけ出していても、古い画面で上書きしない）
         if: steps.gate.outputs.run == '1'
@@ -156,9 +185,8 @@ jobs:
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
         env:
-          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
-          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
-          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+          CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+          CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
         run: python pipeline/trend.py --deadline $(( ${{ steps.gate.outputs.t0 }} + 300 * 60 )) --workers 4
 
       # 作物の見分け（稲・麦・休耕か草・その他）。全部の田・年を、そろったデータから見分け直す（4コアで4分ほど。Earth Engine は使わない）

@@ -8,7 +8,7 @@
  筆ポリゴン(農水省)  Sentinel-2(Copernicus)
         │                  │
         ▼                  ▼
-  build_cells.py     update_ndvi.py  ← Google Earth Engine で区画平均を計算
+  build_cells.py     update_ndvi.py  ← 公開の置き場（AWS）の Sentinel-2 から区画平均を計算（s2open.py。Google Earth Engine は使わない）
   (区画をグリッドに分割)  (未計算の観測日だけ追記)
                      trend.py        ← 過去の年の作物の見分けと田の中の差（生育傾向マップ）
                      vigor.py        ← 例年の育ち（生育傾向マップの田ごとの値。Earth Engine は使わない）
@@ -73,18 +73,20 @@
 
 専門用語なしの手順書は `SETUP_やさしい版.md` を参照。
 
-### 1. Google Earth Engine（計算エンジン）
-1. Google Cloud プロジェクトを Earth Engine に登録（非営利・研究用途として登録）
-2. Cloud コンソール → IAM → **サービスアカウント** を作成し、JSON 鍵をダウンロード
-3. そのサービスアカウントに `Earth Engine Resource Viewer` と `Service Usage Consumer` のロールを付与
-4. Cloud コンソールで `Earth Engine API` を有効化（まだなら）
+### 1. 衛星データ（登録・鍵はいらない）
+2026年11月から、Google Earth Engine は使いません。計算は GitHub Actions の中で行います。
+- **Sentinel-2**（NDVI・圃場内マップ・生育傾向）: AWS の公開データ（Element 84 の `sentinel-cogs`）を直接読む。**登録も鍵もいらない**。
+  雲は、学習した判定器（`pipeline/s2cloud.py`・`pipeline/models/s2cloud_v1.*`）で除く
+- **Sentinel-1 レーダー**（任意。水張りの見分け・生育傾向の作物の手がかり）: Copernicus Data Space（無料のアカウント）の Sentinel Hub から取る（`pipeline/s1cdse.py`）。
+  ダッシュボード（`https://shapps.dataspace.copernicus.eu/dashboard/`）で OAuth クライアントを作り、ID と Secret を下のシークレットに入れる。
+  入れないときは、レーダーの新しい日は計算しない（すでにある分は残る。ほかの更新は止まらない）
+- **Landsat**: 新しい日は計算しない（Earth Engine のころに計算した分は残して表示する）
 
 ### 2. GitHub リポジトリ
 1. このフォルダをそのままリポジトリにする（**Public** にする。無料プランでは Public リポジトリだけが Pages で公開でき、Actions の実行時間も無制限）
-2. Settings → Secrets and variables → Actions に3つ登録
-   - `EE_SERVICE_ACCOUNT` … サービスアカウントのメールアドレス
-   - `EE_PRIVATE_KEY` … JSON 鍵ファイルの中身をそのまま貼る
-   - `EE_PROJECT` … Cloud プロジェクトID
+2. （レーダーを使うときだけ）Settings → Secrets and variables → Actions に2つ登録
+   - `CDSE_CLIENT_ID` … Copernicus Data Space の OAuth クライアントの ID
+   - `CDSE_CLIENT_SECRET` … その Secret
 3. Settings → Pages → Source を `gh-pages` ブランチにする（初回の Actions 実行後にブランチができます）
 
 ### 3. 区画データ
@@ -116,10 +118,12 @@ Actions → `weekly-ndvi` → **Run workflow**。初回は過去24か月分を�
 | `edge_m` | 畦畔を避けて内側に縮める距離。10m画素なら5mが目安 |
 | `history_months` | 初回にさかのぼる月数（前年重ね表示には24） |
 | `max_scene_cloud` | シーン雲量がこれ以上の画像は使わない。空欄なら画像全体の雲量では捨てない（区画ごとに判定） |
-| `cloud_score_min` | 雲判定 Cloud Score+ の晴れ度（0〜1）。これ以上の画素だけ使う。変えると次回の更新で全期間を計算し直す |
-| `cloud_near_m` | 田の NDVI で、雲（Cloud Score+ で雲、または SCL の雲・巻雲）からこの距離（m）以内の画素を使わない（既定 300）。雲の縁の薄い雲で NDVI が低く出るのを防ぐ。遠い画素で足りない観測は、全部の画素の平均を「参考」として残す（`ndvi.json` の有効画素率が負の数。画面は薄い灰色の点で、計算には使わない）。変えると次回の更新で Sentinel-2 の全期間を計算し直す（Landsat・レーダー・生育傾向・圃場内マップは変えない） |
-| `cloud_cs_min` | 田の NDVI で、Cloud Score+ の cs（晴れ度そのもの）がこれ未満の画素も使わない（既定 0＝使わない） |
-| `landsat` | Landsat 8/9（NASA HLS, 30m）も使う。Sentinel-2 がない日の観測を補う（グラフでは白抜きの点） |
+| `s2_backend` | 衛星データの取り方。`open`（既定）= Earth Engine を使わない。`gee` = Google Earth Engine（前の方式。`earthengine-api` と `EE_*` のシークレットが要る） |
+| `legacy_masks` | Earth Engine のころに作った過去の年のデータ（生育傾向・過去の推移・確定した年の圃場内マップ）の雲判定の名前。この名前のデータは作り直さずに使う |
+| `cloud_score_min` | （`gee` のときだけ）雲判定 Cloud Score+ の晴れ度（0〜1）。`open` では、雲の判定器のしきい値（`pipeline/models/s2cloud_v1.json`。月ごと）を使う |
+| `cloud_near_m` | 田の NDVI で、雲（判定器で雲、または SCL の雲・巻雲）からこの距離（m）以内の画素を使わない（既定 300）。雲の縁の薄い雲で NDVI が低く出るのを防ぐ。遠い画素で足りない観測は、全部の画素の平均を「参考」として残す（`ndvi.json` の有効画素率が負の数。画面は薄い灰色の点で、計算には使わない）。変えると次回の更新で Sentinel-2 の全期間を計算し直す（Landsat・レーダー・生育傾向・圃場内マップは変えない） |
+| `cloud_cs_min` | （`gee` のときだけ）田の NDVI で、Cloud Score+ の cs（晴れ度そのもの）がこれ未満の画素も使わない（既定 0＝使わない） |
+| `landsat` | Landsat 8/9（NASA HLS, 30m）も使う。Sentinel-2 がない日の観測を補う（グラフでは白抜きの点）。`open` では新しい日を計算しない（ある分は残す） |
 | `landsat_min_pixels` | Landsat の30m画素がこれ未満しか入らない小さい区画には Landsat を使わない |
 | `radar` | Sentinel-1 レーダー（雲を通す）も使う。指標は VH の後方散乱（区画の中央値、dB）。地図では範囲ごとに晴れた日の NDVI との関係から推定 NDVI に換算し、5/10〜7/31 の空白を埋める（グラフではひし形の点） |
 | `radar_window` | レーダーを計算する時期（月-日、各年） |
@@ -130,11 +134,11 @@ Actions → `weekly-ndvi` → **Run workflow**。初回は過去24か月分を�
 | `trend_windows` | 「6月ごろ」「8月ごろ」の期間（月-日） |
 | `trend_center` | この場所（経度, 緯度）に近いセルから先に作る |
 | `wet_maps` | 機械のハマりやすさの手がかり（土壌図・標高・衛星の乾き）を作る。土・地形は1回だけ（取れなければ28日後にもう一度）。1セル数秒〜数分 |
-| `wet_sat` | 衛星の乾き（GEE）も作る。最初は全時期（全セルで数時間。何回かの実行に分けて続きから）、そのあとは新しい時期（春・秋）が終わり ERA5-Land がそろったら、その時期だけ足す。土・地形を全セルで先に作ってから、残りの時間で乾き |
+| `wet_sat` | （`gee` のときだけ）衛星の乾きも作る。`open` では新しい時期を作らない（ある分は残す）。最初は全時期（全セルで数時間。何回かの実行に分けて続きから）、そのあとは新しい時期（春・秋）が終わり ERA5-Land がそろったら、その時期だけ足す。土・地形を全セルで先に作ってから、残りの時間で乾き |
 | `wet_seasons` | 最初に取る乾きの時期の数（新しい方から）。一度足した時期は残る |
 | `cell_deg_lon/lat` | 配信ファイルの分割単位 |
 
-## ローカルでの動作確認（GEE 不要）
+## ローカルでの動作確認（通信なし）
 ```bash
 pip install -r requirements.txt
 python pipeline/build_cells.py
@@ -150,9 +154,12 @@ cd site && python -m http.server 8000   # → http://localhost:8000/
 - 地図: 国土地理院タイル。標高: 国土地理院 標高タイル（基盤地図情報数値標高モデル）を加工して作成
 - 土壌: 出典：農研機構 日本土壌インベントリー（https://soil-inventory.rad.naro.go.jp/）CC BY 4.0
 - 耕地・森: ESA WorldCover 2021（CC BY 4.0）。雪・雨: ERA5-Land（Copernicus Climate Change Service）
-- 計算: Google Earth Engine。**非営利（研究・教育）用途は無償、行政の実務運用は有償ライセンス** の対象になり得ます。
-  試作の段階から本運用に移すときは、 Earth Engine 商用ライセンスか、計算部分を Copernicus openEO に置き換える
-  （`pipeline/update_ndvi.py` の `GEEBackend` を差し替えるだけ）のどちらかを判断してください。
+- 計算: GitHub Actions の中で行う（2026年11月から、Google Earth Engine は使わない）。
+  - Sentinel-2 L2A は AWS Open Data（Element 84 の sentinel-cogs）、Sentinel-1 は Copernicus Data Space Ecosystem（Sentinel Hub）から取る
+  - 雲の判定器（`pipeline/models/s2cloud_v1`）は、Cloud Score+ の判断を正解にして学習したもの。Cloud Score+（CC BY 4.0）の出典:
+    Pasquarella, V. J., Brown, C. F., Czerwinski, W., Rucklidge, W. J. (2023) "Comprehensive Quality Assessment of Optical Satellite Imagery Using Weakly Supervised Video Learning", CVPR Workshops 2023, doi:10.1109/CVPRW59228.2023.00206
+  - 2026年11月より前に作ったデータ（過去の年の生育傾向・過去の推移・圃場内マップ、Landsat〔NASA HLS〕、レーダー、衛星の乾き）は、Google Earth Engine（研究用途の登録）で計算したもの。作り直さずに使っている
+  - 前の方式（Earth Engine）に戻すときは `config.yaml` の `s2_backend: gee`（`pip install earthengine-api` と `EE_*` のシークレットが要る。Earth Engine は、行政の実務運用では有償ライセンスの対象になり得る）
 
 ## 限界
 - 10m 画素なので、細長い区画や小さな区画は隣の影響を受けます（有効画素率で絞り込み可）
@@ -173,4 +180,4 @@ cd site && python -m http.server 8000   # → http://localhost:8000/
   - crop_s.json がないセル・年は、地図の画面で簡単な決まり（4月の NDVI・7月の NDVI・5〜6月のレーダー・春の裸地・秋の刈り取り）で見分ける
   区画の縁（約8m）は畦・道路が混ざるので計算に使いません
 - ハマりやすさ: 土壌図は 1/5万なので田の中の違いは分からない。SWIR は黒っぽい土（黒泥土・泥炭土）を湿って見せる（土と重なるが、どちらもハマる向き）。
-  地下水位・暗渠・作土の下の硬盤（すき床）は見えない。最初の GEE の確かめは `python pipeline/wet.py --probe --cells <セルID>`（日ごとの使う・使わないと時間を出す）
+  地下水位・暗渠・作土の下の硬盤（すき床）は見えない。衛星の乾きは Earth Engine のころに作った分（`open` では新しい時期を作らない）

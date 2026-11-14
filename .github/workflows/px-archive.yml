@@ -1,6 +1,6 @@
 # 圃場内マップの古い年の画素データ（px_<年>.png / .json）を、公開サイトの外（px-archive ブランチ）に作って置く（pipeline/px_archive.py）。
 # 公開サイト（GitHub Pages）は約1GB の上限に近いので、今年と昨年の分だけを置き、それより古い年は画面が raw.githubusercontent.com の px-archive から読む。
-# 毎週1回（と手で）動かし、置き場にない年（2022年〜）を、公開中のものを写す／Earth Engine で作る。全部そろうと、すぐ終わる。
+# 毎週1回（と手で）動かし、置き場にない年（2022年〜）を、公開中のものを写す／なければ作る（Google Earth Engine は使わない。AWS の公開データから。pipeline/s2open.py）。Earth Engine のころに作って置いた年は、そのまま使う。全部そろうと、すぐ終わる。
 # 時間切れで残りがあるときは、進んだ場合だけ続きを自分で起こす。weekly-ndvi とは順番待ちを分けてある（待ち行列で定期の更新を押しのけないため）
 name: px-archive
 on:
@@ -69,9 +69,6 @@ jobs:
       - name: 古い年の画素データを作る
         id: px
         env:
-          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
-          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
-          EE_PROJECT: ${{ secrets.EE_PROJECT }}
           MAX_MINUTES: ${{ inputs.max_minutes || '300' }}   # 入力はシェルの文に直接書かず、環境変数で渡す
           YEARS: ${{ inputs.years }}
         run: |
