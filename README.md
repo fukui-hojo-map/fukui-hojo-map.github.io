@@ -80,7 +80,7 @@
 - **Sentinel-1 レーダー**（任意。水張りの見分け・生育傾向の作物の手がかり）: Copernicus Data Space（無料のアカウント）の Sentinel Hub から取る（`pipeline/s1cdse.py`）。
   ダッシュボード（`https://shapps.dataspace.copernicus.eu/dashboard/`）で OAuth クライアントを作り、ID と Secret を下のシークレットに入れる。
   入れないときは、レーダーの新しい日は計算しない（すでにある分は残る。ほかの更新は止まらない）
-- **Landsat**: 新しい日は計算しない（Earth Engine のころに計算した分は残して表示する）
+- **Landsat**: 使わない（2026-11 に決定。`config.yaml` の `landsat: false`）。Earth Engine のころに計算した分（2026年10月まで）は残して表示する
 
 ### 2. GitHub リポジトリ
 1. このフォルダをそのままリポジトリにする（**Public** にする。無料プランでは Public リポジトリだけが Pages で公開でき、Actions の実行時間も無制限）
@@ -123,7 +123,7 @@ Actions → `weekly-ndvi` → **Run workflow**。初回は過去24か月分を�
 | `cloud_score_min` | （`gee` のときだけ）雲判定 Cloud Score+ の晴れ度（0〜1）。`open` では、雲の判定器のしきい値（`pipeline/models/s2cloud_v1.json`。月ごと）を使う |
 | `cloud_near_m` | 田の NDVI で、雲（判定器で雲、または SCL の雲・巻雲）からこの距離（m）以内の画素を使わない（既定 300）。雲の縁の薄い雲で NDVI が低く出るのを防ぐ。遠い画素で足りない観測は、全部の画素の平均を「参考」として残す（`ndvi.json` の有効画素率が負の数。画面は薄い灰色の点で、計算には使わない）。変えると次回の更新で Sentinel-2 の全期間を計算し直す（Landsat・レーダー・生育傾向・圃場内マップは変えない） |
 | `cloud_cs_min` | （`gee` のときだけ）田の NDVI で、Cloud Score+ の cs（晴れ度そのもの）がこれ未満の画素も使わない（既定 0＝使わない） |
-| `landsat` | Landsat 8/9（NASA HLS, 30m）も使う。Sentinel-2 がない日の観測を補う（グラフでは白抜きの点）。`open` では新しい日を計算しない（ある分は残す） |
+| `landsat` | Landsat 8/9（NASA HLS, 30m）も使うか。**いまは false（使わない）**。`gee` のときだけ計算できる（Sentinel-2 がない日の観測を補う。グラフでは白抜きの点）。前に計算した分は、false でも残して表示する |
 | `landsat_min_pixels` | Landsat の30m画素がこれ未満しか入らない小さい区画には Landsat を使わない |
 | `radar` | Sentinel-1 レーダー（雲を通す）も使う。指標は VH の後方散乱（区画の中央値、dB）。地図では範囲ごとに晴れた日の NDVI との関係から推定 NDVI に換算し、5/10〜7/31 の空白を埋める（グラフではひし形の点） |
 | `radar_window` | レーダーを計算する時期（月-日、各年） |
