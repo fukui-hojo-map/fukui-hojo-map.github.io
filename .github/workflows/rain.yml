@@ -6,6 +6,10 @@
 #   気象庁の10分ごとの速報は、その時刻の 5〜7分あとに出る。1分ごとに見るので、画面に出るまでの遅れは、ふだん 7〜9分ほど。
 #   毎回、main の pipeline/ を読み直す（rain_acc.py を直したら、実行を止めなくても次の回から使う）。
 #   定時（schedule）と push は、つながりが切れたときの立て直し用。
+#   見張り（watch）: 実行が途中で落ちる（実行の機械ごとなくなる など）と、終わりの「つぎの実行を起こす」が動かず、定時の立て直しまで何時間も止まる。
+#     そこで、同じ実行の中の別の仕事（watch）が、20分たったら次の実行を「待ち」に入れておく（concurrency で、いまの実行が終わるまで始まらない。
+#     いまの実行が、ふつうに終わっても、落ちても、すぐ次が始まる）。待ちは1つだけ（新しい待ちが入ると、前の待ちは消える）。
+#     すぐ落ちる実行が続いても、起こすのは20分に1回まで。これで、Cloudflare の起こし役（fhm-rain-wake。2026-11 にやめる）が要らなくなる
 name: rain
 on:
   schedule:
@@ -19,6 +23,15 @@ permissions:
   actions: write
 concurrency: { group: rain, cancel-in-progress: false }
 jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 20分たったら、次の実行を「待ち」に入れておく（いまの実行が落ちても、つながりが切れないように）
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          sleep 1200
+          gh workflow run rain.yml --repo "$GITHUB_REPOSITORY" && echo "次の実行を待ちに入れた"
   acc:
     runs-on: ubuntu-latest
     timeout-minutes: 350
