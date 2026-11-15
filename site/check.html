@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>つながるかの確認 | ふくい圃場マップ</title>
+<!-- 行政端末など、通信先がしぼられた端末で、ふくい圃場マップが使う通信先に、つながるかを確かめるページ。
+     地図（index.html）と同じ読み込み方（画像・CORS の fetch）で、中身まで確かめる（中継の「止めました」の画面を、つながったと見誤らないため）。
+     どこにも何も送らない（読み込むだけ）。外部の部品・字体は使わない。 -->
+<style>
+:root{--bg:#f5f7f3;--card:#fff;--ink:#1d2a1f;--sub:#56625a;--ok:#1b7a3a;--ng:#b3261e;--wait:#7a6400;--line:#dde3da;--btn:#1b7a3a}
+@media (prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1d2520;--ink:#e6efe8;--sub:#a5b3a9;--ok:#6fd38f;--ng:#ff8a80;--wait:#e3c55a;--line:#33403a;--btn:#2f8f4e}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","Yu Gothic UI","Meiryo",sans-serif;line-height:1.65}
+main{max-width:780px;margin:0 auto;padding:16px}
+h1{font-size:1.3rem;margin:.3em 0 .2em}
+.lead{color:var(--sub);font-size:.95rem;margin:.2em 0 .8em}
+#sum{margin:12px 0 14px;padding:12px 14px;border-radius:10px;background:var(--card);border:2px solid var(--line);font-weight:700}
+#sum.ok{border-color:var(--ok);color:var(--ok)}#sum.ng{border-color:var(--ng);color:var(--ng)}
+.list{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.row{display:flex;gap:10px;padding:10px 12px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.mark{flex:0 0 2.2em;font-size:1.25rem;font-weight:700;text-align:center;line-height:1.3}
+.body{flex:1;min-width:0}
+.what{font-weight:600}
+.host{font-family:ui-monospace,Consolas,"MS Gothic",monospace;font-size:.85rem;color:var(--sub);word-break:break-all}
+.note{font-size:.85rem;color:var(--sub)}
+.tag{display:inline-block;font-size:.75rem;padding:0 7px;border-radius:6px;border:1px solid var(--line);margin-left:6px;font-weight:400;vertical-align:1px}
+.ok{color:var(--ok)}.ng{color:var(--ng)}.wait{color:var(--wait)}
+.btns{margin:14px 0 6px}
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;margin:4px 6px 4px 0}
+button.main{background:var(--btn);border-color:var(--btn);color:#fff}
+textarea{width:100%;min-height:9em;font:12px/1.5 ui-monospace,Consolas,monospace;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px}
+a{color:var(--ok)}
+footer{margin-top:18px;font-size:.85rem;color:var(--sub)}
+</style>
+</head>
+<body>
+<main>
+<h1>つながるかの確認（ふくい圃場マップ）</h1>
+<p class="lead">この端末から、ふくい圃場マップが使う通信先につながるかを確かめます。開くと自動で始まります（30秒ほど）。</p>
+<div id="sum" role="status">確かめています…</div>
+<div class="list" id="list"></div>
+<div class="btns">
+  <button class="main" id="copy" disabled>結果をコピー</button>
+  <button id="again" disabled>もう一度</button>
+  <button id="geo">現在地が使えるか（任意）</button>
+  <a href="./" id="mapLink" hidden>地図を開く</a>
+</div>
+<p class="note" id="geoMsg"></p>
+<textarea id="out" readonly hidden aria-label="結果の文"></textarea>
+<footer>
+  <p>× の行があるときは、「結果をコピー」を押して、情報システムの担当に伝えてください（つながらない通信先の名前が入ります）。</p>
+  <p>このページは、上の通信先から、確かめのための小さなデータや画像を読み込むだけです。入力したことや、この端末の情報を、どこにも送りません。</p>
+</footer>
+</main>
+<script>
+(function(){
+  'use strict';
+  var TIMEOUT=15000, Z=12, X=3597, Y=1607;   // 福井市のあたりの地図のマス（ズーム12）
+  function wait(p,ms){ return new Promise(function(ok,ng){ var t=setTimeout(function(){ ng(new Error('時間切れ（'+Math.round(ms/1000)+'秒）')); },ms); p.then(function(v){ clearTimeout(t); ok(v); },function(e){ clearTimeout(t); ng(e); }); }); }
+  function bust(u){ return u+(u.indexOf('?')<0?'?':'&')+'chk='+Date.now(); }
+  function why(e){ var m=(e&&e.message)||String(e); return /Failed to fetch|NetworkError|Load failed|network/i.test(m)?'つながらない（止められているか、通信先が見つからない）':m; }
+  function get(u,o){ return fetch(u,Object.assign({cache:'no-store',credentials:'omit'},o||{})).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r; }); }
+  function json(u,o){ return get(u,o).then(function(r){ return r.text(); }).then(function(t){ try{ return JSON.parse(t); }catch(e){ throw new Error('中身がちがう（止めた画面が返っている見込み）'); } }); }
+  function img(u){ return new Promise(function(ok,ng){ var i=new Image(); i.onload=function(){ i.naturalWidth>0?ok():ng(new Error('画像が読めない')); }; i.onerror=function(){ ng(new Error('画像が読めない（止められているか、通信先が見つからない）')); }; i.src=bust(u); }); }
+  function anyOf(fs){ return new Promise(function(ok,ng){ var n=fs.length, last; fs.forEach(function(f){ f().then(ok,function(e){ last=e; if(--n===0) ng(last); }); }); }); }
+
+  // need: 1 = これがないと地図が使えない、2 = その機能だけ使えない、3 = なくても使える
+  var TESTS=[
+    {host:'fukui-hojo-map.github.io', need:1, what:'地図のページと、圃場・生育（NDVI）のデータ',
+     run:function(){ return json('data/index.json').then(function(j){ if(!j||!j.cells||!j.cells.length) throw new Error('中身がちがう'); }); }},
+    {host:'cyberjapandata.gsi.go.jp', need:1, what:'下に敷く地図・航空写真・地名（国土地理院）',
+     run:function(){ var b='https://cyberjapandata.gsi.go.jp/xyz/'; return Promise.all([img(b+'pale/'+Z+'/'+X+'/'+Y+'.png'),img(b+'seamlessphoto/'+Z+'/'+X+'/'+Y+'.jpg')]); }},
+    {host:'www.jma.go.jp', need:2, what:'雨雲レーダー・天気予報・アメダス・警報（気象庁）',
+     run:function(){ return json('https://www.jma.go.jp/bosai/jmatile/data/nowc/targetTimes_N1.json').then(function(a){ if(!a||!a.length) throw new Error('中身がちがう'); }); }},
+    {host:'www.data.jma.go.jp', need:2, what:'2週間の気温の見通し（気象庁）',
+     run:function(){ return json('https://www.data.jma.go.jp/cpd/twoweek/data/Latest/data_47616.json'); }},
+    {host:'mreversegeocoder.gsi.go.jp', need:2, what:'地図の場所の住所（国土地理院）',
+     run:function(){ return json('https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=36.0613&lon=136.2236').then(function(j){ if(!j||!j.results) throw new Error('中身がちがう'); }); }},
+    {host:'disaportaldata.gsi.go.jp', need:2, what:'ハザードマップ（浸水の深さ。国土交通省・国土地理院）',
+     run:function(){ return anyOf([[X,Y],[X+1,Y],[X,Y-1],[X-1,Y],[X+1,Y+1]].map(function(p){ return function(){ return img('https://disaportaldata.gsi.go.jp/raster/01_flood_l2_shinsuishin_data/'+Z+'/'+p[0]+'/'+p[1]+'.png'); }; })); }},
+    {host:'disaportal.gsi.go.jp', need:2, what:'ハザードマップの凡例（色の説明）',
+     run:function(){ return img('https://disaportal.gsi.go.jp/hazardmap/copyright/img/shinsui_legend3.png'); }},
+    {host:'raw.githubusercontent.com', need:2, what:'降った雨の量・前の年の圃場の中のようす（GitHub）',
+     run:function(){ return json('https://raw.githubusercontent.com/fukui-hojo-map/fukui-hojo-map.github.io/rain-data/acc.json'); }},
+    {host:'api.github.com', need:3, what:'降った雨の量を、いちばん新しく（GitHub。なくても、5分ほど古いもので動く）',
+     run:function(){ return json('https://api.github.com/rate_limit').then(function(j){ var c=j&&j.resources&&j.resources.core; if(!c) throw new Error('中身がちがう'); return c.remaining<10?'つながるが、この1時間の回数の上限に近い（残り '+c.remaining+' 回。同じ出口の端末の合計）':''; }); }},
+    {host:'fonts.googleapis.com / fonts.gstatic.com', need:3, what:'字の形（Google Fonts。なくても、端末の字で表示する）',
+     run:function(){ return get('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700&text=%E5%9C%83&display=swap').then(function(r){ return r.text(); }).then(function(css){
+        var m=/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/.exec(css); if(!m) throw new Error('fonts.googleapis.com: 中身がちがう');
+        return get(m[1]).then(function(r){ return r.arrayBuffer(); }).then(function(b){ if(!b.byteLength) throw new Error('空'); },function(e){ throw new Error('fonts.gstatic.com: '+why(e)); }); },
+        function(e){ throw new Error('fonts.googleapis.com: '+why(e)); }); }}
+  ];
+  var NEED={1:'必ず',2:'その機能',3:'なくてもよい'};
+  var list=document.getElementById('list'), sum=document.getElementById('sum'), out=document.getElementById('out');
+  var copyB=document.getElementById('copy'), againB=document.getElementById('again'), mapA=document.getElementById('mapLink');
+  var res=[], started='';
+
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function draw(){
+    list.innerHTML=TESTS.map(function(t,i){ var r=res[i]||{s:'wait'}, mk=r.s==='ok'?'○':r.s==='ng'?'×':'…', cl=r.s==='ok'?'ok':r.s==='ng'?'ng':'wait';
+      return '<div class="row"><div class="mark '+cl+'" aria-label="'+(r.s==='ok'?'つながる':r.s==='ng'?'つながらない':'確かめ中')+'">'+mk+'</div><div class="body">'+
+        '<div class="what">'+esc(t.what)+'<span class="tag">'+NEED[t.need]+'</span></div><div class="host">'+esc(t.host)+'</div>'+
+        (r.msg?'<div class="note '+(r.s==='ng'?'ng':'')+'">'+esc(r.msg)+(r.ms!=null?'（'+r.ms+' ミリ秒）':'')+'</div>':(r.ms!=null?'<div class="note">'+r.ms+' ミリ秒</div>':''))+'</div></div>'; }).join('');
+  }
+  function text(){
+    var L=['ふくい圃場マップ つながるかの確認（'+started+'）'];
+    TESTS.forEach(function(t,i){ var r=res[i]||{}; L.push((r.s==='ok'?'○':r.s==='ng'?'×':'？')+' ['+NEED[t.need]+'] '+t.host+' … '+t.what+(r.s==='ng'?'　→ '+r.msg:(r.msg?'　（'+r.msg+'）':''))); });
+    L.push('ページ: '+location.href.split('?')[0]); L.push('ブラウザ: '+navigator.userAgent);
+    return L.join('\n');
+  }
+  function finish(){
+    var ng=res.filter(function(r,i){ return r.s==='ng'&&TESTS[i].need<3; }).length, ng1=res.filter(function(r,i){ return r.s==='ng'&&TESTS[i].need===1; }).length;
+    sum.className=ng?'ng':'ok';
+    sum.textContent=ng1?'地図を使うのに必ず要る通信先に、つながりません（× の行）。「結果をコピー」で、情報システムの担当に伝えてください。'
+      :ng?'地図は使えますが、一部の機能（× の行）が使えません。「結果をコピー」で、情報システムの担当に伝えてください。'
+      :'すべて、つながりました。この端末で、ふくい圃場マップを使えます。';
+    out.value=text(); out.hidden=false; copyB.disabled=false; againB.disabled=false; mapA.hidden=!!ng1;
+  }
+  function runAll(){
+    res=[]; var d=new Date(); started=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    sum.className=''; sum.textContent='確かめています…'; copyB.disabled=true; againB.disabled=true; out.hidden=true; draw();
+    var n=TESTS.length;
+    TESTS.forEach(function(t,i){ var t0=performance.now();
+      wait(Promise.resolve().then(t.run),TIMEOUT).then(function(v){ res[i]={s:'ok',msg:typeof v==='string'?v:'',ms:Math.round(performance.now()-t0)}; },function(e){ res[i]={s:'ng',msg:why(e),ms:Math.round(performance.now()-t0)}; })
+        .then(function(){ draw(); if(--n===0) finish(); });
+    });
+  }
+  copyB.addEventListener('click',function(){ var s=out.value, done=function(){ copyB.textContent='コピーしました'; setTimeout(function(){ copyB.textContent='結果をコピー'; },2500); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(done,function(){ out.select(); try{ document.execCommand('copy'); done(); }catch(e){} });
+    else { out.select(); try{ document.execCommand('copy'); done(); }catch(e){} } });
+  againB.addEventListener('click',runAll);
+  document.getElementById('geo').addEventListener('click',function(){ var m=document.getElementById('geoMsg');
+    if(!navigator.geolocation){ m.textContent='現在地: この端末（ブラウザ）では使えません（地図のほかの機能は使えます）。'; return; }
+    m.textContent='現在地: 確かめています…（許可を聞かれたら「許可」を押してください。位置はどこにも送りません）';
+    navigator.geolocation.getCurrentPosition(function(p){ m.textContent='現在地: 使えます（誤差 約'+Math.round(p.coords.accuracy)+' m。パソコンでは、ずれが大きいことがあります）。'; },
+      function(e){ m.textContent='現在地: 使えません（'+(e.code===1?'許可されていない':e.code===3?'時間切れ':'位置が分からない')+'）。「現在地へ」のボタンは使えませんが、地図のほかの機能は使えます。'; },{timeout:15000,maximumAge:600000}); });
+  runAll();
+})();
+</script>
+</body>
+</html>
