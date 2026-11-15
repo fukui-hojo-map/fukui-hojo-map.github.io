@@ -86,7 +86,13 @@ footer{margin-top:18px;font-size:.85rem;color:var(--sub)}
     {host:'raw.githubusercontent.com', need:2, what:'降った雨の量・前の年の圃場の中のようす（GitHub）',
      run:function(){ return json('https://raw.githubusercontent.com/fukui-hojo-map/fukui-hojo-map.github.io/rain-data/acc.json'); }},
     {host:'api.github.com', need:3, what:'降った雨の量を、いちばん新しく（GitHub。なくても、5分ほど古いもので動く）',
-     run:function(){ return json('https://api.github.com/rate_limit').then(function(j){ var c=j&&j.resources&&j.resources.core; if(!c) throw new Error('中身がちがう'); return c.remaining<10?'つながるが、この1時間の回数の上限に近い（残り '+c.remaining+' 回。同じ出口の端末の合計）':''; }); }},
+     run:function(){   // 地図と同じ読み先・同じ頼み方（Accept: raw）。残りの回数は、GitHub が見せてくれる見出し（x-ratelimit-remaining）で知る
+       return fetch('https://api.github.com/repos/fukui-hojo-map/fukui-hojo-map.github.io/contents/acc.json?ref=rain-data',{cache:'no-store',credentials:'omit',headers:{Accept:'application/vnd.github.raw'}}).then(function(r){
+         var left=r.headers.get('x-ratelimit-remaining');
+         if((r.status===403||r.status===429)&&left==='0') return 'つながるが、この1時間の回数の上限に当たっている（同じ出口の端末の合計。地図は、5分ほど古いもので動く）';
+         if(!r.ok) throw new Error('HTTP '+r.status);
+         return r.text().then(function(t){ try{ JSON.parse(t); }catch(e){ throw new Error('中身がちがう（止めた画面が返っている見込み）'); }
+           return left!=null&&+left<10?'つながるが、この1時間の回数の上限に近い（残り '+left+' 回。同じ出口の端末の合計）':''; }); }); }},
     {host:'fonts.googleapis.com / fonts.gstatic.com', need:3, what:'字の形（Google Fonts。なくても、端末の字で表示する）',
      run:function(){ return get('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@700&text=%E5%9C%83&display=swap').then(function(r){ return r.text(); }).then(function(css){
         var m=/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/.exec(css); if(!m) throw new Error('fonts.googleapis.com: 中身がちがう');
