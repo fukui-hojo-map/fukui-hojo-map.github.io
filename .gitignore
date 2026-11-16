@@ -1,3 +1,9 @@
 __pycache__/
 *.pyc
 state/
+# 計算のプログラムは非公開の置き場（fukui-hojo-map/hojo-pipeline）にあり、自動処理が実行のときだけ取り出す。公開の置き場には入れない
+/pipeline/
+/config.yaml
+/requirements.txt
+/requirements.in
+/_core/
