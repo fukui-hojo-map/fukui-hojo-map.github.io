@@ -32,6 +32,8 @@ jobs:
     permissions:
       contents: write
       actions: write          # 定期実行が止まらないようにする（下の最後のステップ）
+    env:
+      PYTHONPATH: ${{ github.workspace }}/pipeline/_quiet   # エラー・警告で、計算のプログラムのソースの行をログに出さない（公開の実行の記録はだれでも見られる）
     steps:
       - name: 日本時間で今日走るか決める（5〜9月は毎日、それ以外は月曜だけ。手動実行はいつでも）
         id: gate
@@ -48,6 +50,22 @@ jobs:
         if: steps.gate.outputs.run == '1'
         with:
           persist-credentials: false
+      # 計算のプログラムは非公開の置き場（fukui-hojo-map/hojo-pipeline）にある（2026-11 から）。実行のときだけ取り出して、前と同じ場所に置く。
+      # 取り出したものは公開のブランチには置かない（.gitignore にも書いてある）。読むトークン PIPELINE_TOKEN は、その置き場だけを読める（1年で作り直す）
+      - name: 計算のプログラムを取り出す（非公開の置き場から）
+        if: steps.gate.outputs.run == '1'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: fukui-hojo-map/hojo-pipeline
+          ref: main
+          token: ${{ secrets.PIPELINE_TOKEN }}
+          persist-credentials: false
+          path: _core
+      - name: 取り出したプログラムを置く
+        if: steps.gate.outputs.run == '1'
+        run: |
+          cp -r _core/pipeline _core/config.yaml _core/requirements.txt ./ && rm -rf _core
+          echo "計算のプログラム: $(find ./pipeline -type f | wc -l) ファイル"
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: steps.gate.outputs.run == '1'

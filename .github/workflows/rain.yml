@@ -4,7 +4,7 @@
 # 動かし方: GitHub の定時（schedule）は、このリポジトリでは3〜4時間も遅れる（weekly-ndvi で確認）。そこで、1回の実行を約5時間半つづけ、
 #   その間 1分ごとに気象庁の新しい解析・速報を見に行って（新しいものがなければ、すぐ次の待ちに入る）、終わりに自分で次の実行を起こす（workflow_dispatch は、GITHUB_TOKEN からでも起こせる）。
 #   気象庁の10分ごとの速報は、その時刻の 5〜7分あとに出る。1分ごとに見るので、画面に出るまでの遅れは、ふだん 7〜9分ほど。
-#   毎回、main の pipeline/ を読み直す（rain_acc.py を直したら、実行を止めなくても次の回から使う）。
+#   計算のプログラム（rain_acc.py）は非公開の置き場（fukui-hojo-map/hojo-pipeline）にあり、実行の初めに1回だけ取り出す（直したら、次の実行から使う）。
 #   定時（schedule）と push は、つながりが切れたときの立て直し用。
 #   見張り（watch）: 実行が途中で落ちる（実行の機械ごとなくなる など）と、終わりの「つぎの実行を起こす」が動かず、定時の立て直しまで何時間も止まる。
 #     そこで、同じ実行の中の別の仕事（watch）が、20分たったら次の実行を「待ち」に入れておく（concurrency で、いまの実行が終わるまで始まらない。
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['pipeline/rain_acc.py', '.github/workflows/rain.yml']
+    paths: ['.github/workflows/rain.yml']
 permissions:
   contents: write
   actions: write
@@ -35,9 +35,24 @@ jobs:
   acc:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    env:
+      PYTHONPATH: ${{ github.workspace }}/main/pipeline/_quiet   # エラー・警告で、計算のプログラムのソースの行をログに出さない（公開の実行の記録はだれでも見られる）
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with: { path: main, sparse-checkout: pipeline }
+      # 計算のプログラムは非公開の置き場（fukui-hojo-map/hojo-pipeline）にある（2026-11 から）。実行のときだけ取り出して、前と同じ場所に置く。
+      # 取り出したものは公開のブランチには置かない（.gitignore にも書いてある）。読むトークン PIPELINE_TOKEN は、その置き場だけを読める（1年で作り直す）
+      - name: 計算のプログラムを取り出す（非公開の置き場から）
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: fukui-hojo-map/hojo-pipeline
+          ref: main
+          token: ${{ secrets.PIPELINE_TOKEN }}
+          persist-credentials: false
+          path: _core
+          sparse-checkout: pipeline
+      - name: 取り出したプログラムを置く
+        run: |
+          mkdir -p main && cp -r _core/pipeline main/ && rm -rf _core
+          echo "計算のプログラム: $(find main/pipeline -type f | wc -l) ファイル"
       - name: 前回のデータ（rain-data）
         env: { TOKEN: '${{ github.token }}' }
         run: |
@@ -50,7 +65,6 @@ jobs:
           export RAIN_NOCHANGE_FILE="$RUNNER_TEMP/nochange"
           while :; do
             rm -f "$RAIN_NOCHANGE_FILE"
-            ( cd main && git fetch -q --depth 1 origin main && git reset -q --hard FETCH_HEAD ) || echo "main を読み直せなかった（前のまま使う）"
             # 1回で読むのは 4分まで（はじめに 48時間分の速報をためるときも、そのつど新しい結果を置く）
             if python3 -u main/pipeline/rain_acc.py --state data/cache --out data --budget 240 --max-new 80 > "$RUNNER_TEMP/log_now.txt" 2>&1; then FAILS=0; else FAILS=$((FAILS+1)); echo "失敗 ($FAILS)"; tail -n 20 "$RUNNER_TEMP/log_now.txt"; fi
             if [ ! -f "$RAIN_NOCHANGE_FILE" ] && [ "$FAILS" = 0 ]; then
