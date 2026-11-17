@@ -18,14 +18,14 @@ jobs:
     env:
       PYTHONPATH: ${{ github.workspace }}/main/pipeline/_quiet   # エラー・警告で、計算のプログラムのソースの行をログに出さない（公開の実行の記録はだれでも見られる）
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { path: main }
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { ref: gh-pages, path: pages }
       # 計算のプログラムは非公開の置き場（fukui-hojo-map/hojo-pipeline）にある（2026-11 から）。実行のときだけ取り出して、前と同じ場所に置く。
       # 取り出したものは公開のブランチには置かない（.gitignore にも書いてある）。読むトークン PIPELINE_TOKEN は、その置き場だけを読める（1年で作り直す）
       - name: 計算のプログラムを取り出す（非公開の置き場から）
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: fukui-hojo-map/hojo-pipeline
           ref: main

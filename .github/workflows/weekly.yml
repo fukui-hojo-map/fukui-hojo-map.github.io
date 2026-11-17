@@ -46,7 +46,7 @@ jobs:
             echo "今日（日本時間 ${m}月・曜日${w}）は更新しない日です"
           fi
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.run == '1'
         with:
           persist-credentials: false
@@ -54,7 +54,7 @@ jobs:
       # 取り出したものは公開のブランチには置かない（.gitignore にも書いてある）。読むトークン PIPELINE_TOKEN は、その置き場だけを読める（1年で作り直す）
       - name: 計算のプログラムを取り出す（非公開の置き場から）
         if: steps.gate.outputs.run == '1'
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: fukui-hojo-map/hojo-pipeline
           ref: main
@@ -67,7 +67,7 @@ jobs:
           cp -r _core/pipeline _core/config.yaml _core/requirements.txt ./ && rm -rf _core
           echo "計算のプログラム: $(find ./pipeline -type f | wc -l) ファイル"
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.run == '1'
         with:
           ref: gh-pages
@@ -82,7 +82,7 @@ jobs:
             echo "::error::公開中のデータ（gh-pages）を取り出せませんでした。空のデータで上書きしないよう中止します"; exit 1; fi
 
       # 機械のハマりやすさ（pipeline/wet.py）の衛星の乾きの合計。公開サイトの容量（1GB）を使わないよう、別のブランチ wet-state に置く
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.run == '1'
         with:
           ref: wet-state
@@ -100,7 +100,7 @@ jobs:
 
       # レーダー（ndvi.json の rp・rdates・rmask と、過去の年の radar.json。約230MB）は、公開サイトの1GB の上限に収めるため、別のブランチ radar-data に置く（pipeline/radar_store.py）。
       # 計算（NDVI の更新・作物の見分け）は、これまでどおりレーダーを含む形で行い、公開のときだけ外す。最初の1回は公開中のデータにレーダーが入っているので、そのまま radar-data に置く
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.run == '1'
         with:
           ref: radar-data
@@ -117,7 +117,7 @@ jobs:
 
       # 雲の見分け方を変えたときの計算し直し（例: 2026-11 の Earth Engine → open）は、何回かの実行に分かれることがある。
       # 途中のファイル（ndvi_next.json・cloudnear_next.json）は、公開サイトの容量（1GB）を使わないよう、別のブランチ rebuild-state に置く（終わったらブランチごと消す）
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.run == '1'
         with:
           ref: rebuild-state
