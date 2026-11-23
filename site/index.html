@@ -1271,7 +1271,7 @@ let selected=[];       // [{pid,color}]
 let excluded=new Set(), autoFlag={};
 let allDates=[];
 /* 読み込みの結果を覚える決まり（2026-11-12 全体点検）: ファイルが無い（404）ときは「無い」と覚える。通信が切れて読めなかったときは覚えない（次に使うとき、もう一度取りに行く）。前は、一度切れると、生育傾向マップが「まだ準備中」のまま戻らなかった */
-function fetchJ(u){ return fetch(u).then(r=>r.ok?r.json():null); }   /* 無い（404）は null。通信の失敗は、そのまま投げる */
+function fetchJ(u){ return fetch(u).then(r=>r.ok?r.json():r.status===404?null:Promise.reject(new Error(r.status+' '+u))); }   /* 無い（404）は null。通信の失敗と、503・429 などの一時の失敗は投げる（「無い」と覚えこまない。2026-11-23） */
 function cacheP(cache,key,make){ if(key in cache) return cache[key];   /* make(st): 読み込みを始める。なくてもよい部品が通信の失敗で読めなかったときは st.bad=true にする */
   const st={bad:false}, drop=()=>setTimeout(()=>{ if(cache[key]===p) delete cache[key]; },5000);   /* 通信の失敗は、5秒たってから忘れる（すぐ何度も取りに行かない） */
   const p=Promise.resolve().then(()=>make(st)).then(v=>{ if(st.bad){ p.bad=true; drop(); } return v; },()=>{ p.failed=true; drop(); return null; });   /* p.bad: 一部の部品が通信の失敗で欠けた */
@@ -3617,7 +3617,7 @@ async function loadCells(need){   // セル（区画・NDVI）を読み込む。
   await Promise.all(need.map(async c=>{
     loadedCells.add(c.id);
     try{
-      const [g,n]=await Promise.all([fetch(`${DATA}cells/${c.id}/parcels.geojson`).then(r=>r.json()), fetch(`${DATA}cells/${c.id}/ndvi.json`).then(r=>r.ok?r.json():{dates:[],p:{}})]);
+      const [g,n]=await Promise.all([fetch(`${DATA}cells/${c.id}/parcels.geojson`).then(r=>r.json()), fetch(`${DATA}cells/${c.id}/ndvi.json`).then(r=>r.ok?r.json():r.status===404?{dates:[],p:{}}:Promise.reject(new Error(r.status+' ndvi.json')))]);   /* 503 などは「観測が無い」にしない（読めなかったまとまりとして、読み直す。2026-11-23） */
       const full={}; for(const f of g.features){ f.properties.pid=String(f.properties.pid); full[f.properties.pid]=f.properties.full||1; }
       if(n.v===2){ // [添字, NDVI×1000, 有効画素率%] の並び。Landsat（ldates/lp）は同じ日に Sentinel-2 がなければ使う
         const by={}, put=(dates,p,src,cv=v=>v)=>{ for(const pid in p||{}){ const a=p[pid], m=by[pid]||(by[pid]=new Map()); for(let k=0;k<a.length;k+=3){ const d=dates[a[k]];
