@@ -1232,7 +1232,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
       <label style="display:none"><input type="checkbox" id="nbOn">近隣の田の平均も表示</label>
     </div>
     <div class="rankbox" id="rankBox"></div>
-    <div class="btnrow3"><button class="btn small" id="btnPng"><span>グラフを</span><span>画像で保存</span></button><button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（作物・NDVI。スコアマップのときは点数も）と、番号つきの地図を Excel に保存">Excelで保存</button><button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）"><span>日付を選んで</span><span>地図を出力</span></button></div>
+    <div class="btnrow3"><button class="btn small" id="btnPng"><span>グラフを</span><span>画像で保存</span></button><button class="btn small" id="btnXlsx" title="選んだ圃場の一覧（面積・NDVI）と、番号つきの地図を Excel に保存">Excelで保存</button><button class="btn small" id="btnSeries" title="選んだ圃場の NDVI の色分けを、選んだ日付ぶん、地図の画像にして出力します（NDVI の経過を見る）"><span>日付を選んで</span><span>地図を出力</span></button></div>
     <div class="raccbox" id="raccSel" hidden></div>
     <div class="raccbox" id="elevSel" hidden></div>
     <div class="ctl"><span class="hint" id="note"></span></div>
@@ -1274,7 +1274,7 @@ let allDates=[];
 function fetchJ(u){ return fetch(u).then(r=>r.ok?r.json():null); }   /* 無い（404）は null。通信の失敗は、そのまま投げる */
 function cacheP(cache,key,make){ if(key in cache) return cache[key];   /* make(st): 読み込みを始める。なくてもよい部品が通信の失敗で読めなかったときは st.bad=true にする */
   const st={bad:false}, drop=()=>setTimeout(()=>{ if(cache[key]===p) delete cache[key]; },5000);   /* 通信の失敗は、5秒たってから忘れる（すぐ何度も取りに行かない） */
-  const p=Promise.resolve().then(()=>make(st)).then(v=>{ if(st.bad) drop(); return v; },()=>{ p.failed=true; drop(); return null; });
+  const p=Promise.resolve().then(()=>make(st)).then(v=>{ if(st.bad){ p.bad=true; drop(); } return v; },()=>{ p.failed=true; drop(); return null; });   /* p.bad: 一部の部品が通信の失敗で欠けた */
   cache[key]=p; return p; }
 /* グラフ・Excel の「今年」＝作期（5/10〜9/30）の観測がある、いちばん新しい年。1月〜5月上旬に新しい年の観測が入っても、前の年の作期を出す（グラフを空にしない） */
 function seasonYear(a){ a=a||allDates; for(let i=a.length-1;i>=0;i--){ const md=String(a[i]).slice(5); if(md>='05-10'&&md<='09-30') return +String(a[i]).slice(0,4); } return a.length?+String(a[a.length-1]).slice(0,4):new Date().getFullYear(); }
@@ -2304,6 +2304,14 @@ function selLabel(pid){   // 選んだ田の呼び名（色と同じ番号: ①=
   const s=selected.find(x=>x.pid===pid); if(!s) return parcels[pid].name; const k=PALETTE.indexOf(s.color);
   return '選択中圃場'+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'[k]||String(k+1)); }
 function setStatus(m){ document.getElementById('status').textContent=m; }
+// 開いたままのアプリ（ホーム画面のアプリは開きっぱなしが多い）にもどったとき、30分以上たっていれば index.json を見て、新しいデータが出ていたら帯で知らせる（2026-11-23）。
+//   勝手には読み直さない（入力の途中かもしれないため）。「読み直す」を押したときだけ読み直す
+function newDataWatch(v0){ if(!v0||newDataWatch.on) return; newDataWatch.on=true; let t=Date.now(), told=false;
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden||told||Date.now()-t<18e5) return; t=Date.now();
+    fetch(DATA+'index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():null).then(j=>{ const v=j&&(j.updated||j.checked); if(!v||v===v0||told) return; told=true;
+      const b=document.createElement('div'); b.id='newData'; b.setAttribute('role','status'); b.style.cssText='position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2500;background:#1e3a2f;color:#fff;padding:8px 10px 8px 14px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.35);font-size:14px;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px)';
+      b.innerHTML='<span>新しい衛星データがあります</span><button type="button" class="btn small" data-k="go">読み直す</button><button type="button" class="btn small" data-k="x" aria-label="閉じる">×</button>';
+      b.querySelector('[data-k=go]').onclick=()=>location.reload(); b.querySelector('[data-k=x]').onclick=()=>b.remove(); document.body.appendChild(b); }).catch(()=>{}); }); }
 document.getElementById('btnClear').onclick=()=>{ selected=[]; if(window.__ote) window.__ote.clearAll(); refresh(); };   // 選んだ圃場と、重ねているお手本を、まとめて外す（お手本の登録は残る）
 
 // ---------- map coloring ----------
@@ -2622,11 +2630,17 @@ function csLoad(cell){ return cacheP(csCache,cell,()=>fetchJ(`${DATA}cells/${cel
 function trLoad(cell){ vigStatsLoad();
   return cacheP(trCache,cell,st=>{ const opt=u=>fetchJ(u).catch(()=>{ st.bad=true; return null; }), hp=histLoad(cell), cp=csLoad(cell);
     return Promise.all([fetchJ(`${DATA}cells/${cell}/trend.json`),opt(`${DATA}cells/${cell}/spring.json`),hp,cp,opt(`${DATA}cells/${cell}/vig.json`)]).then(async([m,sj,hj,cs,vg])=>{ if(hp.failed||cp.failed) st.bad=true;
-    if(!m) return vg?{m:{p:{},layers:[]},g:null,sj,hj,cs,vg}:null; if(!m.layers.length) return {m,g:null,sj,hj,cs,vg};
+    if(!m) return vg?{m:{p:{},layers:[]},g:null,sj,hj,cs,vg,bad:st.bad}:null; if(!m.layers.length) return {m,g:null,sj,hj,cs,vg,bad:st.bad};
     const img=new Image(); img.src=`${DATA}cells/${cell}/trend.png`; await img.decode();
     const c=document.createElement('canvas'); c.width=img.width; c.height=img.height; const x=c.getContext('2d',{willReadFrequently:true}); x.drawImage(img,0,0);
     const d=x.getImageData(0,0,c.width,c.height).data, g=new Uint8Array(c.width*c.height); for(let i=0;i<g.length;i++) g[i]=d[i*4];
-    return {m,g,sj,hj,cs,vg}; }); }); }
+    return {m,g,sj,hj,cs,vg,bad:st.bad}; }); }); }
+// 生育傾向のデータを読んで trReady に入れる。通信の失敗（全部・一部）は、間をあけて読み直す（5.5秒・11秒…最長60秒おき。2026-11-23）。
+//   以前は、1回失敗すると false を覚えたままで、地図を動かしても圃場が灰色のままだった。読めていたものを、あとの失敗で消さない
+const trFail={};
+function trFetch(cell){ const lp=trLoad(cell); lp.then(x=>{ const v=x||false; if(v||!trReady[cell]) trReady[cell]=v;
+    if(lp.failed||lp.bad){ const n=trFail[cell]=(trFail[cell]||0)+1; setTimeout(()=>trFetch(cell),Math.min(60000,5500*2**(n-1))); } else delete trFail[cell];
+    clearTimeout(paintT); paintT=setTimeout(paintMap,60); if(selected.length&&isTrend(fillMode())) drawChart(); }); }
 // ---------- 生育傾向マップ（例年の育ち）: cells/<id>/vig.json（pipeline/vigor.py） ----------
 // 稲の年ごとに「その年いちばん茂った時（出穂のころ）の NDVI」を、近く（約7km四方）の、同じころに植えて（NDVI が 0.5 を越えた日）
 // 同じころに刈った（0.45 未満に落ちた日）田の平均とくらべた差。品種・田植えの時期の違いはくらべる相手で消える。小さい田は縁が混ざって低く出る分を補正ずみ。
@@ -2643,7 +2657,10 @@ function vigOf(pid,r){   // {s: 田の値（NDVI の差。年が足りなけれ�
   const a=r&&r.vg&&r.vg.p&&r.vg.p[pid]; if(!a) return null;
   return {s:a[0]==null?null:a[0]/1000,yrs:a.slice(1).map(q=>({y:q[0],d:q[1]==null?null:q[1]/1000,vmax:q[2]/1000,n:q[3],t50:q[4],th:q[5]}))}; }
 let vigStats=null, vigStatsP=null;   // 県全体の田の値の分布。生育傾向のデータを初めて読むときに読む
-function vigStatsLoad(){ return vigStatsP||(vigStatsP=fetch(`${DATA}vig_stats.json`).then(r=>r.ok?r.json():null).then(j=>{ vigStats=j; if(j&&selected.length){ if(isTrend(fillMode())) drawChart(); } }).catch(()=>{})); }
+function vigStatsLoad(){ return vigStatsP||(vigStatsP=fetch(`${DATA}vig_stats.json`).then(r=>r.ok?r.json():null).then(j=>{ vigStats=j; try{ trendYearsFix(); }catch(e){} if(j&&selected.length){ if(isTrend(fillMode())) drawChart(); } }).catch(()=>{})); }
+function trendYearsFix(){ const n=vigStats&&vigStats.years?vigStats.years.length:0; if(!n||n===5) return;   // 説明の「過去5年間」を、データの年数に合わせる（2027年9月から6年になる）
+  const f=t=>t.replace('過去5年間',`過去${n}年間`); MODE_DESC.trend=f(MODE_DESC.trend); MODE_HEAD.trend.d=f(MODE_HEAD.trend.d);
+  const el=document.getElementById('modeHead'); if(el&&isTrend(fillRaw())){ el.dataset.k=''; renderModeHead(); const d=document.getElementById('modeDesc'); if(d&&fillRaw()==='trend') d.textContent=MODE_DESC.trend; } }
 const vigLevel=s=>s==null?'':s>=0.02?'よく育つ':s>=0.008?'やや よく育つ':s>-0.01?'近くの田なみ':s>-0.03?'やや弱い':'弱い';   // 例年の育ちの目安（ことば）
 const vigTxt=s=>s==null?'—':(s>=0?'+':'−')+Math.abs(s).toFixed(3);
 const vigOdd=V=>{ const a=V?V.yrs.filter(q=>q.d!=null):[]; return a.length>=2&&a.reduce((x,q)=>x+q.vmax,0)/a.length<0.65; };   // 稲の年の頭打ちの平均が 0.65 未満（ふつうの稲は 0.8 前後）
@@ -2667,7 +2684,7 @@ function drawVig(pid,r){   // 田の値＋田の中の濃淡を塗る。戻り�
 const trReady={}; let paintT=0;
 function trendFill(pid){   // 田全体の例年の育ち（vig.json の田の値）。読み込み前は読み込みを始めて null
   const P=parcels[pid]; if(!P||!P.cell) return null;
-  const r=trReady[P.cell]; if(r===undefined){ trReady[P.cell]=null; trLoad(P.cell).then(x=>{ trReady[P.cell]=x||false; clearTimeout(paintT); paintT=setTimeout(paintMap,60); }); }
+  const r=trReady[P.cell]; if(r===undefined){ trReady[P.cell]=null; trFetch(P.cell); }
   if(!r) return null; const V=vigOf(pid,r); return V?V.s:null; }
 const spMemo=new Map();
 function seasonMins(pid,r){   // {sp:{年: 4/15〜6/10 の最小}, au:{年: 8/15〜10/15 の最小}}（晴れた日＝区画の8割以上の区画の NDVI）
@@ -2758,10 +2775,10 @@ function onParcelTap(pid){ if(window.__ote&&window.__ote.tap(pid)) return;   // 
     selected=[]; toggleSelect(pid); return; }
   if(SHOW_PLAN&&fillMode()==='plan'&&typeof planTap==='function') return planTap(pid); toggleSelect(pid); }
 async function renderTrend(gen,mode,note,lbl){
-  const ranked=[]; let one=null, wait=0, few=0; note.textContent='読み込み中…';
+  const ranked=[]; let one=null, wait=0, few=0, lost=0; note.textContent='読み込み中…';
   for(const s of selected){ const P=parcels[s.pid]; if(!P||!P.cell){ wait++; continue; }
-    const r=await trLoad(P.cell); if(gen!==pxGen) return;
-    if(!r){ wait++; continue; }
+    const lp=trLoad(P.cell), r=await lp; if(gen!==pxGen) return;
+    if(!r||(r.bad&&!r.vg)){ if(lp.failed||lp.bad) lost++; else wait++; continue; }   // 通信の失敗で vig.json が欠けた結果では描かない（「稲の年が0回」など、まちがった理由が出ていた。2026-11-23）
     trReady[P.cell]=r;
     const o=ovDraw(s.pid+'|v',()=>drawVig(s.pid,r)); one={pid:s.pid,r,o};
     if(o){ if(!o.none){ P.layer.setStyle({fillOpacity:0}); P.layer._stk=''; }
@@ -2773,10 +2790,12 @@ async function renderTrend(gen,mode,note,lbl){
   if(selected.length===1&&one){ const V=vigOf(one.pid,one.r), cr=cropsOf(one.pid,one.r), ok=V?V.yrs.filter(q=>q.d!=null).map(q=>q.y):[];
     const ex=[['麦','麦'],['休','休耕か草'],['他','その他']].map(([k,n])=>{ const ys=Object.keys(cr).filter(y=>cr[y]===k).sort(); return ys.length?`${n} ${ys.join('・')}`:''; }).filter(Boolean).join('、');
     const yNow=allDates.length?allDates[allDates.length-1].slice(0,4):'', later=cr[yNow]==='稲'&&vigStats&&!(vigStats.years||[]).includes(+yNow)?`（${yNow}年の分は9月下旬に加わります）`:'';
-    if(one.o) msg.push(`稲の年 ${ok.join('・')}（${ok.length}回）の、いちばん茂った時をくらべています${one.o.flat?'（田の中の濃淡は出せない大きさです）':''}${later}`);
+    const miss=Object.keys(cr).filter(y=>cr[y]==='稲'&&!ok.includes(+y)&&(!later||y!==yNow)).sort(), more=[ex?`稲でない年: ${ex}`:'',miss.length?`くらべられなかった稲の年: ${miss.join('・')}`:''].filter(Boolean).join('。');
+    if(one.o) msg.push(`稲の年 ${ok.join('・')}（${ok.length}回）の、いちばん茂った時をくらべています${one.o.flat?'（圃場の中の濃淡は出せない大きさです）':''}${more?`（${more}）`:''}${later}`);
     else msg.push(`くらべられた稲の年が${ok.length}回しかないため出せません（2回以上必要${ex?`。${ex}`:''}）${later}`); }
   else if(few) msg.push(`出せない田 ${few}枚（くらべられた稲の年が2回に足りない）`);
   if(wait) msg.push(`まだ準備中 ${wait}枚`);
+  if(lost){ msg.push(`読み込めなかった圃場 ${lost}枚（通信を確かめてください。自動で読み直します）`); setTimeout(()=>{ if(gen===pxGen) renderPx(); },6000); }
   note.textContent=msg.join(' / ');
   drawChart();
 }
@@ -2784,14 +2803,14 @@ const MODE_DESC={   // 表示モードごとのひとこと説明
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
   rel:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',
   trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
-  elev:'圃場の標高を色にします（青＝低い・赤＝高い）。いま画面に見えている圃場どうしを同じ物差しでくらべるので、高い圃場ほど赤く、順番が入れかわることはありません。色の高さ（m）は凡例に出ます。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと右の表に出ます。その後の圃場整備・盛土は反映されません。',
-  elevr:'一枚の圃場の中の高低差を、圃場ごとに色の幅を合わせて7段階に塗ります。色は、その圃場の中央値（真ん中の高さ）との差で、最低±10cm。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと右の表に出ます。測量から年がたっているため、数cmの細かい凹凸は今の圃場と違うことがあります（傾きや大きなくぼみの目安として）。'};
+  elev:'圃場の標高を色にします（青＝低い・赤＝高い）。いま画面に見えている圃場どうしを同じ物差しでくらべるので、高い圃場ほど赤く、順番が入れかわることはありません。色の高さ（m）は凡例に出ます。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと表に出ます。その後の圃場整備・盛土は反映されません。',
+  elevr:'一枚の圃場の中の高低差を、圃場ごとに色の幅を合わせて7段階に塗ります。色は、その圃場の中央値（真ん中の高さ）との差で、最低±10cm。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと表に出ます。測量から年がたっているため、数cmの細かい凹凸は今の圃場と違うことがあります（傾きや大きなくぼみの目安として）。'};
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
 const MODE_HEAD={
   abs:{t:'絶対表示',d:'稲の生育量の指標｢NDVI(植生指数)｣を色表示。絶対表示は、他圃場との比較に便利です。'},
   rel:{t:'相対表示',d:'圃場内のNDVIを強制的に7段階に色分け。圃場内の生育ムラを分かりやすく見たいときに役立ちます。'},
-  trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った田','田をタップすると、その田の数字が右に出ます']},
-  elev:{t:'高低差マップ',d:'圃場の標高を色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの圃場との比較に。',how:['色は、いま画面に見えている圃場どうしの高さのくらべ（同じ物差し。高い圃場ほど赤い）。色の高さ（m）は左下の凡例に出ます','広くくらべるときは地図を縮小、近所だけなら拡大','圃場をタップすると標高が右に出ます（2枚以上なら1枚目との差も）','標高の誤差は±数十cm。数cmの差は目安です']},
+  trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った圃場','圃場をタップすると、その圃場の数字がグラフの所に出ます']},
+  elev:{t:'高低差マップ',d:'圃場の標高を色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの圃場との比較に。',how:['色は、いま画面に見えている圃場どうしの高さのくらべ（同じ物差し。高い圃場ほど赤い）。色の高さ（m）は左下の凡例に出ます','広くくらべるときは地図を縮小、近所だけなら拡大','圃場をタップすると標高が表に出ます（2枚以上なら1枚目との差も）','標高の誤差は±数十cm。数cmの差は目安です']},
   elevr:{t:'高低差マップ（相対表示）',d:'一枚の圃場の中の高低差（傾きも）を、圃場ごとに色の幅を合わせて7段階に色分けします。圃場内のばらつきの確認に。',how:['地図を拡大（見えている圃場の中）、または圃場をタップ','色の幅は、その圃場の中央値から圃場ごとに自動（最低±10cm）。縁5mは除く','標高の誤差は±数十cm。数cmの差は目安です']}};
 function renderModeHead(){ const el=document.getElementById('modeHead'), k=fillRaw(), m=MODE_HEAD[k]; if(!el||el.dataset.k===k) return; el.dataset.k=k;
   el.innerHTML=m?`<div class="topbox"><div class="tbhead"><h2>${m.t}</h2><div class="tbsub">${m.d}</div>${m.how?`<ol class="mhow">${m.how.map(x=>`<li>${x}</li>`).join('')}</ol>`:''}${m.extra||''}</div></div>`:''; }
@@ -2837,7 +2856,7 @@ async function renderBulk(gen,mode,note){   // 選んでいない、見えてい
     else if(ev){ const e=await elevLoad(pid); if(gen!==pxGen) return; o=e===undefined?false:e?ovDraw(key,()=>drawElev(pid,e)):ovDraw(key,()=>false); }
     else { const r=px?await pxLoad(P.cell,d.slice(0,4)):await trLoad(P.cell); if(gen!==pxGen) return;
       if(px){ const k=r&&r.g?r.m.dates.indexOf(d):-1; o=k>=0?ovDraw(key,()=>drawPx(pid,r,k,mode)):null; }
-      else o=r?ovDraw(key,()=>drawVig(pid,r)):null; }
+      else o=r&&!(r.bad&&!r.vg)?ovDraw(key,()=>drawVig(pid,r)):null; }
     if(o&&!o.none){ P.layer.setStyle({fillOpacity:0}); P.layer._stk=''; } else if(px&&pkg.series&&pkg.series[pid]) noPhoto.push(pid);   // 絵が出なかった稲の田＝この日の画像がない
     if(performance.now()-t0>40){ await new Promise(r=>setTimeout(r)); if(gen!==pxGen) return; t0=performance.now(); } }
   if(pids.length>BULK_MAX&&!note.textContent) note.textContent=`見えている圃場のうち中心に近い${BULK_MAX}枚を色分けしています`;
@@ -2929,7 +2948,7 @@ function drawChart(){
 function drawVigChart(svg){   // 生育傾向マップのときのグラフ: 稲の年ごとの「近くの同じ作期の田との差」（いちばん茂った時の NDVI）と、例年の値（地図の色）
   hoverPts=[]; const rows=[]; let wait=0;
   for(const s of selected){ const P=parcels[s.pid]; if(!P||!P.cell) continue; const r=trReady[P.cell];
-    if(!r){ if(r===undefined){ trReady[P.cell]=null; trLoad(P.cell).then(x=>{ trReady[P.cell]=x||false; drawChart(); }); } if(r!==false) wait++; continue; }
+    if(!r){ if(r===undefined){ trReady[P.cell]=null; trFetch(P.cell); } if(r!==false||trFail[P.cell]) wait++; continue; }
     rows.push({s,V:vigOf(s.pid,r)}); }
   if(wait) setStatus('読み込み中…');
   const ys=[...new Set([...(vigStats&&vigStats.years||[]),...rows.flatMap(q=>q.V?q.V.yrs.map(a=>a.y):[])])].sort();
@@ -3319,11 +3338,7 @@ async function exportRows(){   // 田ごとの行（点数はスコアマップ�
     o.area=polyArea(P.feature.geometry)/100; const c=P.layer.getBounds().getCenter(); o.lat=c.lat; o.lon=c.lng;
     const ser=seriesOf(s.pid).filter(q=>!q.rad), last=ser[ser.length-1], yr=ser.filter(q=>q.date.startsWith(y)), mx=yr.length?yr.reduce((a,b)=>b.ndvi>a.ndvi?b:a):null;
     o.last=last; o.max=mx;
-    if(P.cell){ const sc=SHOW_RANK&&fillMode()==='score'&&typeof rankParts==='function', [r,sh,wz,wl]=await Promise.all([trLoad(P.cell),sc&&shapeLoad(P.cell),sc&&wetLoad(P.cell),sc&&wildLoad(P.cell)]);
-      if(r){ const cr=cropsOf(s.pid,r); o.crops={}; for(const k in cr){ o.crops[k]=CN[cr[k]]??cr[k]; years.add(k); }
-        o.vig=vigOf(s.pid,r); const t=drawTrend(s.pid,r);
-        if(t.span&&sc){ const p=rankParts(s.pid,r,t,sh&&sh.p&&sh.p[s.pid],hamaOf(s.pid,t.deep,wz,wl&&wl.p&&wl.p[s.pid])), mt=await wildRisk(s.pid);
-          const sc=Math.round(p.base-(mt&&mt.pen||0)); o.rank={sc,rk:rankOf(s.pid,sc).rk==='TOP'?`Rank ${rankOf(s.pid,sc).n}（県${rankOf(s.pid,sc).n}位）`:rankOf(s.pid,sc).rk,p,mt,text:rankText(p,mt).join(' ')}; } } }
+    // 作物・例年の育ち・点数の列は、いまの一覧には無い（2026-11-23: 使わない生育傾向のデータを、まとまりごとに読んでいたのをやめた）
     out.push(o); }
   return {rows:out,years:[...years].sort()};
 }
@@ -3485,9 +3500,9 @@ document.getElementById('btnSeries').onclick=()=>{
   setStatus(''); const MAX=24, ov=document.createElement('div'); ov.className='sx';
   ov.innerHTML=`<div role="dialog" aria-label="日付を選んで地図を出力"><h3>日付を選んで、地図を出力</h3>
     <p>選んだ圃場（${selected.length}枚）の、NDVI の色分け（${fm==='rel'?'相対表示':'絶対表示'}）を、選んだ日付ぶん、同じ範囲・同じ番号の地図にします。日付は、衛星の画像がある日です。</p>
-    <div class="sxb"><button class="btn small" data-q="all">全部</button><button class="btn small" data-q="year">今年だけ</button><button class="btn small" data-q="none">解除</button></div>
-    <div class="sxd">${(()=>{ const ly=+dates[dates.length-1].slice(0,4); let h='', y0=''; for(const d of dates.slice().reverse()){ const y=d.slice(0,4);   // 新しい日から。年ごとに見出しと色を分ける
-        if(y!==y0){ y0=y; h+=`<div class="sxy ${+y===ly?'now':'old'}">${y}年${+y===ly?'（今年）':+y===ly-1?'（昨年）':''}</div>`; }
+    <div class="sxb"><button class="btn small" data-q="all">全部</button><button class="btn small" data-q="year">${+dates[dates.length-1].slice(0,4)===new Date(Date.now()+9*36e5).getUTCFullYear()?'今年':dates[dates.length-1].slice(0,4)+'年'}だけ</button><button class="btn small" data-q="none">解除</button></div>
+    <div class="sxd">${(()=>{ const ly=+dates[dates.length-1].slice(0,4), nowY=new Date(Date.now()+9*36e5).getUTCFullYear(); let h='', y0=''; for(const d of dates.slice().reverse()){ const y=d.slice(0,4);   // 新しい日から。年ごとに見出しと色を分ける
+        if(y!==y0){ y0=y; h+=`<div class="sxy ${+y===ly?'now':'old'}">${y}年${+y===nowY?'（今年）':+y===nowY-1?'（昨年）':''}</div>`; }
         h+=`<label class="${+y===ly?'now':'old'}"><input type="checkbox" value="${d}" ${d===cd.value?'checked':''}> ${d}</label>`; } return h; })()}</div>
     <div class="sxm" id="sxm"></div>
     <div class="sxb"><button class="btn primary" data-o="sheet">1枚にまとめて保存（PNG）</button><button class="btn" data-o="zip">日付ごとに保存（ZIP）</button><button class="btn" data-o="close">閉じる</button></div></div>`;
@@ -3551,14 +3566,18 @@ function cullCells(){
   if(changed||!shownPids){ shownPids=[]; for(const id in cellShown) if(cellShown[id]) for(const l of cellLayers[id]) shownPids.push(l._pid); }
   return changed; }
 async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一覧を読み込んでいます','');   // 起動の画面の進み
-  try{ index=await (window.__idx||Promise.reject()).catch(()=>fetch(DATA+'index.json',{cache:'no-cache'}).then(r=>r.json())); }catch(e){ setStatus('data/index.json が読めません。配信先の設定を確認してください。'); if(BT) BT.finish(); return; }
+  for(let k=0;k<3&&!index;k++){   // 通信の失敗は、3回までやり直す（2026-11-23。以前は1回で止まり、白い地図に「拡大すると区画が表示されます」と出たままだった）
+    try{ index=await ((k?null:window.__idx)||Promise.reject()).catch(()=>fetch(DATA+'index.json',{cache:'no-cache'}).then(r=>{ if(!r.ok) throw 0; return r.json(); })); }catch(e){ index=null; if(k<2) await new Promise(r=>setTimeout(r,1500*(k+1))); } }
+  if(!index){ const m='圃場のデータを読み込めませんでした。通信を確かめて、ページを読み直してください。'; setStatus(m); const h=document.getElementById('maphint'); if(h){ h.textContent=m; h.classList.remove('hidden'); } if(BT) BT.finish(); return; }
   if(BT){ BT.mark('index'); BT.stage(30,38,'地図を準備しています',''); }
   pkg={meta:{name:'',source:index.source||'Sentinel-2 L2A',attribution:'Contains modified Copernicus Sentinel data'},parcels:{type:'FeatureCollection',features:[]},series:{},radar:{},near:{}};   // near: 雲の近くの観測（参考。薄い灰色の点）
   geoLayer=L.geoJSON([], {style:()=>({color:'#fff',weight:1,opacity:.8,fillColor:'#888',fillOpacity:.35}),
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
       l._pid=pid; l.on('click',()=>onParcelTap(pid)); } }).addTo(map);
   const md=x=>x?`${+x.slice(0,4)!==new Date(Date.now()+9*36e5).getUTCFullYear()?x.slice(0,4)+'年':''}${+x.slice(5,7)}/${+x.slice(8,10)}`:'', LT=index.latest||{}, chk=index.checked||index.updated||'';   /* 今年でない日は、年を書く（冬に開くと、去年の日と分からなかった） */
-  document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+``;
+  const chkT=Date.parse(chk)||0, mNow=new Date(Date.now()+9*36e5).getUTCMonth()+1, stale=chkT&&(Date.now()-chkT)/864e5>(mNow>=4&&mNow<=9?6:16);   // 2026-11-23
+  document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+(stale?`（データの更新が止まっています。最後の確認 ${md(chk.slice(0,10))}）`:'');
+  newDataWatch(index.updated||chk);
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
   setFoot('データ: '+(index.source||'Sentinel-2')+'。Contains modified Copernicus Sentinel data。地図: 国土地理院（地理院タイル〔航空写真・淡色地図〕・地名のベクトルタイル）。重ねる地図（洪水・土砂災害・津波の想定）: ハザードマップポータルサイト（国土交通省・国土地理院）。雨雲・雨量: 気象庁ホームページ（高解像度降水ナウキャスト・降水短時間予報・解析雨量）。区画: 農林水産省 筆ポリゴン。土壌: 農研機構 日本土壌インベントリー（CC BY 4.0）。標高・高低差マップ: 国土地理院 標高タイル（基盤地図情報 数値標高モデル）を加工して作成。NDVIは10m画素の区画平均で、0.8〜0.9で頭打ちになります。雲の影響を完全には除けないので、判断は現地の観察と合わせてください。');
   const h=parseHash();
