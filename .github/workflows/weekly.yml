@@ -174,7 +174,7 @@ jobs:
       - name: 最新の画面を取り込む（この更新の途中で site.yml が画面だけ出していても、古い画面で上書きしない）
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
-        run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -E '\.(html|svg|png|ico|webmanifest)$')
+        run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -vx 'site/data')
       - name: レーダーのデータを radar-data ブランチに置く
         id: radar1
         if: steps.gate.outputs.run == '1'
@@ -251,7 +251,7 @@ jobs:
       - name: 最新の画面を取り込む（この更新の途中で site.yml が画面だけ出していても、古い画面で上書きしない）
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
-        run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -E '\.(html|svg|png|ico|webmanifest)$')
+        run: git fetch -q origin main && git checkout FETCH_HEAD -- $(git ls-tree --name-only FETCH_HEAD site/ | grep -vx 'site/data')
       - name: レーダーのデータを radar-data ブランチに置く（作物の見分けのあとの分）
         id: radar2
         if: steps.gate.outputs.run == '1' && (steps.crop.outcome == 'success' || steps.vig.outcome == 'success' || steps.elev.outcome == 'success' || (steps.trend.outputs.made != '' && steps.trend.outputs.made != '0'))

@@ -3575,7 +3575,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
       l._pid=pid; l.on('click',()=>onParcelTap(pid)); } }).addTo(map);
   const md=x=>x?`${+x.slice(0,4)!==new Date(Date.now()+9*36e5).getUTCFullYear()?x.slice(0,4)+'年':''}${+x.slice(5,7)}/${+x.slice(8,10)}`:'', LT=index.latest||{}, chk=index.checked||index.updated||'';   /* 今年でない日は、年を書く（冬に開くと、去年の日と分からなかった） */
-  const chkT=Date.parse(chk)||0, mNow=new Date(Date.now()+9*36e5).getUTCMonth()+1, stale=chkT&&(Date.now()-chkT)/864e5>(mNow>=4&&mNow<=9?6:16);   // 2026-11-23
+  const chkT=Date.parse(chk)||0, mNow=new Date(Date.now()+9*36e5).getUTCMonth()+1, stale=chkT&&(Date.now()-chkT)/864e5>(mNow>=5&&mNow<=9?8:16);   // 2026-11-23: 5〜9月（毎日の更新）は8日、ほかの月（週1回）は16日
   document.getElementById('meta').textContent=`${index.n_parcels?.toLocaleString()||''}区画`+(LT.s2?` / 最新の撮影 Sentinel-2 ${md(LT.s2)}${LT.ls?'・Landsat '+md(LT.ls):''}`:'')+(stale?`（データの更新が止まっています。最後の確認 ${md(chk.slice(0,10))}）`:'');
   newDataWatch(index.updated||chk);
   if(chk) provFrom=new Date(Date.parse(chk.slice(0,10)+'T00:00:00Z')-5*864e5).toISOString().slice(0,10);   // 最後の確認から5日以内の観測は速報
