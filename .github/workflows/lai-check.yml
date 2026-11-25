@@ -1,0 +1,73 @@
+name: lai-check
+# LAI（葉の量。pipeline/lai.py）を、1つのセルだけで試す（公開はしない）。
+# 定期処理（weekly.yml）のログは公開ファイルの一覧で長く、途中の段のエラーが読みにくいので、うまく動かないときの原因を見るのに使う（2026-11-25）
+on:
+  workflow_dispatch:
+    inputs:
+      cell:
+        description: '試すセルID（例 5451_2163）'
+        default: '5451_2163'
+concurrency:
+  group: lai-check
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: ${{ github.workspace }}/pipeline/_quiet   # エラーでソースの行をログに出さない（公開の実行の記録はだれでも見られる）
+      CELL: ${{ inputs.cell }}   # 入力はシェルの文に直接書かず、環境変数で渡す
+    steps:
+      - name: 計算のプログラムを取り出す（非公開の置き場から）
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: fukui-hojo-map/hojo-pipeline
+          ref: main
+          token: ${{ secrets.PIPELINE_TOKEN }}
+          persist-credentials: false
+          path: _core
+      - name: 取り出したプログラムを置く
+        run: cp -r _core/pipeline _core/config.yaml _core/requirements.txt ./ && rm -rf _core
+      - name: 1つのセルのデータを取り出す（公開中のデータと、計算用のファイル）
+        run: |
+          [[ "$CELL" =~ ^[0-9]{4}_[0-9]{4}$ ]] || { echo "::error::セルIDの形がちがいます"; exit 1; }
+          R=https://raw.githubusercontent.com/fukui-hojo-map/fukui-hojo-map.github.io
+          mkdir -p "site/data/cells/$CELL"
+          curl -fsSL -o site/data/index.json "$R/gh-pages/data/index.json"
+          for f in ndvi.json parcels.geojson; do curl -fsSL -o "site/data/cells/$CELL/$f" "$R/gh-pages/data/cells/$CELL/$f"; done
+          curl -fsSL -o "site/data/cells/$CELL/inner.geojson" "$R/calc-data/cells/$CELL/inner.geojson"
+          ls -la "site/data/cells/$CELL"
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Earth Engine の計算を SNAP の確かめ用の例と比べる
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: python pipeline/lai.py --self-test
+      - name: 1つのセルの LAI を計算する
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: python pipeline/lai.py --data site/data --cells "$CELL" --max-minutes 10 --workers 1
+      - name: できた LAI のあらまし（月ごとの区画の LAI の中央値など）
+        run: |
+          python - <<'EOF'
+          import json, os, statistics as st
+          c = os.environ["CELL"]; p = f"site/data/cells/{c}/lai.json"
+          if not os.path.exists(p):
+              print("lai.json はできていません"); raise SystemExit(0)
+          j = json.load(open(p)); print("mask", j["mask"], "日数", len(j["dates"]), "区画", len(j["p"]), "大きさ", os.path.getsize(p))
+          by = {}
+          for a in j["p"].values():
+              for k in range(0, len(a), 2):
+                  by.setdefault(j["dates"][a[k]][:7], []).append(a[k + 1] / 100)
+          for m in sorted(by):
+              v = sorted(by[m]); print(m, "観測", len(v), "中央値", round(st.median(v), 2), "90%", round(v[int(0.9 * (len(v) - 1))], 2), "最大", max(v))
+          EOF
