@@ -98,6 +98,68 @@ jobs:
       - run: pip install -r requirements.txt
         if: steps.gate.outputs.run == '1'
 
+      # 衛星データは Google Earth Engine で計算する（2026-11-25 に戻した。config.yaml の s2_backend: gee。11/14〜11/25 は Earth Engine なし＝open）。
+      # 鍵（EE_*）がない・使えないときは、ここで止める（データは変えない。地図は前のまま）
+      - name: Earth Engine の鍵を確かめる
+        if: steps.gate.outputs.run == '1'
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+        run: |
+          python - <<'EOF'
+          import os, sys
+          sys.path.insert(0, "pipeline")
+          from common import load_config, pick_backend
+          cfg = load_config()
+          if pick_backend(cfg) != "gee":
+              print("Earth Engine を使わない設定（open）です"); sys.exit(0)
+          if not (os.environ.get("EE_SERVICE_ACCOUNT") and os.environ.get("EE_PRIVATE_KEY")):
+              print("::error::Earth Engine の鍵（シークレット EE_SERVICE_ACCOUNT・EE_PRIVATE_KEY・EE_PROJECT）がありません。入れてから、もう一度動かしてください（データは変えていません）"); sys.exit(1)
+          from update_ndvi import GEEBackend
+          GEEBackend(cfg)
+          import ee
+          print("Earth Engine につながりました:", ee.Number(1).add(1).getInfo() == 2)
+          EOF
+
+      # Earth Engine なし（open）のころの田の NDVI・近くの雲の割合は、雲の見分け方の名前がちがうので、そのままでは全期間（24か月）を Earth Engine で計算し直しになる（何日もかかる）。
+      # そこで、切り替える前に残した Earth Engine のころの公開データ（backup-gee-20261114-gh-pages）に戻して、そのあとの日だけを計算する。方式が同じセルは何もしない（2回目からは何もしない）
+      - name: Earth Engine のころのデータに戻す（方式がちがうセルだけ。1回だけ）
+        if: steps.gate.outputs.run == '1'
+        run: |
+          python - <<'EOF'
+          import json, os, subprocess, sys
+          sys.path.insert(0, "pipeline")
+          from common import load_config, pick_backend
+          cfg = load_config()
+          if pick_backend(cfg) != "gee":
+              sys.exit(0)
+          import update_ndvi, cloudnear
+          mid, D, B = update_ndvi.s2_mask_id(cfg), "site/data", "backup-gee-20261114-gh-pages"
+          rd = lambda p: json.load(open(p)) if os.path.exists(p) else {}
+          ids = [c["id"] for c in rd(f"{D}/index.json")["cells"]]
+          need = [i for i in ids if rd(f"{D}/cells/{i}/ndvi.json").get("mask") != mid]
+          cn = rd(f"{D}/cloudnear.json"); cn_need = bool(cn) and cn.get("mask") != cloudnear.MASK
+          if not need and not cn_need:
+              print("Earth Engine のデータのままです。戻すものはありません"); sys.exit(0)
+          subprocess.run(["git", "fetch", "-q", "--depth=1", "origin", B], check=True)
+          def old(path):
+              r = subprocess.run(["git", "show", f"FETCH_HEAD:{path}"], capture_output=True)
+              return r.stdout if r.returncode == 0 else None
+          n, skip = 0, []
+          for i in need:
+              b = old(f"data/cells/{i}/ndvi.json"); j = json.loads(b) if b else {}
+              if j.get("v") == 2 and j.get("mask") == mid:
+                  open(f"{D}/cells/{i}/ndvi.json", "wb").write(b); n += 1
+              else:
+                  skip.append(i)        # 写しにない・方式がちがう: update_ndvi が全期間を計算し直す
+          print(f"田の NDVI: {n} セルを Earth Engine のころのデータに戻しました（写しにないセル {len(skip)}: {skip[:10]}）")
+          if cn_need:
+              b = old("data/cloudnear.json"); j = json.loads(b) if b else {}
+              if j.get("mask") == cloudnear.MASK:
+                  open(f"{D}/cloudnear.json", "wb").write(b); print("近くの雲の割合も戻しました")
+          EOF
+
       # レーダー（ndvi.json の rp・rdates・rmask と、過去の年の radar.json。約230MB）は、公開サイトの1GB の上限に収めるため、別のブランチ radar-data に置く（pipeline/radar_store.py）。
       # 計算（NDVI の更新・作物の見分け）は、これまでどおりレーダーを含む形で行い、公開のときだけ外す。最初の1回は公開中のデータにレーダーが入っているので、そのまま radar-data に置く
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -135,11 +197,13 @@ jobs:
         if: ${{ steps.gate.outputs.run == '1' && (inputs.rebuild_cells == true || hashFiles('site/data/index.json') == '') }}
         run: python pipeline/build_cells.py
 
-      # 衛星データは Google Earth Engine を使わずに取る（2026-11 から。config.yaml の s2_backend: open）。
-      #   Sentinel-2: AWS の公開データ（鍵はいらない）。レーダー: Copernicus Data Space（下の2つのシークレットがあるときだけ。なければ、今ある分を残して先へ進む）
+      # 衛星データは Google Earth Engine で計算する（EE_*）。config.yaml を open にしたときは、Sentinel-2 は AWS の公開データ、レーダーは Copernicus Data Space（CDSE_*。なければ、今ある分を残す）
       - name: NDVI を更新
         if: steps.gate.outputs.run == '1'
         env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
           CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
           CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
           MAX_MINUTES: ${{ inputs.max_minutes || '300' }}   # 入力はシェルの文に直接書かず、環境変数で渡す
@@ -148,12 +212,16 @@ jobs:
           python pipeline/update_ndvi.py --max-minutes "$MAX_MINUTES" --workers 4 ${{ inputs.full && '--full' || '' }}
 
       # 近くの雲の割合（pipeline/cloudnear.py → data/cloudnear.json）。画面が、6〜9月に「まわり3kmの99%以上が雲」の日の観測を使わないための材料。
-      # 計算済みの日は飛ばす。方式を変えたとき（Earth Engine → open）は、cloudnear_next.json に全部の日を作ってから入れ替える（それまでは前のファイルを使う）。
+      # 計算済みの日は飛ばす。方式を変えたとき（Earth Engine ↔ open）は、cloudnear_next.json に全部の日を作ってから入れ替える（それまでは前のファイルを使う）。
       # 失敗しても前回のファイルが残るだけで、ほかは止めない
       - name: 近くの雲の割合を計算する
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
         timeout-minutes: 40
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: python pipeline/cloudnear.py --max-minutes 30 --workers 4
 
       - name: 計算し直しの途中のファイルを rebuild-state ブランチに置く（公開サイトには出さない）
@@ -203,11 +271,14 @@ jobs:
         if: steps.gate.outputs.run == '1'
         continue-on-error: true
         env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
           CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
           CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
         run: python pipeline/trend.py --deadline $(( ${{ steps.gate.outputs.t0 }} + 300 * 60 )) --workers 4
 
-      # 作物の見分け（稲・麦・休耕か草・その他）。全部の田・年を、そろったデータから見分け直す（4コアで4分ほど。Earth Engine は使わない）
+      # 作物の見分け（稲・麦・休耕か草・その他）。全部の田・年を、そろったデータから見分け直す（4コアで4分ほど。この段は Earth Engine を使わない）
       # 入力が欠けた年は前回の見分けを残す（--prev）。失敗しても前回のファイルが残るだけで、ほかは止めない
       - name: 作物を見分ける
         id: crop
