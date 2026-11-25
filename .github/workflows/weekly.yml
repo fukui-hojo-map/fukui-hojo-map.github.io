@@ -20,6 +20,9 @@ on:
         description: '新しい画像の有無に関係なく全セルを調べる'
         type: boolean
         default: false
+      lai_minutes:
+        description: 'LAI（葉の量）の計算に使う時間の上限（分）。はじめの作りためは 240 など'
+        default: '60'
 
 concurrency:
   group: ndvi-update
@@ -241,6 +244,23 @@ jobs:
           EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
           EE_PROJECT: ${{ secrets.EE_PROJECT }}
         run: python pipeline/cloudnear.py --max-minutes 30 --workers 4
+
+      # LAI（葉面積指数＝葉の量。pipeline/lai.py → cells/<id>/lai.json。ESA SNAP の方式を Earth Engine で）。2026-11-25〜、開発版の画面で試す（本番の画面は読まない）。
+      # 計算する日は、NDVI に晴れた区画がある日（去年の1月から）。区画の内側の形（inner.geojson）を使うので、計算用のファイルを外す前に。
+      # 時間切れの分は次回に続ける。失敗しても、ほかは止めない（config の lai が true でなければ何もしない）
+      - name: LAI（葉の量）を計算する（開発版の画面で試す）
+        if: steps.gate.outputs.run == '1'
+        continue-on-error: true
+        timeout-minutes: 260
+        env:
+          EE_SERVICE_ACCOUNT: ${{ secrets.EE_SERVICE_ACCOUNT }}
+          EE_PRIVATE_KEY: ${{ secrets.EE_PRIVATE_KEY }}
+          EE_PROJECT: ${{ secrets.EE_PROJECT }}
+          LAI_MINUTES: ${{ inputs.lai_minutes || '60' }}   # 入力はシェルの文に直接書かず、環境変数で渡す
+        run: |
+          case "$LAI_MINUTES" in ''|*[!0-9]*) echo "::error::lai_minutes は数字で入れてください"; exit 1;; esac
+          [ "$LAI_MINUTES" -le 240 ] || LAI_MINUTES=240
+          if [ -f pipeline/lai.py ]; then python pipeline/lai.py --max-minutes "$LAI_MINUTES" --workers 6; else echo "lai.py がないので飛ばします"; fi
 
       - name: 計算し直しの途中のファイルを rebuild-state ブランチに置く（公開サイトには出さない）
         if: steps.gate.outputs.run == '1'
