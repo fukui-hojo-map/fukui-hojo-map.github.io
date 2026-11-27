@@ -1209,7 +1209,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="mapbar">
       <div class="mbrow">
       <div class="ctl" style="margin:0"><span id="dateCtl" style="display:inline-flex;gap:4px;align-items:center"><span style="white-space:nowrap">日付</span><select id="colorDate" title="雲で写らなかった日は出ません" hidden></select><button type="button" class="dsel" id="colorDateBtn" aria-haspopup="listbox" title="日付を選ぶ（雲で写らなかった日は出ません）"><span class="t">—</span><span class="car" aria-hidden="true">▾</span></button></span><input type="checkbox" id="colorOn" checked hidden></div>
-      <div class="ctl" style="margin:0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>絶対表示</option><option value="rel">相対表示</option><option value="srvi">SRVI（比植生指数）</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
+      <div class="ctl" style="margin:0"><span style="line-height:1.2;white-space:nowrap">表示<br>モード</span><select id="fillMode"><option value="abs" selected>NDVI（絶対表示）</option><option value="rel">NDVI（相対表示）</option><option value="srvi">SRVI（絶対表示）</option><option value="trend">生育傾向マップ</option><option value="elev">高低差マップ</option></select><input type="checkbox" id="bandOn" checked hidden><button type="button" class="ib" id="mbInfo" title="説明">ⓘ</button></div>
       </div>
       <div class="more"><div class="modedesc" id="modeDesc"></div><div class="cloudnote" id="cloudNote">雲（うすい雲・かすみ・雲の影）がかかると、NDVI が実際より低く出ることがあります。日付の一覧の（雲○%）は、まわり約3km（圃場を選んでいるときはその圃場のあたり、選んでいないときは地図の真ん中のあたり）の雲の割合です。雲の多い日の色は、参考程度に見てください。</div><span class="pxnote" id="pxNote"></span></div>
       <div class="bar" id="lgBar"></div><div class="lbl" id="lgLbl"><span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span></div>
@@ -3710,7 +3710,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   if(BT){ BT.mark('index'); BT.stage(30,38,'地図を準備しています',''); }
   pkg={meta:{name:'',source:index.source||'Sentinel-2 L2A',attribution:'Contains modified Copernicus Sentinel data'},parcels:{type:'FeatureCollection',features:[]},series:{},radar:{},near:{}};   // near: 雲の近くの観測（参考。薄い灰色の点）
   laiCells=new Set((index.cells||[]).filter(c=>c.lai).map(c=>c.id));   // LAI（lai.json）があるセル
-  if(laiCells.size&&!document.querySelector('#fillMode option[value="lai"]')){ const o=document.createElement('option'); o.value='lai'; o.textContent='LAI（葉面積指数）'; const fm=document.getElementById('fillMode'), r=fm.querySelector('option[value="srvi"]')||fm.querySelector('option[value="trend"]'); fm.insertBefore(o,r); }   // 相対表示のつぎ（SRVI の前）
+  if(laiCells.size&&!document.querySelector('#fillMode option[value="lai"]')){ const o=document.createElement('option'); o.value='lai'; o.textContent='LAI（絶対表示）'; const fm=document.getElementById('fillMode'), r=fm.querySelector('option[value="srvi"]')||fm.querySelector('option[value="trend"]'); fm.insertBefore(o,r); }   // 相対表示のつぎ（SRVI の前）
   geoLayer=L.geoJSON([], {style:()=>({color:'#fff',weight:1,opacity:.8,fillColor:'#888',fillOpacity:.35}),
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
       l._pid=pid; l.on('click',()=>onParcelTap(pid)); } }).addTo(map);
