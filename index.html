@@ -2867,7 +2867,7 @@ async function renderTrend(gen,mode,note,lbl){
 const SRVI_TXT='SRVI（Simple Ratio Vegetation Index、比植生指数）は、近赤外の反射を赤の反射で割った値です。NDVIと同じ衛星の写真から計算しますが、NDVIが高い（葉が茂った）ところほど値の差が大きく開くので、茂った圃場どうしの違いが見やすくなります。値は、土や水面で1前後、葉が茂ると10〜20ほどになります。';
 const MODE_DESC={   // 表示モードごとのひとこと説明
   srvi:SRVI_TXT,
-  lai:'LAI（Leaf Area Index、葉面積指数）は、圃場内の葉全ての面積を全部足すと、圃場面積の何倍になるかを示したものです。NDVIは幼穂形成期以降で値が頭打ちになるので、幼穂形成期以降の生育量の比較は、LAIも併せて確認することを推奨します。',
+  lai:'LAI（Leaf Area Index、葉面積指数）は、圃場内の葉全ての面積を全部足すと、圃場面積の何倍になるかを示したものです。NDVIは幼穂形成期以降で値が頭打ちになるので、幼穂形成期以降の生育量の比較は、LAIも併せて確認することを推奨します。なお、LAIは圃場ごとの値で色分けし、圃場内の色分けは表示しない仕様です。',
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
   rel:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',
   trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
@@ -2876,7 +2876,7 @@ const MODE_DESC={   // 表示モードごとのひとこと説明
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
 const MODE_HEAD={
   srvi:{t:'SRVI（比植生指数）',d:SRVI_TXT},
-  lai:{t:'LAI（葉面積指数）',d:'LAI（Leaf Area Index、葉面積指数）は、圃場内の葉全ての面積を全部足すと、圃場面積の何倍になるかを示したものです。NDVIは幼穂形成期以降で値が頭打ちになるので、幼穂形成期以降の生育量の比較は、LAIも併せて確認することを推奨します。'},
+  lai:{t:'LAI（葉面積指数）',d:'LAI（Leaf Area Index、葉面積指数）は、圃場内の葉全ての面積を全部足すと、圃場面積の何倍になるかを示したものです。NDVIは幼穂形成期以降で値が頭打ちになるので、幼穂形成期以降の生育量の比較は、LAIも併せて確認することを推奨します。なお、LAIは圃場ごとの値で色分けし、圃場内の色分けは表示しない仕様です。'},
   abs:{t:'絶対表示',d:'稲の生育量の指標｢NDVI(植生指数)｣を色表示。絶対表示は、他圃場との比較に便利です。'},
   rel:{t:'相対表示',d:'圃場内のNDVIを強制的に7段階に色分け。圃場内の生育ムラを分かりやすく見たいときに役立ちます。'},
   trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った圃場','圃場をタップすると、その圃場の数字がグラフの所に出ます']},
@@ -2894,7 +2894,7 @@ async function renderPx(){ relRange='';
   bar.classList.toggle('rel',mode!=='abs'&&mode!=='srvi');
   bar.style.background=bandOn()&&(selected.length||map.getZoom()>=BULK_ZOOM)&&document.getElementById('colorOn').checked?bandBar(mode==='abs'?'abs':mode==='srvi'?'srvi':isTrend(mode)?'vig':'rel'):isTrend(mode)?VIG_GRAD:'';
   lbl.innerHTML=mode==='rel'?'<span>その田の平均より低い</span><span>田の中の差</span><span>高い</span>':isTrend(mode)?VIG_LBL:mode==='srvi'?`<span>少ない 1</span><span>SRVI（比植生指数）</span><span>${SRVI_COL} 以上 多い</span>`:'<span>低い 0.2</span><span>NDVI</span><span>0.9 高い</span>';
-  if(fm==='lai'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; bar.classList.remove('rel'); bar.style.background='';   // LAI: 圃場ごとの値で塗る（圃場の中の図は、まだない）
+  if(fm==='lai'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; bar.classList.remove('rel'); bar.style.background='';   // LAI: 圃場ごとの値で塗る。圃場の中の色分けは出さない仕様（2026-11-27 利用者。説明の文にも書く）
     lbl.innerHTML=`<span>少ない 0</span><span>LAI（葉面積指数）</span><span>${LAI_COL} 以上 多い</span>`; laiEnsure();
     note.textContent=laiCells.size?'':'LAI のデータは、まだ作っているところです'; return; }
   if(fm==='top'){ pxLayer.clearLayers(); const b=document.getElementById('rankBox'); b.style.display='none'; b.innerHTML=''; return renderTop(gen,note,bar,lbl); }
@@ -3710,7 +3710,7 @@ async function boot(){ const BT=window.BOOT; if(BT) BT.stage(14,30,'区画の一
   if(BT){ BT.mark('index'); BT.stage(30,38,'地図を準備しています',''); }
   pkg={meta:{name:'',source:index.source||'Sentinel-2 L2A',attribution:'Contains modified Copernicus Sentinel data'},parcels:{type:'FeatureCollection',features:[]},series:{},radar:{},near:{}};   // near: 雲の近くの観測（参考。薄い灰色の点）
   laiCells=new Set((index.cells||[]).filter(c=>c.lai).map(c=>c.id));   // LAI（lai.json）があるセル
-  if(laiCells.size&&!document.querySelector('#fillMode option[value="lai"]')){ const o=document.createElement('option'); o.value='lai'; o.textContent='LAI（絶対表示）'; const fm=document.getElementById('fillMode'), r=fm.querySelector('option[value="srvi"]')||fm.querySelector('option[value="trend"]'); fm.insertBefore(o,r); }   // 相対表示のつぎ（SRVI の前）
+  if(laiCells.size&&!document.querySelector('#fillMode option[value="lai"]')){ const o=document.createElement('option'); o.value='lai'; o.textContent='LAI（絶対表示）'; const fm=document.getElementById('fillMode'), r=fm.querySelector('option[value="trend"]'); fm.insertBefore(o,r); }   // SRVI のつぎ（生育傾向の前。2026-11-27 利用者「SRVIとLAIの並びを逆に」）
   geoLayer=L.geoJSON([], {style:()=>({color:'#fff',weight:1,opacity:.8,fillColor:'#888',fillOpacity:.35}),
     onEachFeature:(f,l)=>{ const pid=String(f.properties.pid); parcels[pid]={feature:f,layer:l,centroid:centroid(f.geometry),name:f.properties.name||pid.slice(0,8),crop:''};
       l._pid=pid; l.on('click',()=>onParcelTap(pid)); } }).addTo(map);
