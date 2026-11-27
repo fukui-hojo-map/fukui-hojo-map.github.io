@@ -1251,7 +1251,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div hidden>
       <div class="ctl"><label>有効画素率 <input type="number" id="thr" min="50" max="100" step="5" value="70" style="width:64px">% 以上</label>
         <label>近隣の半径 <input type="number" id="nbR" min="100" max="2000" step="100" value="500" style="width:72px">m</label></div>
-      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>雲・かすみの疑いの点を、グラフと計算から外す（1区画だけ前後より低いV字の点〔前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上〕、同じ日の周りの圃場よりいつもの差で 0.12 以上低い点、地域全体がそろって下がった日〔かすみの日。6〜8月、9月は近くの雲30%以上の日〕に前後を結んだ線より 0.04 以上低い点、近くの雲20%以上の日に前後より 0.2 以上低い点。どれも、あとの点でもどるものだけ。水張りの水面〔0 以下〕と、前後3日以内の Landsat も同じくらい低い点〔収穫など本物の変化〕は外さない）</label></div>
+      <div class="ctl"><label><input type="checkbox" id="dipOn" checked>雲・かすみの疑いの点を、グラフと計算から外す（1区画だけ前後より低いV字の点〔前後とも NDVI 0.7 以上なら 0.07 以上、それ以外は 0.1 以上〕、同じ日の周りの圃場よりいつもの差で 0.12 以上低い点、地域全体がそろって下がった日〔かすみの日。6〜8月は毎回、ほかの月は近くの雲30%以上の日だけ。水張り・田植えの時期（4/15〜5/31）は調べない〕に前後を結んだ線より 0.04 以上低い点、近くの雲80%以上の日に地域全体がそろって上がった日に前後を結んだ線より 0.04 以上高い点、近くの雲20%以上の日に前後より 0.2 以上低い点、雪の日〔11〜3月に、区画のまとまりの半分以上の圃場が NDVI 0.1 未満になった日〕の NDVI 0.15 未満の点。ありえないほど高い NDVI〔0.95 以上、または 0.92 以上で前後より 0.05 以上高い点〕。LAI は、さらに、11〜3月に NDVI 0.3 未満なのに LAI 1.0 以上の点〔雪〕と、LAI だけが前後より 0.5 以上飛び出した点〔うすい雲〕も外す。雪の日のほかは、どれも、あとの点でもどるものだけ〔6〜9月の外の、地域がそろって下がった日は、前の高さ近く（0.1 以内）までもどるものだけ。秋の色落ち・耕起などで下がったままの点は外さない〕。水張りの水面〔0 以下〕と、前後3日以内の Landsat も同じくらい低い点〔収穫など本物の変化〕は外さない）</label></div>
       <div class="ctl"><label><input type="checkbox" id="cnOn" checked>6〜9月に、まわり（半径3km）のほぼ全部が雲・雲の影・巻雲の日の Sentinel-2 の観測を、グラフと計算から外す（雲の切れ間だけ晴れて見える日は、うすい雲の影響が残りやすいため。data/cloudnear.json があるときだけ働く）</label></div>
       <div class="ctl"><label><input type="checkbox" id="lsOn" checked>Landsat の点は、前後3日以内に Sentinel-2 がない日だけ使い、前後の Sentinel-2 と0.08以上違う点は除く</label></div>
       <div class="ctl" id="radarCtl" style="display:none"><label><input type="checkbox" id="radarOn">レーダー（Sentinel-1）から推定した点を表示（5/10〜7/31、精度が低いので参考）</label></div>
@@ -2218,16 +2218,49 @@ function nbDips(s,C){ const out=new Set(); if(!C||!C.mem.length) return out; con
 //   その日の Sentinel-2 の点で、自分の前後の点（Landsat も含む。各20日以内）を結んだ線より 0.04 以上低く、後ろの点で 0.03 以上もどるものを外す（前の点がなければ、後ろより 0.06 以上低いもの）。
 //   晴れていた圃場の点（前後と同じ高さ）と、下がったままの点（収穫など）は外さない。試算（福井市まわり7区画・2025〜2026年の6〜8月）で、外れるのは点の約6%（すべて、かすみの日の点）
 const HZ_R=0.02, HZ_WIN=20*864e5, HZ_FROM='06-01', HZ_TO='08-31', HZ_SEP='09-30', HZ_SEP_CN=30;   // 9月は、収穫・ひこばえでも地域がそろって下がって戻るので、近くの雲が30%以上の日だけ（2026-10-23 追加）
+// 6〜9月の外（10月〜5月）も調べる（2026-11-27 利用者「雲・かすみの取りのぞき方に問題があるのでは？」→ 点検: 1年中のグラフにしたあと、6〜9月の外の雲の日に
+//   地域がそろって下がった日がほとんど残っていた〔本番データ 54区画のまとまり: 近くの雲 50〜79% の日の 17%、80% 以上の日の 31% が 0.05 以上低いまま〕）。
+//   6〜9月の外は、耕起・水張り・収穫・雪などで、晴れた日にも地域がそろって下がるので、近くの雲が HZ_OFF_CN% 以上の日だけにする（9月と同じ考え）
+//   ただし、水張り・田植えの時期（HZ_SKIP の間）は対象にしない。水張りで下がった点は、次の観測で少しもどる（苗が育つ）ので、かすみと見分けられず、
+//   グラフの始まり（水張りの日）が変わってしまうため（試算: 5月を入れると、54区画のまとまりの約600圃場で水張りの日が変わった）
+let HZ_OFF_CN=30, HZ_SKIP=['04-15','05-31'];
+// 歯止め（2026-11-27 利用者「収穫による変化などまで除いたりしていないか？」）: 6〜9月の外は、後ろの点が前の水準近く（HZ_KEEP 以内）まで戻るものだけ外す。
+//   試算（本番データ 54区画のまとまり）: この歯止めの前は、外した下がった点 1,837 のうち 124 が「次の点も前より 0.15 以上低い」＝本当に下がっている途中の点だった（11月の色落ち、3〜4月の耕起など）
+const HZ_KEEP=0.10, HZ_KEEP_OFF=d=>{ const md=d.slice(5); return md<HZ_FROM||md>HZ_SEP; };
+function hzDayOk(cell,d){ const md=d.slice(5); if(md>=HZ_FROM&&md<=HZ_TO) return true; if(md>=HZ_SKIP[0]&&md<=HZ_SKIP[1]) return false; const v=cnVal(cell,d); return v!==null&&v>=(md>HZ_TO&&md<=HZ_SEP?HZ_SEP_CN:HZ_OFF_CN); }
 function hzOf(C){ if(C.haze) return C.haze; const cnt=new Map(); for(const m of C.mem) for(const d of m.keys()) cnt.set(d,(cnt.get(d)||0)+1);
   const good=[...cnt].filter(x=>x[1]>=NB_MIN).map(x=>x[0]).sort(), T=good.map(tOf), out=new Set();
-  for(let i=0;i<good.length;i++){ const md=good[i].slice(5); if(md<HZ_FROM||md>HZ_SEP) continue; if(md>HZ_TO){ const v=cnVal(C.cell,good[i]); if(v===null||v<HZ_SEP_CN) continue; } let lb=Infinity, la=Infinity;
+  for(let i=0;i<good.length;i++){ if(!hzDayOk(C.cell,good[i])) continue; let lb=Infinity, la=Infinity;
     for(let j=0;j<good.length;j++){ if(j===i||Math.abs(T[i]-T[j])>HZ_WIN) continue; const v=nbPair(C,good[i],good[j]); if(v===null) continue; if(T[j]<T[i]) lb=Math.min(lb,v); else la=Math.min(la,v); }
     if(lb<=-HZ_R&&la<=-HZ_R) out.add(good[i]); }   // 前のどれかの日より、後のどれかの日より、地域がそろって低い
   return C.haze=out; }
+// 雲の多い日に、地域がそろって上がった日（2026-11-27 利用者の指示で追加）。例: 2025-04-19（近くの雲 91%）に、ある区画のまとまりの 471 圃場の中央値が 0.48、
+//   前後の晴れた日は 0.24〜0.25（水張り前の土の時期）。雲のすき間・雲の影の下の画素が、ゆがんだ高い値で雲の判定を通ったもの。今までの判定は「下がった点」だけを見ていたので外れなかった。
+//   近くの雲が UP_CN% 以上の日で、区画のまとまりの中央値（両方の日にデータのある圃場の差）が、前20日以内のどれかの日と、後20日以内のどれかの日の両方より UP_R 以上高い日を「雲で上がった日」とし、
+//   その日の Sentinel-2 の点で、自分の前後の点（Landsat も含む。各20日以内）を結んだ線より 0.04 以上高く、後ろの点で 0.03 以上もどるものを外す（前の点がなければ、後ろより 0.06 以上高いもの）。
+//   晴れた日には使わない（晴れた日の「前後より高い日」は、生育の曲がり・撮影の角度のゆれで、雲ではない）
+//   本物の上がり（芽吹き・麦の生育など）は、後ろの点が下がらないので外れない。「前の高さ近くまでもどるものだけ」の歯止めは付けない
+//   （付けると、4月に育っている麦などの圃場で、04-19 の 0.92〔前 0.64・後 0.77〕のような雲の点が残った。試算で 51 圃場）
+let UP_R=0.05, UP_CN=80;
+function upOf(C){ if(C.up) return C.up; const cnt=new Map(); for(const m of C.mem) for(const d of m.keys()) cnt.set(d,(cnt.get(d)||0)+1);
+  const good=[...cnt].filter(x=>x[1]>=NB_MIN).map(x=>x[0]).sort(), T=good.map(tOf), out=new Set();
+  for(let i=0;i<good.length;i++){ const c=cnVal(C.cell,good[i]); if(c===null||c<UP_CN) continue; let hb=-Infinity, ha=-Infinity;
+    for(let j=0;j<good.length;j++){ if(j===i||Math.abs(T[i]-T[j])>HZ_WIN) continue; const v=nbPair(C,good[i],good[j]); if(v===null) continue; if(T[j]<T[i]) hb=Math.max(hb,v); else ha=Math.max(ha,v); }
+    if(hb>=UP_R&&ha>=UP_R) out.add(good[i]); }   // 前のどれかの日より、後のどれかの日より、地域がそろって高い
+  return C.up=out; }
+function upSpikes(s,C){ const out=new Set(); if(!C||!C.mem.length) return out; const U=upOf(C); if(!U.size) return out;
+  for(let i=0;i<s.length;i++){ const r=s[i]; if(r[3]==='L'||!U.has(r[0])) continue; const t=tOf(r[0]); let pv=null,nx=null;
+    for(let j=i-1;j>=0;j--){ if(t-tOf(s[j][0])<=HZ_WIN) pv=s[j]; break; } for(let j=i+1;j<s.length;j++){ if(tOf(s[j][0])-t<=HZ_WIN) nx=s[j]; break; }
+    if(!nx||r[1]-nx[1]<0.03) continue;   // 後ろの点で、もどっている（一時的）
+    if(pv){ const tp=tOf(pv[0]), it=pv[1]+(nx[1]-pv[1])*(t-tp)/(tOf(nx[0])-tp); if(r[1]<it+0.04) continue; }   // 前後を結んだ線より 0.04 以上高い
+    else if(r[1]-nx[1]<0.06) continue;
+    out.add(r[0]); }
+  return out; }
 function hzDips(s,C){ const out=new Set(); if(!C||!C.mem.length) return out; const H=hzOf(C); if(!H.size) return out;
   for(let i=0;i<s.length;i++){ const r=s[i]; if(r[3]==='L'||!H.has(r[0])) continue; const t=tOf(r[0]); let pv=null,nx=null;
     for(let j=i-1;j>=0;j--){ if(t-tOf(s[j][0])<=HZ_WIN) pv=s[j]; break; } for(let j=i+1;j<s.length;j++){ if(tOf(s[j][0])-t<=HZ_WIN) nx=s[j]; break; }
     if(!nx||nx[1]-r[1]<0.03) continue;   // 後ろの点で、もどっている（一時的）
+    if(pv&&HZ_KEEP_OFF(r[0])&&nx[1]<pv[1]-HZ_KEEP) continue;   // 6〜9月の外: 後ろの点が前の水準近くまで戻らないもの（秋の色落ち・耕起・雪など本物の変化）は外さない（V字の判定と同じ歯止め）
     if(pv){ const tp=tOf(pv[0]), it=pv[1]+(nx[1]-pv[1])*(t-tp)/(tOf(nx[0])-tp); if(r[1]>it-0.04) continue; }   // 前後を結んだ線より 0.04 以上低い
     else if(nx[1]-r[1]<0.06) continue;
     out.add(r[0]); }
@@ -2242,11 +2275,32 @@ function bigDips(s,cell){ const out=new Set(); if(!cnData||!cell) return out;
     if(pv[1]<BG_HI||nx[1]<BG_HI||r[1]>Math.min(pv[1],nx[1])-BG_D||nx[1]<pv[1]-BG_BACK) continue;
     out.add(r[0]); }
   return out; }
+// 雪の日（2026-11-27 利用者「1月～12月までで、本当にSRVIやLAI、NDVIの値が正しいのか今一度、確かめたい」→ 点検）:
+//   11〜3月に、区画のまとまりの半分以上の圃場が NDVI 0.1 未満になった日は、雪で覆われた日とみなし、その日の NDVI 0.15 未満の Sentinel-2 の点は外す。
+//   衛星の雪の判定（SCL 11）から漏れた雪。NDVI は 0 近く、LAI は SNAP の網の学習の範囲の外（明るすぎる）で 5 前後のでたらめな値になる（例: 2025-02-08、37区画のまとまりで LAI の中央値 5.1）。
+//   点検（本番データ 637区画のまとまり・2025年1月〜）: LAI で見た雪の疑い（NDVI 0.3 未満で LAI 1.0 以上）の 89% を、NDVI だけのこの決まりで拾う。外れるのは 11〜3月の点の 0.8%（2月は 17%。ほかの月は 1.4% 以下）。
+//   水張りの田・池（ずっと NDVI が低い）を、雪の日にまちがえて外すのは、外れた点の 1% ほど。地図の色・グラフ・計算のどれにも使わない（NDVI・SRVI・LAI とも）
+const SNOW_MON=new Set(['11','12','01','02','03']), SNOW_DAY=0.1, SNOW_PT=0.15, SNOW_MIN=10;
+let SNOW_FRAC=0.5, snowMed=new Map();
+function snowDays(cell){ let c=snowMed.get(cell); if(c) return c; const t=thr()-1e-9, n=new Map(), lo=new Map();
+  for(const pid in pkg.series){ if(!parcels[pid]||parcels[pid].cell!==cell) continue;
+    for(const r of pkg.series[pid]){ if(r[3]==='L'||r[2]<t||!SNOW_MON.has(r[0].slice(5,7))) continue; n.set(r[0],(n.get(r[0])||0)+1); if(r[1]<SNOW_DAY) lo.set(r[0],(lo.get(r[0])||0)+1); } }
+  c=new Set(); for(const [d,k] of n) if(k>=SNOW_MIN&&(lo.get(d)||0)/k>=SNOW_FRAC) c.add(d);
+  snowMed.set(cell,c); return c; }
+// ありえないほど高い NDVI（2026-11-27 点検）: 区画の平均で NDVI 0.95 以上は、いつも外す（赤がほぼ 0。暗い画素・大気の補正の引きすぎ。例: 2025-12-30 の冬に 1.0、2026-11-23 の11月に 0.96）。
+//   7〜8月の茂った田でも、画面に残る点の 99% は 0.90 以下。0.95 以上で前後と同じ高さに続いたものは、全体で 48点しかなかった。
+//   0.92 以上で、前後の点（各20日以内）のどちらより 0.05 以上高いもの（例: 6月に 0.97、前後 0.83・0.87）も、1回だけの飛び出しとして外す。
+//   SRVI は NDVI 0.92 で 24、0.95 で 39、0.98 で 99 になり、グラフ・Excel で大きく飛び出していた。点検（本番データ）: 画面に残っていた点の 0.02%（約1,700点）。近くの雲とはかかわりなく出る
+let HI_ALL=0.95, HI_SP=0.92; const HI_D=0.05;
+function hiSpike(s,i){ const r=s[i]; if(r[3]==='L') return false; if(r[1]>=HI_ALL) return true; if(r[1]<HI_SP||i<=0||i>=s.length-1) return false;
+  const pv=s[i-1], nx=s[i+1], t=tOf(r[0]); if(t-tOf(pv[0])>20*864e5||tOf(nx[0])-t>20*864e5) return false;
+  return r[1]-pv[1]>=HI_D&&r[1]-nx[1]>=HI_D; }
+function snowBad(cell,r){ return r[3]!=='L'&&r[1]<SNOW_PT&&SNOW_MON.has(r[0].slice(5,7))&&snowDays(cell).has(r[0]); }
 // filtered rows per parcel, cached; rebuilt when threshold / excluded days / dip or Landsat filter / data change
 let clean=new Map(), cleanKey='', dataVer=0;
-function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); nbMed=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
+function syncClean(){ const k=`${thr()}|${dipOn()}|${cnOn()}|${cnVer}|${lsCheckOn()}|${radarOn()}|${[...excluded].sort().join()}`; if(k!==cleanKey){ clean=new Map(); nbMed=new Map(); snowMed=new Map(); cleanKey=k; } }   // 区画を読み足しても前からの区画の系列は変わらないので、読み足しでは捨てない
 function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
-  const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0])));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）
+  const t=thr()-1e-9, dip=dipOn(), cn=cnOn(), cell=parcels[pid]?.cell; let s=(pkg.series[pid]||[]).filter(r=>r[2]>=t&&!excluded.has(r[0])&&!(cn&&r[3]!=='L'&&cnBad(cell,r[0]))&&!(dip&&snowBad(cell,r)));   // 近くがほぼ雲の日の Sentinel-2 は使わない（Landsat は対象外）。雪の日の雪の点も
   const L0=s.filter(r=>r[3]==='L');   // Landsat の点（前後3日の Sentinel-2 と重なって、グラフには出さない点も含む）
   // Landsat の裏付け（2026-11-25）: Sentinel-2 の低い点を、前後3日以内の Landsat（別の衛星・別の日）がほぼ同じ値（0.08 未満の差）で見ていれば、雲・かすみではなく本物の変化（収穫など）として外さない。
   //   例: 8/24 0.58 → 9/1 0.37（収穫）→ 9/13 0.54（ひこばえ）は V字に見えて外れていたが、9/2 の Landsat も 0.41 だった
@@ -2256,7 +2310,7 @@ function cleanOf(pid){ let c=clean.get(pid); if(c) return c;
     const ref=okP&&okN?pv[1]+(nx[1]-pv[1])*(t-tOf(pv[0]))/(tOf(nx[0])-tOf(pv[0])):okP?pv[1]:okN?nx[1]:null;
     return q.some(x=>ref===null||Math.abs(x[1]-r[1])<Math.abs(x[1]-ref)); };
   if(lsCheckOn()&&s.some(r=>r[3]==='L')){ const s2=s.filter(r=>r[3]!=='L').map(r=>[Date.parse(r[0]),r[1]]); s=s.filter(r=>r[3]!=='L'||lsFits(s2,Date.parse(r[0]),r[1])); }
-  const C=dip?nbOf(cell):null, nb=C?nbDips(s,C):null, hz=C?hzDips(s,C):null, pre=s.map((r,i)=>dip&&!cf(r)&&(isDip(s,i)||(r[3]!=='L'&&((!!nb&&nb.has(r[0]))||(!!hz&&hz.has(r[0]))))));
+  const C=dip?nbOf(cell):null, nb=C?nbDips(s,C):null, hz=C?hzDips(s,C):null, up=C?upSpikes(s,C):null, pre=s.map((r,i)=>dip&&!cf(r)&&(isDip(s,i)||hiSpike(s,i)||(r[3]!=='L'&&((!!nb&&nb.has(r[0]))||(!!hz&&hz.has(r[0]))||(!!up&&up.has(r[0]))))));
   // 大きな落ち込みは、ほかの判定で外したあとの前後で見る（隣のかすみの日の点に隠れないように）
   const bg=dip?bigDips(s.filter((r,i)=>!pre[i]),cell):null, isD=s.map((r,i)=>pre[i]||(!!bg&&r[3]!=='L'&&bg.has(r[0])&&!cf(r))), opt=s.filter((r,i)=>!isD[i]), dips=s.filter((r,i)=>isD[i]), by=new Map(opt.map(r=>[r[0],r[1]]));
   let rows=opt, rad=(pkg.radar||{})[pid];   // 前後より急に低いV字の点（雲・かすみの疑い）はグラフにも出さない
@@ -2296,9 +2350,23 @@ function laiEnsure(){   // 読み込んだセルの lai.json を読む（LAI の
   if(!laiOn()) return;
   for(const id of loadedCells){ if(laiReq.has(id)||!laiCells.has(id)) continue; laiReq.add(id);
     laiFetch(id).then(()=>{ clearTimeout(laiT); laiT=setTimeout(()=>{ if(laiOn()){ paintMap(); drawChart(); } },150); }).catch(()=>{ setTimeout(()=>laiReq.delete(id),5000); }); } }
-function laiVal(pid,d){ const m=laiData[pid], v=m&&m.get(d); return v==null||!cleanOf(pid).by.has(d)?null:v; }
-function laiSeriesOf(pid){ const m=laiData[pid]; if(!m) return []; const by=cleanOf(pid).by;
-  return [...m].filter(([d])=>by.has(d)).sort((a,b)=>a[0]<b[0]?-1:1).map(([d,v])=>({date:d,t:Date.parse(d+'T00:00:00Z'),ndvi:v/LAI_Y,lai:v})); }   // グラフの縦の位置は ndvi（0〜1）に、0〜LAI_Y を当てる
+// LAI だけの見直し（2026-11-27 点検。本番データ 637区画のまとまり・2025年1月〜）。NDVI の系列で残った日のうち、さらに次の LAI は使わない:
+//   (1) 雪の疑い: 11〜3月に、同じ日の NDVI が 0.3 未満なのに LAI が 1.0 以上（植物ではありえない組み合わせ。雪の明るさで SNAP の網の学習の範囲の外）。LAI の点の 0.2%（2月は 15%）
+//   (2) LAI だけの飛び出し: 前後の LAI（各20日以内）を結んだ線より 0.5 以上かつ3割以上高く、前後のどちらより 0.3 以上高いのに、同じ日の NDVI は飛び出していない（線より 0.03 未満の上）。
+//       うすい雲・かすみで、LAI に使う赤外の端（レッドエッジ・短波赤外）だけが乱れたもの。LAI の点の 0.16%。近くの雲が多い日ほど多い（0〜19% の日 0.07%、80% 以上の日 2.2%）
+const LAI_SNOW_N=0.3, LAI_SNOW_L=1.0, LAI_SP=0.5, LAI_SP_R=1.3, LAI_SP_NB=0.3;
+function laiClean(pid){ const m=laiData[pid]; if(!m) return null; const c=cleanOf(pid); if(c.lai&&c.laiSrc===m) return c.lai;   // NDVI の取りのぞき（cleanOf）が作り直されたら、LAI も作り直す
+  const by=c.by, dip=dipOn(); let s=[...m].filter(([d])=>by.has(d)).sort((a,b)=>a[0]<b[0]?-1:1).map(([d,v])=>[d,v,by.get(d),tOf(d)]);
+  if(dip){ s=s.filter(([d,v,n])=>!(SNOW_MON.has(d.slice(5,7))&&n<LAI_SNOW_N&&v>=LAI_SNOW_L));
+    const bad=new Set(), W=20*864e5;
+    for(let i=1;i<s.length-1;i++){ const [d0,l0,n0,t0]=s[i-1], [d,l,n,t]=s[i], [d1,l1,n1,t1]=s[i+1]; if(t-t0>W||t1-t>W) continue;
+      const f=(t-t0)/(t1-t0), li=l0+(l1-l0)*f, ni=n0+(n1-n0)*f;
+      if(l-li>=LAI_SP&&l>=li*LAI_SP_R&&l>=Math.max(l0,l1)+LAI_SP_NB&&n-ni<0.03) bad.add(d); }
+    s=s.filter(x=>!bad.has(x[0])); }
+  c.lai=new Map(s.map(x=>[x[0],x[1]])); c.laiSrc=m; return c.lai; }
+function laiVal(pid,d){ const m=laiClean(pid), v=m&&m.get(d); return v==null?null:v; }
+function laiSeriesOf(pid){ const m=laiClean(pid); if(!m) return [];
+  return [...m].map(([d,v])=>({date:d,t:Date.parse(d+'T00:00:00Z'),ndvi:v/LAI_Y,lai:v})); }   // グラフの縦の位置は ndvi（0〜1）に、0〜LAI_Y を当てる
 function laiColor(v){ return v==null||isNaN(v)?'#9aa':ndviColor(0.2+0.7*Math.max(0,Math.min(1,v/LAI_COL))); }   // NDVI と同じ色の並び（茶→黄→緑）。0〜3 以上
 // SRVI（Simple Ratio Vegetation Index、比植生指数）＝ 近赤外 ÷ 赤（2026-11-27 利用者「表示モードに、SRVIを加えて」）。NDVI と同じ赤・近赤外から計算するので、
 //   1つの値は SRVI＝(1＋NDVI)÷(1−NDVI) で NDVI から換算できる（画面の中で換算。データ作成は変えない）。圃場ごとの値は区画の平均の NDVI からの換算、
@@ -2870,7 +2938,7 @@ const MODE_DESC={   // 表示モードごとのひとこと説明
   lai:'LAI（Leaf Area Index、葉面積指数）は、圃場内の葉全ての面積を全部足すと、圃場面積の何倍になるかを示したものです。NDVIは幼穂形成期以降で値が頭打ちになるので、幼穂形成期以降の生育量の比較は、LAIも併せて確認することを推奨します。なお、LAIは圃場ごとの値で色分けし、圃場内の色分けは表示しない仕様です。',
   abs:'生育の量（NDVI）をそのまま色にします。他の圃場との比較に。【NDVIとは】衛星の写真から測った、稲の緑の濃さ（葉の茂り具合）の数字です。0.2ごろは田植えのころ（水面や土が見える）、0.8〜0.9は葉が茂りきったころで、数字が大きいほど生育が旺盛です。',
   rel:'生育ムラを強制的に7段階に色分けします。一枚の圃場の生育ムラを確認したいときに。',
-  trend:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
+  trend:'過去5年間の水稲作付時のNDVI（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',
   elev:'圃場の標高を色にします（青＝低い・赤＝高い）。いま画面に見えている圃場どうしを同じ物差しでくらべるので、高い圃場ほど赤く、順番が入れかわることはありません。色の高さ（m）は凡例に出ます。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと表に出ます。その後の圃場整備・盛土は反映されません。',
   elevr:'一枚の圃場の中の高低差を、圃場ごとに色の幅を合わせて7段階に塗ります。色は、その圃場の中央値（真ん中の高さ）との差で、最低±10cm。標高は国土地理院の航空レーザ測量で、測量年度は場所ごとに違い、圃場を選ぶと表に出ます。測量から年がたっているため、数cmの細かい凹凸は今の圃場と違うことがあります（傾きや大きなくぼみの目安として）。'};
 // 表示モードごとの、右上の概要・使い方（開発者のモードは priv.js が足す。作付計画・生育予測は自分の見出しがある）
@@ -2879,7 +2947,7 @@ const MODE_HEAD={
   lai:{t:'LAI（葉面積指数）',d:'LAI（Leaf Area Index、葉面積指数）は、圃場内の葉全ての面積を全部足すと、圃場面積の何倍になるかを示したものです。NDVIは幼穂形成期以降で値が頭打ちになるので、幼穂形成期以降の生育量の比較は、LAIも併せて確認することを推奨します。なお、LAIは圃場ごとの値で色分けし、圃場内の色分けは表示しない仕様です。'},
   abs:{t:'絶対表示',d:'稲の生育量の指標｢NDVI(植生指数)｣を色表示。絶対表示は、他圃場との比較に便利です。'},
   rel:{t:'相対表示',d:'圃場内のNDVIを強制的に7段階に色分け。圃場内の生育ムラを分かりやすく見たいときに役立ちます。'},
-  trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時の生育（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った圃場','圃場をタップすると、その圃場の数字がグラフの所に出ます']},
+  trend:{t:'生育傾向マップ',d:'過去5年間の水稲作付時のNDVI（絶対表示）を平均化したものです。各圃場の生育傾向を大まかに掴みたいときに。',how:['濃いほど、過去の水稲作付時によく育った圃場','圃場をタップすると、その圃場の数字がグラフの所に出ます']},
   elev:{t:'高低差マップ',d:'圃場の標高を色にします（青＝低い・赤＝高い）。水が溜まりやすい所・水持ちの見当に。周りの圃場との比較に。',how:['色は、いま画面に見えている圃場どうしの高さのくらべ（同じ物差し。高い圃場ほど赤い）。色の高さ（m）は左下の凡例に出ます','広くくらべるときは地図を縮小、近所だけなら拡大','圃場をタップすると標高が表に出ます（2枚以上なら1枚目との差も）','標高の誤差は±数十cm。数cmの差は目安です']},
   elevr:{t:'高低差マップ（相対表示）',d:'一枚の圃場の中の高低差（傾きも）を、圃場ごとに色の幅を合わせて7段階に色分けします。圃場内のばらつきの確認に。',how:['地図を拡大（見えている圃場の中）、または圃場をタップ','色の幅は、その圃場の中央値から圃場ごとに自動（最低±10cm）。縁5mは除く','標高の誤差は±数十cm。数cmの差は目安です']}};
 function renderModeHead(){ const el=document.getElementById('modeHead'), k=fillRaw(), m=MODE_HEAD[k]; if(!el||el.dataset.k===k) return; el.dataset.k=k;
